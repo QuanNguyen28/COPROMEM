@@ -19,6 +19,7 @@ class JoinIntent(str, Enum):
 
 class RunMode(str, Enum):
     NO_MEMORY = "no_memory"
+    SUCCESS_ONLY_MEMORY = "success_only_memory"
     TEXT_RULE = "text_rule"
     CONTRASTIVE_PATCH = "contrastive_patch"
     SHAM_RETRY = "sham_retry"
@@ -165,6 +166,7 @@ class RoleProfile:
     planner_omission_rate: float
     solver_ignore_plan_rate: float
     reviewer_detection_rate: float
+    success_memory_compliance: float = 0.55
     text_rule_compliance: float = 0.45
     patch_compliance: float = 0.70
 

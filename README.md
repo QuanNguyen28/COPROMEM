@@ -23,6 +23,38 @@ python3 -m copromem.experiment --seed 7 --output artifacts/synthetic_report.json
 python3 -m pytest
 ```
 
+## Chạy smoke experiment ba arm
+
+So sánh trực tiếp `no_memory`, memory chỉ học từ trajectory thành công, và
+`contract_check` của CoProMem trên 6 task thuộc 2 template group held-out:
+
+```bash
+python3 -m copromem.tiny_experiment --seed 7 --output artifacts/tiny_experiment.json
+python3 -m pytest tests/test_tiny_experiment.py
+```
+
+Đây là smoke test cơ chế synthetic rất nhỏ, không phải bằng chứng tổng quát cho
+LLM agent hoặc dataset bên ngoài.
+
+## GSM8K micro-pilot với agent calls thật
+
+Pipeline ba arm dùng OpenRouter qua `OPENROUTER_API_KEY` trong `.env`, mặc định
+giới hạn 40 calls và 0.02 USD:
+
+```bash
+python3 -m copromem.real_gsm8k_experiment --output artifacts/gsm8k_real_micro.json
+python3 -m pytest tests/test_real_gsm8k_experiment.py
+```
+
+Thêm `--seed 17` để đổi provider sampling seed mà vẫn giữ nguyên task slice.
+Có thể lặp `--prior-report artifacts/previous.json` để tái sử dụng và cộng dồn
+evidence success/failure từ các run trước vào contract bank.
+
+Report ghi accuracy/exact match, parse/schema/recovery rate, paired flips,
+calls/token/latency trên mỗi task, chi phí tổng/per-task/per-success, cache và
+reasoning tokens. Mẫu mặc định chỉ là stress slice 3 build + 4 test nên không
+được diễn giải như accuracy đại diện cho toàn GSM8K.
+
 Thí nghiệm xây bank từ split `build`, tune/minimize trên `dev`, audit boundary trên `audit`, rồi freeze và đánh giá trên `final`. Báo cáo JSON chứa success, paired beneficial/harmful flips, verifier/recovery cost và khoảng tin cậy bootstrap cluster theo template group.
 
 ## Synthetic task và giới hạn claim

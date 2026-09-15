@@ -1,0 +1,71 @@
+{
+  "arms": {
+    "contract_check": {
+      "downstream_error_rate": 0.0,
+      "macro_group_success": 1.0,
+      "recovery_success_rate": 1.0,
+      "runtime_cost_per_task": 3.5499999999999994,
+      "success_rate": 1.0,
+      "task_count": 6,
+      "verifier_cost_per_task": 0.05000000000000001
+    },
+    "no_memory": {
+      "downstream_error_rate": 0.5,
+      "macro_group_success": 0.5,
+      "recovery_success_rate": 0.0,
+      "runtime_cost_per_task": 3.0,
+      "success_rate": 0.5,
+      "task_count": 6,
+      "verifier_cost_per_task": 0.0
+    },
+    "success_only_memory": {
+      "downstream_error_rate": 0.3333333333333333,
+      "macro_group_success": 0.6666666666666666,
+      "recovery_success_rate": 0.0,
+      "runtime_cost_per_task": 3.0,
+      "success_rate": 0.6666666666666666,
+      "task_count": 6,
+      "verifier_cost_per_task": 0.0
+    }
+  },
+  "claim_supported_in_this_run": true,
+  "copromem": {
+    "admission": {
+      "admitted": true,
+      "reasons": [
+        "passed replay, transfer, and harm gates"
+      ]
+    },
+    "admitted_contract_count": 1
+  },
+  "paired_copromem_vs_no_memory": {
+    "beneficial_flips": 3,
+    "harmful_flips": 0,
+    "net_gain": 3
+  },
+  "paired_copromem_vs_success_only": {
+    "beneficial_flips": 2,
+    "harmful_flips": 0,
+    "net_gain": 2
+  },
+  "protocol": {
+    "claim": "executable failure-derived contracts outperform no memory and success-only memory",
+    "held_out_groups": [
+      "final-template-00",
+      "final-template-01"
+    ],
+    "seed": 7,
+    "synthetic_only": true,
+    "task_count": 6
+  },
+  "success_only_memory": {
+    "remembered_plan_fields": [
+      "join_keys",
+      "declared_cardinality",
+      "expected_rows",
+      "rationale"
+    ],
+    "source": "successful build trajectories only",
+    "successful_trajectory_count": 8
+  }
+}

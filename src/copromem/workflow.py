@@ -40,9 +40,15 @@ class WorkflowEngine:
     complete an already-public plan artifact from the public task schema.
     """
 
-    def __init__(self, bank: ContractBank | None = None, verifier_cost: float = 0.05):
+    def __init__(
+        self,
+        bank: ContractBank | None = None,
+        verifier_cost: float = 0.05,
+        success_memory_fields: tuple[str, ...] = (),
+    ):
         self.bank = bank or ContractBank()
         self.verifier_cost = verifier_cost
+        self.success_memory_fields = success_memory_fields
 
     def run(self, task: JoinTask, profile: RoleProfile, mode: RunMode, seed: int) -> WorkflowRun:
         cost = CostLedger()
@@ -168,7 +174,9 @@ class WorkflowEngine:
         force_complete: bool,
     ) -> PlanArtifact:
         omission_rate = profile.planner_omission_rate
-        if mode is RunMode.TEXT_RULE:
+        if mode is RunMode.SUCCESS_ONLY_MEMORY and "declared_cardinality" in self.success_memory_fields:
+            omission_rate *= 1.0 - profile.success_memory_compliance
+        elif mode is RunMode.TEXT_RULE:
             omission_rate *= 1.0 - profile.text_rule_compliance
         elif mode is RunMode.CONTRASTIVE_PATCH:
             omission_rate *= 1.0 - profile.patch_compliance

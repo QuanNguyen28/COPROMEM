@@ -1,0 +1,402 @@
+{
+  "build_collection": {
+    "metrics": {
+      "agent_system": {
+        "provider_models": [
+          "deepseek/deepseek-v4-flash"
+        ],
+        "recovered_task_success_rate": null,
+        "recovery_activation_rate": 0.0,
+        "recovery_verifier_pass_rate": null
+      },
+      "cost": {
+        "cached_tokens": 0,
+        "completion_tokens": 1372,
+        "prompt_tokens": 1678,
+        "reasoning_tokens": 701,
+        "total_usd": 0.0005393488,
+        "usd_per_success": 0.0002696744,
+        "usd_per_task": 0.00017978293333333333
+      },
+      "efficiency": {
+        "agent_calls": 6,
+        "calls_per_task": 2.0,
+        "mean_task_latency_seconds": 11.259854333334564,
+        "p50_task_latency_seconds": 9.258502800003043,
+        "p95_task_latency_seconds": 16.156501900004514,
+        "successful_tasks_per_1k_tokens": 0.6557377049180327,
+        "tokens_per_task": 1016.6666666666666,
+        "total_tokens": 3050
+      },
+      "task_specific": {
+        "exact_numeric_match_rate": 0.6666666666666666,
+        "final_plan_schema_pass_rate": 0.3333333333333333,
+        "initial_plan_schema_pass_rate": 0.3333333333333333,
+        "median_absolute_error_on_parsed_failures": null
+      },
+      "task_success": {
+        "answer_parse_rate": 0.6666666666666666,
+        "correct": 2,
+        "pass_at_1": 0.6666666666666666,
+        "task_count": 3
+      }
+    },
+    "tasks": [
+      {
+        "calls": 2,
+        "correct": true,
+        "final_plan_valid": false,
+        "gold": "76",
+        "id": "train-1202",
+        "initial_plan_valid": false,
+        "predicted": "76",
+        "recovered": false
+      },
+      {
+        "calls": 2,
+        "correct": false,
+        "final_plan_valid": true,
+        "gold": "40",
+        "id": "train-2345",
+        "initial_plan_valid": true,
+        "predicted": null,
+        "recovered": false
+      },
+      {
+        "calls": 2,
+        "correct": true,
+        "final_plan_valid": false,
+        "gold": "6",
+        "id": "train-3331",
+        "initial_plan_valid": false,
+        "predicted": "6",
+        "recovered": false
+      }
+    ]
+  },
+  "evaluation": {
+    "copromem": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": null,
+          "recovery_activation_rate": 0.0,
+          "recovery_verifier_pass_rate": null
+        },
+        "cost": {
+          "cached_tokens": 390,
+          "completion_tokens": 1475,
+          "prompt_tokens": 2031,
+          "reasoning_tokens": 679,
+          "total_usd": 0.0004524322,
+          "usd_per_success": 0.0002262161,
+          "usd_per_task": 0.00011310805
+        },
+        "efficiency": {
+          "agent_calls": 8,
+          "calls_per_task": 2.0,
+          "mean_task_latency_seconds": 16.951497774998643,
+          "p50_task_latency_seconds": 13.608407199993962,
+          "p95_task_latency_seconds": 29.685574399998586,
+          "successful_tasks_per_1k_tokens": 0.5704506560182544,
+          "tokens_per_task": 876.5,
+          "total_tokens": 3506
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.5,
+          "final_plan_schema_pass_rate": 0.5,
+          "initial_plan_schema_pass_rate": 0.5,
+          "median_absolute_error_on_parsed_failures": 0.6667
+        },
+        "task_success": {
+          "answer_parse_rate": 0.75,
+          "correct": 2,
+          "pass_at_1": 0.5,
+          "task_count": 4
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": false,
+          "final_plan_valid": false,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_plan_valid": false,
+          "predicted": null,
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_plan_valid": false,
+          "predicted": "145",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_plan_valid": true,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_plan_valid": true,
+          "predicted": "2.6667",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": true,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_plan_valid": true,
+          "predicted": "29",
+          "recovered": false
+        }
+      ]
+    },
+    "no_memory": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": null,
+          "recovery_activation_rate": 0.0,
+          "recovery_verifier_pass_rate": null
+        },
+        "cost": {
+          "cached_tokens": 0,
+          "completion_tokens": 1678,
+          "prompt_tokens": 1874,
+          "reasoning_tokens": 1159,
+          "total_usd": 0.000626140072,
+          "usd_per_success": 0.000313070036,
+          "usd_per_task": 0.000156535018
+        },
+        "efficiency": {
+          "agent_calls": 8,
+          "calls_per_task": 2.0,
+          "mean_task_latency_seconds": 8.591910224999083,
+          "p50_task_latency_seconds": 4.716806299999007,
+          "p95_task_latency_seconds": 18.141480300000694,
+          "successful_tasks_per_1k_tokens": 0.5630630630630631,
+          "tokens_per_task": 888.0,
+          "total_tokens": 3552
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.5,
+          "final_plan_schema_pass_rate": 0.25,
+          "initial_plan_schema_pass_rate": 0.25,
+          "median_absolute_error_on_parsed_failures": null
+        },
+        "task_success": {
+          "answer_parse_rate": 0.5,
+          "correct": 2,
+          "pass_at_1": 0.5,
+          "task_count": 4
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": false,
+          "final_plan_valid": false,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_plan_valid": false,
+          "predicted": null,
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_plan_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_plan_valid": false,
+          "predicted": null,
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": true,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_plan_valid": true,
+          "predicted": "2",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": false,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_plan_valid": false,
+          "predicted": "29",
+          "recovered": false
+        }
+      ]
+    },
+    "success_only_memory": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": null,
+          "recovery_activation_rate": 0.0,
+          "recovery_verifier_pass_rate": null
+        },
+        "cost": {
+          "cached_tokens": 384,
+          "completion_tokens": 2758,
+          "prompt_tokens": 2218,
+          "reasoning_tokens": 1857,
+          "total_usd": 0.0009248640000000001,
+          "usd_per_success": 0.00030828800000000004,
+          "usd_per_task": 0.00023121600000000002
+        },
+        "efficiency": {
+          "agent_calls": 8,
+          "calls_per_task": 2.0,
+          "mean_task_latency_seconds": 12.055940599997484,
+          "p50_task_latency_seconds": 11.683395799991558,
+          "p95_task_latency_seconds": 15.153679900002317,
+          "successful_tasks_per_1k_tokens": 0.6028938906752411,
+          "tokens_per_task": 1244.0,
+          "total_tokens": 4976
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.75,
+          "final_plan_schema_pass_rate": 0.75,
+          "initial_plan_schema_pass_rate": 0.75,
+          "median_absolute_error_on_parsed_failures": 0.666
+        },
+        "task_success": {
+          "answer_parse_rate": 1.0,
+          "correct": 3,
+          "pass_at_1": 0.75,
+          "task_count": 4
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": true,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_plan_valid": true,
+          "predicted": "20",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": true,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_plan_valid": true,
+          "predicted": "145",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_plan_valid": true,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_plan_valid": true,
+          "predicted": "2.666",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": false,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_plan_valid": false,
+          "predicted": "29",
+          "recovered": false
+        }
+      ]
+    }
+  },
+  "experiment_totals": {
+    "failed_http_attempts": 0,
+    "http_attempts": 30,
+    "measured_agent_calls": 30,
+    "measured_cost_usd": 0.0025427850720000002
+  },
+  "limitations": [
+    "Only four evaluation tasks; metrics are descriptive and have very high uncertainty.",
+    "The answer-blind stress slice is not a representative estimate of GSM8K accuracy.",
+    "GSM8K may be present in model training data; this does not establish contamination-free generalization.",
+    "The procedural contract is admitted from tiny observational evidence and is not statistically validated.",
+    "Provider inference can be nondeterministic even at temperature zero."
+  ],
+  "memory_construction": {
+    "construction_agent_calls": 0,
+    "copromem_contract": {
+      "admitted": false,
+      "evidence": {
+        "build_failures": 1,
+        "failures_with_observable_violation": 0,
+        "successful_valid_handoffs": 0
+      },
+      "interface": "planner_to_solver",
+      "recovery": "return_to_planner",
+      "required_fields": [],
+      "verifier": "non-empty typed fields"
+    },
+    "success_only_memory_available": false,
+    "success_only_source": "first correct build trajectory with verifier-valid plan"
+  },
+  "paired": {
+    "copromem_vs_no_memory": {
+      "beneficial_flips": 1,
+      "harmful_flips": 1,
+      "net_gain": 0
+    },
+    "copromem_vs_success_only_memory": {
+      "beneficial_flips": 0,
+      "harmful_flips": 1,
+      "net_gain": -1
+    }
+  },
+  "protocol": {
+    "arms": [
+      "no_memory",
+      "success_only_memory",
+      "copromem"
+    ],
+    "benchmark": "GSM8K",
+    "build_tasks": 3,
+    "dataset_source": {
+      "test": "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl",
+      "train": "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/train.jsonl"
+    },
+    "evaluation_tasks": 4,
+    "model": {
+      "context_length": 1048576,
+      "id": "deepseek/deepseek-v4-flash",
+      "name": "DeepSeek: DeepSeek V4 Flash 0423",
+      "pricing_usd_per_token": {
+        "completion": "0.000000177212",
+        "input_cache_read": "0.0000000177212",
+        "prompt": "0.000000088606"
+      }
+    },
+    "sampling": "answer-blind longest-question stress slice; not representative random sampling",
+    "temperature": 0
+  }
+}

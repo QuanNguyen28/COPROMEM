@@ -1,0 +1,945 @@
+{
+  "agent_workflow_memory": "1. **Calculate total time for a multi-step process with a known per-unit time and a fixed additional task.**  \n   Multiply the number of remaining items by the time per item, then add the fixed task time.\n\n2. **Compute total contributions from multiple categories for two individuals, then sum.**  \n   For each category, multiply the per-occurrence count by the number of occurrences for each person, sum each person\u2019s total, then add the two totals.\n\n3. **Find the difference between two totals derived from per-item quantities and counts.**  \n   Compute the old total by multiplying each item\u2019s quantity by its count and summing; compute the new total similarly; subtract the new total from the old total.\n\n4. **Determine the number of items to remove to meet a weight limit, given per-item weight and initial count.**  \n   Convert the weight limit to the same unit as per-item weight, compute the maximum allowed items, then subtract from the initial count.",
+  "build_task_ids": [
+    "train-0399",
+    "train-0636",
+    "train-1202",
+    "train-1531",
+    "train-1647",
+    "train-2345",
+    "train-3331",
+    "train-3822",
+    "train-4670",
+    "train-5918"
+  ],
+  "completed_arms": {
+    "agent_workflow_memory": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": null,
+          "recovery_activation_rate": 0.0,
+          "recovery_verifier_pass_rate": null
+        },
+        "cost": {
+          "cached_tokens": 6316,
+          "completion_tokens": 7056,
+          "prompt_tokens": 13375,
+          "reasoning_tokens": 3190,
+          "total_usd": 0.002429511878,
+          "usd_per_success": 0.00014291246341176472,
+          "usd_per_task": 0.0001214755939
+        },
+        "efficiency": {
+          "agent_calls": 40,
+          "calls_per_task": 2.0,
+          "mean_task_latency_seconds": 14.224411135000627,
+          "p50_task_latency_seconds": 13.175035100000969,
+          "p95_task_latency_seconds": 23.09546219999902,
+          "successful_tasks_per_1k_tokens": 0.8320689148842445,
+          "tokens_per_task": 1021.55,
+          "total_tokens": 20431
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.85,
+          "final_plan_schema_pass_rate": 0.5,
+          "initial_plan_schema_pass_rate": 0.5,
+          "median_absolute_error_on_parsed_failures": null
+        },
+        "task_success": {
+          "answer_parse_rate": 0.85,
+          "correct": 17,
+          "pass_at_1": 0.85,
+          "task_count": 20
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "200",
+          "id": "test-0041",
+          "initial_artifact_valid": false,
+          "predicted": "200"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0183",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "24",
+          "id": "test-0193",
+          "initial_artifact_valid": true,
+          "predicted": "24"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "4",
+          "id": "test-0340",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "350",
+          "id": "test-0415",
+          "initial_artifact_valid": false,
+          "predicted": "350"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0459",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "43500",
+          "id": "test-0640",
+          "initial_artifact_valid": true,
+          "predicted": "43500"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "36",
+          "id": "test-0677",
+          "initial_artifact_valid": true,
+          "predicted": "36"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "11",
+          "id": "test-0960",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "374",
+          "id": "test-0965",
+          "initial_artifact_valid": false,
+          "predicted": "374"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "94",
+          "id": "test-1012",
+          "initial_artifact_valid": true,
+          "predicted": "94"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "34",
+          "id": "test-1029",
+          "initial_artifact_valid": true,
+          "predicted": "34"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_artifact_valid": false,
+          "predicted": "145"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-1176",
+          "initial_artifact_valid": false,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "320",
+          "id": "test-1195",
+          "initial_artifact_valid": true,
+          "predicted": "320"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_artifact_valid": false,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_artifact_valid": true,
+          "predicted": "29"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "210",
+          "id": "test-1264",
+          "initial_artifact_valid": false,
+          "predicted": "210"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1306",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        }
+      ]
+    },
+    "copromem": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": 0.875,
+          "recovery_activation_rate": 0.4,
+          "recovery_verifier_pass_rate": 0.5
+        },
+        "cost": {
+          "cached_tokens": 3930,
+          "completion_tokens": 8589,
+          "prompt_tokens": 11906,
+          "reasoning_tokens": 3440,
+          "total_usd": 0.002599017544,
+          "usd_per_success": 0.0001624385965,
+          "usd_per_task": 0.0001299508772
+        },
+        "efficiency": {
+          "agent_calls": 48,
+          "calls_per_task": 2.4,
+          "mean_task_latency_seconds": 13.974824129997796,
+          "p50_task_latency_seconds": 12.466588000002957,
+          "p95_task_latency_seconds": 27.122628500001156,
+          "successful_tasks_per_1k_tokens": 0.7806782141985851,
+          "tokens_per_task": 1024.75,
+          "total_tokens": 20495
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.8,
+          "final_plan_schema_pass_rate": 0.8,
+          "initial_plan_schema_pass_rate": 0.6,
+          "median_absolute_error_on_parsed_failures": null
+        },
+        "task_success": {
+          "answer_parse_rate": 0.8,
+          "correct": 16,
+          "pass_at_1": 0.8,
+          "task_count": 20
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "200",
+          "id": "test-0041",
+          "initial_artifact_valid": true,
+          "predicted": "200"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0183",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "24",
+          "id": "test-0193",
+          "initial_artifact_valid": false,
+          "predicted": "24"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "4",
+          "id": "test-0340",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "350",
+          "id": "test-0415",
+          "initial_artifact_valid": false,
+          "predicted": "350"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0459",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "43500",
+          "id": "test-0640",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "36",
+          "id": "test-0677",
+          "initial_artifact_valid": true,
+          "predicted": "36"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "11",
+          "id": "test-0960",
+          "initial_artifact_valid": false,
+          "predicted": "11"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "374",
+          "id": "test-0965",
+          "initial_artifact_valid": false,
+          "predicted": "374"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "94",
+          "id": "test-1012",
+          "initial_artifact_valid": false,
+          "predicted": "94"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "34",
+          "id": "test-1029",
+          "initial_artifact_valid": false,
+          "predicted": "34"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_artifact_valid": false,
+          "predicted": "145"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1176",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "320",
+          "id": "test-1195",
+          "initial_artifact_valid": true,
+          "predicted": "320"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_artifact_valid": true,
+          "predicted": "29"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "210",
+          "id": "test-1264",
+          "initial_artifact_valid": true,
+          "predicted": "210"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1306",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        }
+      ]
+    },
+    "critic": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": 0.4,
+          "recovery_activation_rate": 1.0,
+          "recovery_verifier_pass_rate": 0.4
+        },
+        "cost": {
+          "cached_tokens": 4129,
+          "completion_tokens": 12645,
+          "prompt_tokens": 16428,
+          "reasoning_tokens": 8847,
+          "total_usd": 0.004298991026,
+          "usd_per_success": 0.00053737387825,
+          "usd_per_task": 0.00021494955130000001
+        },
+        "efficiency": {
+          "agent_calls": 60,
+          "calls_per_task": 3.0,
+          "mean_task_latency_seconds": 19.53564415999972,
+          "p50_task_latency_seconds": 16.9954804999943,
+          "p95_task_latency_seconds": 29.174691500003973,
+          "successful_tasks_per_1k_tokens": 0.2751694011625907,
+          "tokens_per_task": 1453.65,
+          "total_tokens": 29073
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.4,
+          "final_plan_schema_pass_rate": 0.4,
+          "initial_plan_schema_pass_rate": 0.85,
+          "median_absolute_error_on_parsed_failures": null
+        },
+        "task_success": {
+          "answer_parse_rate": 0.4,
+          "correct": 8,
+          "pass_at_1": 0.4,
+          "task_count": 20
+        }
+      },
+      "tasks": [
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "200",
+          "id": "test-0041",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_artifact_valid": true,
+          "predicted": "20"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0183",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "24",
+          "id": "test-0193",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "4",
+          "id": "test-0340",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "350",
+          "id": "test-0415",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-0459",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "43500",
+          "id": "test-0640",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "36",
+          "id": "test-0677",
+          "initial_artifact_valid": true,
+          "predicted": "36"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "11",
+          "id": "test-0960",
+          "initial_artifact_valid": true,
+          "predicted": "11"
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "374",
+          "id": "test-0965",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "94",
+          "id": "test-1012",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "34",
+          "id": "test-1029",
+          "initial_artifact_valid": true,
+          "predicted": "34.0"
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-1176",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "320",
+          "id": "test-1195",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_artifact_valid": true,
+          "predicted": "29"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "210",
+          "id": "test-1264",
+          "initial_artifact_valid": false,
+          "predicted": "210"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1306",
+          "initial_artifact_valid": true,
+          "predicted": "2.0"
+        }
+      ]
+    },
+    "expel": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": null,
+          "recovery_activation_rate": 0.0,
+          "recovery_verifier_pass_rate": null
+        },
+        "cost": {
+          "cached_tokens": 3757,
+          "completion_tokens": 7218,
+          "prompt_tokens": 9466,
+          "reasoning_tokens": 2750,
+          "total_usd": 0.002091654616,
+          "usd_per_success": 0.00014940390114285713,
+          "usd_per_task": 0.00010458273079999999
+        },
+        "efficiency": {
+          "agent_calls": 40,
+          "calls_per_task": 2.0,
+          "mean_task_latency_seconds": 12.35055888500283,
+          "p50_task_latency_seconds": 12.066040099998645,
+          "p95_task_latency_seconds": 19.01902289999998,
+          "successful_tasks_per_1k_tokens": 0.8391273076000959,
+          "tokens_per_task": 834.2,
+          "total_tokens": 16684
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.7,
+          "final_plan_schema_pass_rate": 0.6,
+          "initial_plan_schema_pass_rate": 0.6,
+          "median_absolute_error_on_parsed_failures": 1.0
+        },
+        "task_success": {
+          "answer_parse_rate": 0.85,
+          "correct": 14,
+          "pass_at_1": 0.7,
+          "task_count": 20
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "200",
+          "id": "test-0041",
+          "initial_artifact_valid": true,
+          "predicted": "200"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_artifact_valid": true,
+          "predicted": "20"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0183",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "24",
+          "id": "test-0193",
+          "initial_artifact_valid": true,
+          "predicted": "24"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "4",
+          "id": "test-0340",
+          "initial_artifact_valid": true,
+          "predicted": "3"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "350",
+          "id": "test-0415",
+          "initial_artifact_valid": true,
+          "predicted": "350"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0459",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "43500",
+          "id": "test-0640",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "36",
+          "id": "test-0677",
+          "initial_artifact_valid": false,
+          "predicted": "36"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "11",
+          "id": "test-0960",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "374",
+          "id": "test-0965",
+          "initial_artifact_valid": false,
+          "predicted": "374"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "94",
+          "id": "test-1012",
+          "initial_artifact_valid": false,
+          "predicted": "94"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "34",
+          "id": "test-1029",
+          "initial_artifact_valid": false,
+          "predicted": "34"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_artifact_valid": false,
+          "predicted": "145"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1176",
+          "initial_artifact_valid": true,
+          "predicted": "3"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "320",
+          "id": "test-1195",
+          "initial_artifact_valid": true,
+          "predicted": "320"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_artifact_valid": true,
+          "predicted": "2.6666666666666665"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_artifact_valid": true,
+          "predicted": "29"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "210",
+          "id": "test-1264",
+          "initial_artifact_valid": false,
+          "predicted": "210"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-1306",
+          "initial_artifact_valid": false,
+          "predicted": null
+        }
+      ]
+    }
+  },
+  "completed_stage": "copromem",
+  "evaluation_task_ids": [
+    "test-0041",
+    "test-0144",
+    "test-0183",
+    "test-0193",
+    "test-0340",
+    "test-0415",
+    "test-0459",
+    "test-0640",
+    "test-0677",
+    "test-0960",
+    "test-0965",
+    "test-1012",
+    "test-1029",
+    "test-1077",
+    "test-1176",
+    "test-1195",
+    "test-1199",
+    "test-1209",
+    "test-1264",
+    "test-1306"
+  ],
+  "expel_memory": "None",
+  "provider_calls_so_far": 210,
+  "provider_cost_usd_so_far": 0.013183364132,
+  "request_seed": 42,
+  "status": "in_progress"
+}

@@ -1,0 +1,1312 @@
+{
+  "evaluation": {
+    "agent_workflow_memory": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": null,
+          "recovery_activation_rate": 0.0,
+          "recovery_verifier_pass_rate": null
+        },
+        "cost": {
+          "cached_tokens": 6316,
+          "completion_tokens": 7056,
+          "prompt_tokens": 13375,
+          "reasoning_tokens": 3190,
+          "total_usd": 0.002429511878,
+          "usd_per_success": 0.00014291246341176472,
+          "usd_per_task": 0.0001214755939
+        },
+        "efficiency": {
+          "agent_calls": 40,
+          "calls_per_task": 2.0,
+          "mean_task_latency_seconds": 14.224411135000627,
+          "p50_task_latency_seconds": 13.175035100000969,
+          "p95_task_latency_seconds": 23.09546219999902,
+          "successful_tasks_per_1k_tokens": 0.8320689148842445,
+          "tokens_per_task": 1021.55,
+          "total_tokens": 20431
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.85,
+          "final_plan_schema_pass_rate": 0.5,
+          "initial_plan_schema_pass_rate": 0.5,
+          "median_absolute_error_on_parsed_failures": null
+        },
+        "task_success": {
+          "answer_parse_rate": 0.85,
+          "correct": 17,
+          "pass_at_1": 0.85,
+          "task_count": 20
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "200",
+          "id": "test-0041",
+          "initial_artifact_valid": false,
+          "predicted": "200"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0183",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "24",
+          "id": "test-0193",
+          "initial_artifact_valid": true,
+          "predicted": "24"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "4",
+          "id": "test-0340",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "350",
+          "id": "test-0415",
+          "initial_artifact_valid": false,
+          "predicted": "350"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0459",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "43500",
+          "id": "test-0640",
+          "initial_artifact_valid": true,
+          "predicted": "43500"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "36",
+          "id": "test-0677",
+          "initial_artifact_valid": true,
+          "predicted": "36"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "11",
+          "id": "test-0960",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "374",
+          "id": "test-0965",
+          "initial_artifact_valid": false,
+          "predicted": "374"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "94",
+          "id": "test-1012",
+          "initial_artifact_valid": true,
+          "predicted": "94"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "34",
+          "id": "test-1029",
+          "initial_artifact_valid": true,
+          "predicted": "34"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_artifact_valid": false,
+          "predicted": "145"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-1176",
+          "initial_artifact_valid": false,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "320",
+          "id": "test-1195",
+          "initial_artifact_valid": true,
+          "predicted": "320"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_artifact_valid": false,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_artifact_valid": true,
+          "predicted": "29"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "210",
+          "id": "test-1264",
+          "initial_artifact_valid": false,
+          "predicted": "210"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1306",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        }
+      ]
+    },
+    "copromem": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": 0.875,
+          "recovery_activation_rate": 0.4,
+          "recovery_verifier_pass_rate": 0.5
+        },
+        "cost": {
+          "cached_tokens": 3930,
+          "completion_tokens": 8589,
+          "prompt_tokens": 11906,
+          "reasoning_tokens": 3440,
+          "total_usd": 0.002599017544,
+          "usd_per_success": 0.0001624385965,
+          "usd_per_task": 0.0001299508772
+        },
+        "efficiency": {
+          "agent_calls": 48,
+          "calls_per_task": 2.4,
+          "mean_task_latency_seconds": 13.974824129997796,
+          "p50_task_latency_seconds": 12.466588000002957,
+          "p95_task_latency_seconds": 27.122628500001156,
+          "successful_tasks_per_1k_tokens": 0.7806782141985851,
+          "tokens_per_task": 1024.75,
+          "total_tokens": 20495
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.8,
+          "final_plan_schema_pass_rate": 0.8,
+          "initial_plan_schema_pass_rate": 0.6,
+          "median_absolute_error_on_parsed_failures": null
+        },
+        "task_success": {
+          "answer_parse_rate": 0.8,
+          "correct": 16,
+          "pass_at_1": 0.8,
+          "task_count": 20
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "200",
+          "id": "test-0041",
+          "initial_artifact_valid": true,
+          "predicted": "200"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0183",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "24",
+          "id": "test-0193",
+          "initial_artifact_valid": false,
+          "predicted": "24"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "4",
+          "id": "test-0340",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "350",
+          "id": "test-0415",
+          "initial_artifact_valid": false,
+          "predicted": "350"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0459",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "43500",
+          "id": "test-0640",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "36",
+          "id": "test-0677",
+          "initial_artifact_valid": true,
+          "predicted": "36"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "11",
+          "id": "test-0960",
+          "initial_artifact_valid": false,
+          "predicted": "11"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "374",
+          "id": "test-0965",
+          "initial_artifact_valid": false,
+          "predicted": "374"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "94",
+          "id": "test-1012",
+          "initial_artifact_valid": false,
+          "predicted": "94"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "34",
+          "id": "test-1029",
+          "initial_artifact_valid": false,
+          "predicted": "34"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_artifact_valid": false,
+          "predicted": "145"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1176",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "320",
+          "id": "test-1195",
+          "initial_artifact_valid": true,
+          "predicted": "320"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_artifact_valid": true,
+          "predicted": "29"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "210",
+          "id": "test-1264",
+          "initial_artifact_valid": true,
+          "predicted": "210"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1306",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        }
+      ]
+    },
+    "critic": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": 0.4,
+          "recovery_activation_rate": 1.0,
+          "recovery_verifier_pass_rate": 0.4
+        },
+        "cost": {
+          "cached_tokens": 4129,
+          "completion_tokens": 12645,
+          "prompt_tokens": 16428,
+          "reasoning_tokens": 8847,
+          "total_usd": 0.004298991026,
+          "usd_per_success": 0.00053737387825,
+          "usd_per_task": 0.00021494955130000001
+        },
+        "efficiency": {
+          "agent_calls": 60,
+          "calls_per_task": 3.0,
+          "mean_task_latency_seconds": 19.53564415999972,
+          "p50_task_latency_seconds": 16.9954804999943,
+          "p95_task_latency_seconds": 29.174691500003973,
+          "successful_tasks_per_1k_tokens": 0.2751694011625907,
+          "tokens_per_task": 1453.65,
+          "total_tokens": 29073
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.4,
+          "final_plan_schema_pass_rate": 0.4,
+          "initial_plan_schema_pass_rate": 0.85,
+          "median_absolute_error_on_parsed_failures": null
+        },
+        "task_success": {
+          "answer_parse_rate": 0.4,
+          "correct": 8,
+          "pass_at_1": 0.4,
+          "task_count": 20
+        }
+      },
+      "tasks": [
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "200",
+          "id": "test-0041",
+          "initial_artifact_valid": false,
+          "method_details": {
+            "critique": "None",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "ValueError: only single-target assignments are allowed",
+            "initial_prediction": null
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "The code correctly calculates the profit as $20 based on the given numbers. However, the problem statement says \"Kim\" at the beginning but then asks for \"Lucas\" at the end \u2014 this is a name inconsistency in the problem, not a code issue. No correction is needed for the code itself.\n\nNo correction needed.",
+            "final_execution": "Done; answer = 20",
+            "initial_execution": "Done; answer = 20",
+            "initial_prediction": "20"
+          },
+          "predicted": "20"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0183",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "None",
+            "final_execution": "Done; answer = 2",
+            "initial_execution": "Done; answer = 2",
+            "initial_prediction": "2"
+          },
+          "predicted": "2"
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "24",
+          "id": "test-0193",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "None",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "Done; answer = 24",
+            "initial_prediction": "24"
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "4",
+          "id": "test-0340",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": " The problem is that the code incorrectly adds 1 ball back at the end. The story says he starts with 3 balls, adds 1 each week for 4 weeks (so 3 + 4 = 7), then drops 3 (7 - 3 = 4), 2 are caught (so 2 are recovered, meaning he still has those 2, so 4 - 2 = 2? No\u2014wait, the correct interpretation is: he drops 3, so he loses 3 from his hands, but 2 are caught and returned to him, so net loss is 1 ball. So 7 - 1 = 6. The code does 3 + 4 - 3 - 2 + 1 = 3, which is wrong because it subtracts the 2 caught balls as if they were lost, then adds 1 back incorrectly. The correct answer should be 6, not 3. So the code has a semantic error in how it handles the caught balls.",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "Done; answer = 3",
+            "initial_prediction": "3"
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "350",
+          "id": "test-0415",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "The code just sets `answer = 350` without actually solving the problem. There is no reasoning, no variable definitions, and no calculations based on the word problem. This is not a valid solution\u2014it's just guessing a number.  \n\nA correct solution would define variables for each category of apples, set up equations based on the problem description, and solve for the unknown (apples from average trees).",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "Done; answer = 350",
+            "initial_prediction": "350"
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-0459",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "None",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "Done; answer = 2",
+            "initial_prediction": "2"
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "43500",
+          "id": "test-0640",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "No correction is needed. The code correctly calculates the total cost as $43,500.",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "Done; answer = 43500.0",
+            "initial_prediction": "43500.0"
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "36",
+          "id": "test-0677",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "The code correctly calculates the number of additional signatures needed (36) to reach a total of 100 from the current total of 64. No correction is needed.",
+            "final_execution": "Done; answer = 36",
+            "initial_execution": "Done; answer = 36",
+            "initial_prediction": "36"
+          },
+          "predicted": "36"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "11",
+          "id": "test-0960",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "None",
+            "final_execution": "Done; answer = 11",
+            "initial_execution": "Done; answer = 9",
+            "initial_prediction": "9"
+          },
+          "predicted": "11"
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "374",
+          "id": "test-0965",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "The provided solution outputs a single number (374) with no calculation shown. The execution simply says \"Done; answer = 374\". \n\nThe problem is that the answer is incorrect. Let's verify:\n\n- First leg south: 10 h \u00d7 30 mph = 300 miles south\n- Second leg north: 2 h \u00d7 18 mph = 36 miles north (so net south = 300 - 36 = 264)\n- Third leg south: 5 h \u00d7 22 mph = 110 miles south\n- Total net south distance = 264 + 110 = 374 miles\n\nThe calculation 374 is actually correct for the net displacement. So no correction is needed.",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "Done; answer = 374",
+            "initial_prediction": "374"
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "94",
+          "id": "test-1012",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "None",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "Done; answer = 94",
+            "initial_prediction": "94"
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "34",
+          "id": "test-1029",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "The code is sematically correct. No correction is needed.",
+            "final_execution": "Done; answer = 34.0",
+            "initial_execution": "Done; answer = 34.0",
+            "initial_prediction": "34.0"
+          },
+          "predicted": "34.0"
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "The code correctly calculates the arrival time of the fourth train as 145 minutes from the start. Since Paul is waiting from time 0 (when he's at the station) until the fourth train arrives, the total wait time is indeed 145 minutes.\n\nNo correction is needed.",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "Done; answer = 145.0",
+            "initial_prediction": "145.0"
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-1176",
+          "initial_artifact_valid": false,
+          "method_details": {
+            "critique": "The code is missing entirely \u2014 there's no actual Python code provided. The error message (\"only single-target assignments are allowed\") is likely from some other code or parser, not from the solution. Since no code exists to verify, the problem is simply that no solution was written. \n\n**No correction is needed** because there's no code to correct, but a solution still needs to be written.",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "ValueError: only single-target assignments are allowed",
+            "initial_prediction": null
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "320",
+          "id": "test-1195",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "None",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "Done; answer = 320",
+            "initial_prediction": "320"
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "None",
+            "final_execution": "ValueError: only single-target assignments are allowed",
+            "initial_execution": "Done; answer = 2.0",
+            "initial_prediction": "2.0"
+          },
+          "predicted": null
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "The code is correct. It calculates:\n\n- Low: 1 liter/day \u00d7 3 days = 3 liters\n- Medium: 2 liters/day \u00d7 3 days = 6 liters\n- High: 4 liters/day \u00d7 5 days = 20 liters\n- Total: 3 + 6 + 20 = 29 liters\n\nNo correction is needed.",
+            "final_execution": "Done; answer = 29",
+            "initial_execution": "Done; answer = 29",
+            "initial_prediction": "29"
+          },
+          "predicted": "29"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "210",
+          "id": "test-1264",
+          "initial_artifact_valid": false,
+          "method_details": {
+            "critique": "None",
+            "final_execution": "Done; answer = 210",
+            "initial_execution": "ValueError: only single-target assignments are allowed",
+            "initial_prediction": null
+          },
+          "predicted": "210"
+        },
+        {
+          "calls": 3,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1306",
+          "initial_artifact_valid": true,
+          "method_details": {
+            "critique": "The code incorrectly interprets \"half as many test tubes as requested\" as `requested_test_tubes // 2` (integer division). Since 16 is even, this happens to give the correct result (8), but the semantic issue is that it should be `requested_test_tubes / 2` or `requested_test_tubes * 0.5` to be mathematically correct for the general case.\n\nMore importantly, the code misinterprets the problem statement: \"Igor gathered half as many test tubes as requested, two more than the number of Petri dishes requested.\" The phrase \"two more than the number of Petri dishes requested\" means Igor gathered 2 more than the requested Petri dishes (14 + 2 = 16), which the code correctly implements. However, the problem says he gathered \"half as many test tubes as requested\" - this is correctly 8.\n\nThe code's logic and arithmetic are actually correct for this specific problem, yielding the right answer of 2 lost beakers. No correction is needed.",
+            "final_execution": "Done; answer = 2.0",
+            "initial_execution": "Done; answer = 2",
+            "initial_prediction": "2"
+          },
+          "predicted": "2.0"
+        }
+      ]
+    },
+    "expel": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": null,
+          "recovery_activation_rate": 0.0,
+          "recovery_verifier_pass_rate": null
+        },
+        "cost": {
+          "cached_tokens": 3757,
+          "completion_tokens": 7218,
+          "prompt_tokens": 9466,
+          "reasoning_tokens": 2750,
+          "total_usd": 0.002091654616,
+          "usd_per_success": 0.00014940390114285713,
+          "usd_per_task": 0.00010458273079999999
+        },
+        "efficiency": {
+          "agent_calls": 40,
+          "calls_per_task": 2.0,
+          "mean_task_latency_seconds": 12.35055888500283,
+          "p50_task_latency_seconds": 12.066040099998645,
+          "p95_task_latency_seconds": 19.01902289999998,
+          "successful_tasks_per_1k_tokens": 0.8391273076000959,
+          "tokens_per_task": 834.2,
+          "total_tokens": 16684
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.7,
+          "final_plan_schema_pass_rate": 0.6,
+          "initial_plan_schema_pass_rate": 0.6,
+          "median_absolute_error_on_parsed_failures": 1.0
+        },
+        "task_success": {
+          "answer_parse_rate": 0.85,
+          "correct": 14,
+          "pass_at_1": 0.7,
+          "task_count": 20
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "200",
+          "id": "test-0041",
+          "initial_artifact_valid": true,
+          "predicted": "200"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_artifact_valid": true,
+          "predicted": "20"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0183",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "24",
+          "id": "test-0193",
+          "initial_artifact_valid": true,
+          "predicted": "24"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "4",
+          "id": "test-0340",
+          "initial_artifact_valid": true,
+          "predicted": "3"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "350",
+          "id": "test-0415",
+          "initial_artifact_valid": true,
+          "predicted": "350"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-0459",
+          "initial_artifact_valid": true,
+          "predicted": "2"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "43500",
+          "id": "test-0640",
+          "initial_artifact_valid": true,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "36",
+          "id": "test-0677",
+          "initial_artifact_valid": false,
+          "predicted": "36"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "11",
+          "id": "test-0960",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "374",
+          "id": "test-0965",
+          "initial_artifact_valid": false,
+          "predicted": "374"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "94",
+          "id": "test-1012",
+          "initial_artifact_valid": false,
+          "predicted": "94"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "34",
+          "id": "test-1029",
+          "initial_artifact_valid": false,
+          "predicted": "34"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_artifact_valid": false,
+          "predicted": "145"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1176",
+          "initial_artifact_valid": true,
+          "predicted": "3"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "320",
+          "id": "test-1195",
+          "initial_artifact_valid": true,
+          "predicted": "320"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_artifact_valid": true,
+          "predicted": "2.6666666666666665"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_artifact_valid": true,
+          "predicted": "29"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "210",
+          "id": "test-1264",
+          "initial_artifact_valid": false,
+          "predicted": "210"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "2",
+          "id": "test-1306",
+          "initial_artifact_valid": false,
+          "predicted": null
+        }
+      ]
+    }
+  },
+  "experiment_totals": {
+    "failed_http_attempts": 0,
+    "http_attempts": 210,
+    "measured_agent_calls": 210,
+    "measured_cost_usd": 0.013183364132,
+    "measured_tokens": 100733
+  },
+  "implementation_provenance": {
+    "agent_workflow_memory": "Adapted released offline workflow induction and workflow injection.",
+    "copromem": "Native repository planner-to-solver executable contract arm.",
+    "critic": "Adapted released GSM8K program-of-thought interpreter critique/correction flow; restricted arithmetic interpreter replaces arbitrary exec.",
+    "expel": "Adapted released insight-extraction rule operations to GSM8K build trajectories.",
+    "repositories": {
+      "agent_workflow_memory": {
+        "revision": "8c0ff8cd11d648c8fceb99e4e42f37e3b75381b1",
+        "url": "https://github.com/zorazrw/agent-workflow-memory"
+      },
+      "critic": {
+        "revision": "5cf70eb41cdaa1d8faa3e1265d95ee5792d49a53",
+        "url": "https://github.com/microsoft/ProphetNet/tree/master/CRITIC"
+      },
+      "expel": {
+        "revision": "e41ec9a24823e7b560c561ab191441b56d9bcefc",
+        "url": "https://github.com/LeapLabTHU/ExpeL"
+      }
+    }
+  },
+  "limitations": [
+    "Twenty answer-blind stress-slice items give descriptive, high-uncertainty results.",
+    "These are GSM8K adapters, not exact reproductions of the papers' original task suites.",
+    "ExpeL and AWM share a small build set; their published systems used richer experience collections.",
+    "CRITIC receives one critique/correction iteration and has a larger per-task call budget.",
+    "Provider inference may be nondeterministic even at temperature zero and a request seed.",
+    "GSM8K may be present in model training data."
+  ],
+  "memory_construction": {
+    "agent_workflow_memory": {
+      "memory": "1. **Calculate total time for a multi-step process with a known per-unit time and a fixed additional task.**  \n   Multiply the number of remaining items by the time per item, then add the fixed task time.\n\n2. **Compute total contributions from multiple categories for two individuals, then sum.**  \n   For each category, multiply the per-occurrence count by the number of occurrences for each person, sum each person\u2019s total, then add the two totals.\n\n3. **Find the difference between two totals derived from per-item quantities and counts.**  \n   Compute the old total by multiplying each item\u2019s quantity by its count and summing; compute the new total similarly; subtract the new total from the old total.\n\n4. **Determine the number of items to remove to meet a weight limit, given per-item weight and initial count.**  \n   Convert the weight limit to the same unit as per-item weight, compute the maximum allowed items, then subtract from the initial count.",
+      "usage": {
+        "agent_calls": 1,
+        "completion_tokens": 198,
+        "cost_usd": 0.00017694,
+        "latency_seconds": 4.056682200003706,
+        "prompt_tokens": 1570,
+        "total_tokens": 1768
+      }
+    },
+    "copromem": {
+      "construction_agent_calls": 0,
+      "contract": {
+        "admitted": true,
+        "current_run_evidence": {
+          "build_failures": 5,
+          "failures_with_observable_violation": 4,
+          "successful_valid_handoffs": 3
+        },
+        "evidence": {
+          "build_failures": 5,
+          "failures_with_observable_violation": 4,
+          "successful_valid_handoffs": 3
+        },
+        "interface": "planner_to_solver",
+        "recovery": "return_to_planner",
+        "required_fields": [
+          "operations",
+          "answer_unit",
+          "check"
+        ],
+        "reused_prior_contract": false,
+        "verifier": "non-empty typed fields"
+      }
+    },
+    "critic": {
+      "construction_agent_calls": 0,
+      "persistent_memory": false
+    },
+    "expel": {
+      "memory": "None",
+      "usage": {
+        "agent_calls": 1,
+        "completion_tokens": 420,
+        "cost_usd": 0.000310652636,
+        "latency_seconds": 12.831933500005107,
+        "prompt_tokens": 2666,
+        "total_tokens": 3086
+      }
+    },
+    "shared_build_collection": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "deepseek/deepseek-v4-flash"
+          ],
+          "recovered_task_success_rate": null,
+          "recovery_activation_rate": 0.0,
+          "recovery_verifier_pass_rate": null
+        },
+        "cost": {
+          "cached_tokens": 2155,
+          "completion_tokens": 4084,
+          "prompt_tokens": 5112,
+          "reasoning_tokens": 2331,
+          "total_usd": 0.001276596432,
+          "usd_per_success": 0.0002553192864,
+          "usd_per_task": 0.0001276596432
+        },
+        "efficiency": {
+          "agent_calls": 20,
+          "calls_per_task": 2.0,
+          "mean_task_latency_seconds": 12.24060997999768,
+          "p50_task_latency_seconds": 11.299749099998735,
+          "p95_task_latency_seconds": 23.158069199998863,
+          "successful_tasks_per_1k_tokens": 0.5437146585471945,
+          "tokens_per_task": 919.6,
+          "total_tokens": 9196
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.5,
+          "final_plan_schema_pass_rate": 0.4,
+          "initial_plan_schema_pass_rate": 0.4,
+          "median_absolute_error_on_parsed_failures": 5.0
+        },
+        "task_success": {
+          "answer_parse_rate": 0.6,
+          "correct": 5,
+          "pass_at_1": 0.5,
+          "task_count": 10
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "30",
+          "id": "train-0399",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "52",
+          "id": "train-0636",
+          "initial_artifact_valid": false,
+          "predicted": "52"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "76",
+          "id": "train-1202",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "12",
+          "id": "train-1531",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "88",
+          "id": "train-1647",
+          "initial_artifact_valid": true,
+          "predicted": "88"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": false,
+          "gold": "40",
+          "id": "train-2345",
+          "initial_artifact_valid": false,
+          "predicted": "40"
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "6",
+          "id": "train-3331",
+          "initial_artifact_valid": true,
+          "predicted": "6"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": true,
+          "gold": "5",
+          "id": "train-3822",
+          "initial_artifact_valid": true,
+          "predicted": "10"
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_artifact_valid": false,
+          "gold": "180",
+          "id": "train-4670",
+          "initial_artifact_valid": false,
+          "predicted": null
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_artifact_valid": true,
+          "gold": "1400",
+          "id": "train-5918",
+          "initial_artifact_valid": true,
+          "predicted": "1400"
+        }
+      ]
+    }
+  },
+  "paired_vs_copromem": {
+    "agent_workflow_memory": {
+      "beneficial_flips": 1,
+      "harmful_flips": 2,
+      "net_gain": -1
+    },
+    "critic": {
+      "beneficial_flips": 9,
+      "harmful_flips": 1,
+      "net_gain": 8
+    },
+    "expel": {
+      "beneficial_flips": 3,
+      "harmful_flips": 1,
+      "net_gain": 2
+    }
+  },
+  "protocol": {
+    "arms": [
+      "expel",
+      "agent_workflow_memory",
+      "critic",
+      "copromem"
+    ],
+    "benchmark": "GSM8K",
+    "build_tasks": 10,
+    "evaluation_tasks": 20,
+    "model": {
+      "context_length": 1048576,
+      "id": "deepseek/deepseek-v4-flash",
+      "name": "DeepSeek: DeepSeek V4 Flash 0423",
+      "pricing_usd_per_token": {
+        "completion": "0.000000177212",
+        "input_cache_read": "0.0000000177212",
+        "prompt": "0.000000088606"
+      },
+      "supported_parameters": [
+        "frequency_penalty",
+        "include_reasoning",
+        "logit_bias",
+        "logprobs",
+        "max_completion_tokens",
+        "max_tokens",
+        "min_p",
+        "presence_penalty",
+        "reasoning",
+        "reasoning_effort",
+        "repetition_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_a",
+        "top_k",
+        "top_logprobs",
+        "top_p"
+      ]
+    },
+    "request_seed": 42,
+    "sampling": "answer-blind longest-question stress slice; deterministic and not representative",
+    "temperature": 0
+  }
+}

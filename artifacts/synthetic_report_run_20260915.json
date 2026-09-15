@@ -1,0 +1,193 @@
+{
+  "bank": {
+    "contracts": [
+      {
+        "contract_id": "join-cardinality-rationale-v1",
+        "counterexamples": [
+          "intentional many-to-many expansion"
+        ],
+        "evidence": {
+          "conditional_benefit": 0.2666666666666667,
+          "replay": {
+            "beneficial_flips": 7,
+            "checkpoint_count": 15,
+            "contract_success": 0.9333333333333333,
+            "harmful_flips": 0,
+            "no_memory_success": 0.4666666666666667,
+            "sham_retry_success": 0.5333333333333333,
+            "text_rule_success": 0.6666666666666666,
+            "verifier_cost": 0.7500000000000001
+          },
+          "scope": {
+            "boundary_harmful_flips": 0,
+            "in_scope_coverage": 1.0,
+            "in_scope_success": 0.8,
+            "transfer_success": 0.8,
+            "veto_accuracy": 1.0
+          },
+          "verifier_cost": 0.7500000000000001
+        },
+        "interface": "planner_to_solver",
+        "owner": "planner",
+        "postcondition": "the solver receives a plan with declared cardinality before executing a row-preserving join",
+        "precondition": "the plan names join keys, cardinality, and output-row rationale",
+        "recovery_route": "return_to_planner_for_cardinality_completion",
+        "required_fields": [
+          "declared_cardinality"
+        ],
+        "scope_name": "join_preservation_scope",
+        "status": "admitted",
+        "verifier_name": "plan_cardinality_present"
+      }
+    ]
+  },
+  "clustered_95pct_ci_success_delta": [
+    0.3125,
+    0.46875
+  ],
+  "construction": {
+    "admission": {
+      "admitted": true,
+      "reasons": [
+        "passed replay, transfer, and harm gates"
+      ]
+    },
+    "candidate_count": 1,
+    "lifecycle_build_cost": 289.0,
+    "minimization": {
+      "claim": "empirically 1-minimal for tested field-deletion set",
+      "initial_required_fields": [
+        "declared_cardinality",
+        "expected_rows"
+      ],
+      "retained_required_fields": [
+        "declared_cardinality"
+      ]
+    },
+    "replay_after_minimization": {
+      "beneficial_flips": 7,
+      "checkpoint_count": 15,
+      "contract_success": 0.9333333333333333,
+      "harmful_flips": 0,
+      "no_memory_success": 0.4666666666666667,
+      "sham_retry_success": 0.5333333333333333,
+      "text_rule_success": 0.6666666666666666,
+      "verifier_cost": 0.7500000000000001
+    },
+    "replay_before_minimization": {
+      "beneficial_flips": 22,
+      "checkpoint_count": 30,
+      "contract_success": 1.0,
+      "harmful_flips": 0,
+      "no_memory_success": 0.26666666666666666,
+      "sham_retry_success": 0.5,
+      "text_rule_success": 0.6,
+      "verifier_cost": 1.5000000000000007
+    },
+    "scope_and_transfer": {
+      "boundary_harmful_flips": 0,
+      "in_scope_coverage": 1.0,
+      "in_scope_success": 0.8,
+      "transfer_success": 0.8,
+      "veto_accuracy": 1.0
+    }
+  },
+  "final_source": {
+    "contract_check": {
+      "downstream_error_rate": 0.1875,
+      "macro_group_success": 0.8125,
+      "recovery_success_rate": 1.0,
+      "runtime_cost_per_task": 3.4437499999999996,
+      "success_rate": 0.8125,
+      "task_count": 32,
+      "verifier_cost_per_task": 0.037500000000000006
+    },
+    "no_memory": {
+      "downstream_error_rate": 0.59375,
+      "macro_group_success": 0.40625,
+      "recovery_success_rate": 0.0,
+      "runtime_cost_per_task": 3.0,
+      "success_rate": 0.40625,
+      "task_count": 32,
+      "verifier_cost_per_task": 0.0
+    },
+    "sham_retry": {
+      "downstream_error_rate": 0.46875,
+      "macro_group_success": 0.53125,
+      "recovery_success_rate": 0.3076923076923077,
+      "runtime_cost_per_task": 3.4437499999999996,
+      "success_rate": 0.53125,
+      "task_count": 32,
+      "verifier_cost_per_task": 0.037500000000000006
+    },
+    "static_verifier": {
+      "downstream_error_rate": 0.1875,
+      "macro_group_success": 0.8125,
+      "recovery_success_rate": 1.0,
+      "runtime_cost_per_task": 3.4437499999999996,
+      "success_rate": 0.8125,
+      "task_count": 32,
+      "verifier_cost_per_task": 0.037500000000000006
+    },
+    "text_rule": {
+      "downstream_error_rate": 0.3125,
+      "macro_group_success": 0.6875,
+      "recovery_success_rate": 0.0,
+      "runtime_cost_per_task": 3.0,
+      "success_rate": 0.6875,
+      "task_count": 32,
+      "verifier_cost_per_task": 0.0
+    }
+  },
+  "final_transfer_executor_swap": {
+    "contract_check": {
+      "downstream_error_rate": 0.3125,
+      "macro_group_success": 0.6875,
+      "recovery_success_rate": 1.0,
+      "runtime_cost_per_task": 3.4437499999999996,
+      "success_rate": 0.6875,
+      "task_count": 32,
+      "verifier_cost_per_task": 0.037500000000000006
+    },
+    "no_memory": {
+      "downstream_error_rate": 0.65625,
+      "macro_group_success": 0.34375,
+      "recovery_success_rate": 0.0,
+      "runtime_cost_per_task": 3.0,
+      "success_rate": 0.34375,
+      "task_count": 32,
+      "verifier_cost_per_task": 0.0
+    },
+    "text_rule": {
+      "downstream_error_rate": 0.40625,
+      "macro_group_success": 0.59375,
+      "recovery_success_rate": 0.0,
+      "runtime_cost_per_task": 3.0,
+      "success_rate": 0.59375,
+      "task_count": 32,
+      "verifier_cost_per_task": 0.0
+    }
+  },
+  "notes": [
+    "The static-verifier arm separates the learned-contract admission protocol from verifier value.",
+    "Intentional expansions are vetoed by scope; they are reported during admission rather than counted as eligible coverage.",
+    "This is a synthetic feasibility demonstration, not evidence for claims on DS-1000, AFTER, or LLM agents."
+  ],
+  "paired_contract_vs_no_memory": {
+    "beneficial_flips": 13,
+    "harmful_flips": 0,
+    "net_gain": 13
+  },
+  "protocol": {
+    "arms": [
+      "no_memory",
+      "text_rule",
+      "sham_retry",
+      "static_verifier",
+      "contract_check"
+    ],
+    "domain": "public join-cardinality planning artifact",
+    "seed": 7,
+    "split_policy": "template groups are disjoint across build/dev/audit/final"
+  }
+}

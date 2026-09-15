@@ -11,6 +11,9 @@ dependencies = []
 
 [project.scripts]
 copromem-demo = "copromem.experiment:main"
+copromem-tiny = "copromem.tiny_experiment:main"
+copromem-gsm8k-real = "copromem.real_gsm8k_experiment:main"
+copromem-gsm8k-literature = "copromem.literature_baselines_experiment:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

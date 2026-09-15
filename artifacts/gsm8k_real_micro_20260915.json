@@ -1,0 +1,406 @@
+{
+  "build_collection": {
+    "metrics": {
+      "agent_system": {
+        "provider_models": [
+          "mistralai/ministral-3b-2512"
+        ],
+        "recovered_task_success_rate": null,
+        "recovery_activation_rate": 0.0,
+        "recovery_verifier_pass_rate": null
+      },
+      "cost": {
+        "cached_tokens": 0,
+        "completion_tokens": 1141,
+        "prompt_tokens": 1904,
+        "reasoning_tokens": 0,
+        "total_usd": 0.0003045,
+        "usd_per_success": 0.00015225,
+        "usd_per_task": 0.00010149999999999999
+      },
+      "efficiency": {
+        "agent_calls": 6,
+        "calls_per_task": 2.0,
+        "mean_task_latency_seconds": 2.4787504999985686,
+        "p50_task_latency_seconds": 2.4334502999990946,
+        "p95_task_latency_seconds": 2.948599999996077,
+        "successful_tasks_per_1k_tokens": 0.6568144499178982,
+        "tokens_per_task": 1015.0,
+        "total_tokens": 3045
+      },
+      "task_specific": {
+        "exact_numeric_match_rate": 0.6666666666666666,
+        "final_plan_schema_pass_rate": 0.6666666666666666,
+        "initial_plan_schema_pass_rate": 0.6666666666666666,
+        "median_absolute_error_on_parsed_failures": null
+      },
+      "task_success": {
+        "answer_parse_rate": 0.6666666666666666,
+        "correct": 2,
+        "pass_at_1": 0.6666666666666666,
+        "task_count": 3
+      }
+    },
+    "tasks": [
+      {
+        "calls": 2,
+        "correct": false,
+        "final_plan_valid": false,
+        "gold": "76",
+        "id": "train-1202",
+        "initial_plan_valid": false,
+        "predicted": null,
+        "recovered": false
+      },
+      {
+        "calls": 2,
+        "correct": true,
+        "final_plan_valid": true,
+        "gold": "40",
+        "id": "train-2345",
+        "initial_plan_valid": true,
+        "predicted": "40",
+        "recovered": false
+      },
+      {
+        "calls": 2,
+        "correct": true,
+        "final_plan_valid": true,
+        "gold": "6",
+        "id": "train-3331",
+        "initial_plan_valid": true,
+        "predicted": "6",
+        "recovered": false
+      }
+    ]
+  },
+  "evaluation": {
+    "copromem": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "mistralai/ministral-3b-2512"
+          ],
+          "recovered_task_success_rate": 0.0,
+          "recovery_activation_rate": 0.75,
+          "recovery_verifier_pass_rate": 0.3333333333333333
+        },
+        "cost": {
+          "cached_tokens": 1408,
+          "completion_tokens": 1837,
+          "prompt_tokens": 3814,
+          "reasoning_tokens": 0,
+          "total_usd": 0.00043838,
+          "usd_per_success": 0.00043838,
+          "usd_per_task": 0.000109595
+        },
+        "efficiency": {
+          "agent_calls": 11,
+          "calls_per_task": 2.75,
+          "mean_task_latency_seconds": 3.8626054500000464,
+          "p50_task_latency_seconds": 3.118316500003857,
+          "p95_task_latency_seconds": 6.3647993999984465,
+          "successful_tasks_per_1k_tokens": 0.1769598301185631,
+          "tokens_per_task": 1412.75,
+          "total_tokens": 5651
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.25,
+          "final_plan_schema_pass_rate": 0.5,
+          "initial_plan_schema_pass_rate": 0.25,
+          "median_absolute_error_on_parsed_failures": 1.0
+        },
+        "task_success": {
+          "answer_parse_rate": 1.0,
+          "correct": 1,
+          "pass_at_1": 0.25,
+          "task_count": 4
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": true,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_plan_valid": true,
+          "predicted": "20",
+          "recovered": false
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_plan_valid": true,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_plan_valid": false,
+          "predicted": "85",
+          "recovered": true
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_plan_valid": false,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_plan_valid": false,
+          "predicted": "2.67",
+          "recovered": true
+        },
+        {
+          "calls": 3,
+          "correct": false,
+          "final_plan_valid": false,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_plan_valid": false,
+          "predicted": "30",
+          "recovered": true
+        }
+      ]
+    },
+    "no_memory": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "mistralai/ministral-3b-2512"
+          ],
+          "recovered_task_success_rate": null,
+          "recovery_activation_rate": 0.0,
+          "recovery_verifier_pass_rate": null
+        },
+        "cost": {
+          "cached_tokens": 0,
+          "completion_tokens": 1494,
+          "prompt_tokens": 2131,
+          "reasoning_tokens": 0,
+          "total_usd": 0.0003625,
+          "usd_per_success": 0.00012083333333333332,
+          "usd_per_task": 9.0625e-05
+        },
+        "efficiency": {
+          "agent_calls": 8,
+          "calls_per_task": 2.0,
+          "mean_task_latency_seconds": 2.769164400000591,
+          "p50_task_latency_seconds": 2.5081073000037577,
+          "p95_task_latency_seconds": 3.330913799996779,
+          "successful_tasks_per_1k_tokens": 0.8275862068965517,
+          "tokens_per_task": 906.25,
+          "total_tokens": 3625
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.75,
+          "final_plan_schema_pass_rate": 0.25,
+          "initial_plan_schema_pass_rate": 0.25,
+          "median_absolute_error_on_parsed_failures": 0.67
+        },
+        "task_success": {
+          "answer_parse_rate": 1.0,
+          "correct": 3,
+          "pass_at_1": 0.75,
+          "task_count": 4
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": true,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_plan_valid": true,
+          "predicted": "20",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": false,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_plan_valid": false,
+          "predicted": "145",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_plan_valid": false,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_plan_valid": false,
+          "predicted": "2.67",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": false,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_plan_valid": false,
+          "predicted": "29",
+          "recovered": false
+        }
+      ]
+    },
+    "success_only_memory": {
+      "metrics": {
+        "agent_system": {
+          "provider_models": [
+            "mistralai/ministral-3b-2512"
+          ],
+          "recovered_task_success_rate": null,
+          "recovery_activation_rate": 0.0,
+          "recovery_verifier_pass_rate": null
+        },
+        "cost": {
+          "cached_tokens": 896,
+          "completion_tokens": 1243,
+          "prompt_tokens": 3094,
+          "reasoning_tokens": 0,
+          "total_usd": 0.00035306,
+          "usd_per_success": 0.00017653,
+          "usd_per_task": 8.8265e-05
+        },
+        "efficiency": {
+          "agent_calls": 8,
+          "calls_per_task": 2.0,
+          "mean_task_latency_seconds": 3.3535547249994124,
+          "p50_task_latency_seconds": 2.666080499999225,
+          "p95_task_latency_seconds": 5.336838399998669,
+          "successful_tasks_per_1k_tokens": 0.46114825916532165,
+          "tokens_per_task": 1084.25,
+          "total_tokens": 4337
+        },
+        "task_specific": {
+          "exact_numeric_match_rate": 0.5,
+          "final_plan_schema_pass_rate": 1.0,
+          "initial_plan_schema_pass_rate": 1.0,
+          "median_absolute_error_on_parsed_failures": 2.833
+        },
+        "task_success": {
+          "answer_parse_rate": 1.0,
+          "correct": 2,
+          "pass_at_1": 0.5,
+          "task_count": 4
+        }
+      },
+      "tasks": [
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": true,
+          "gold": "20",
+          "id": "test-0144",
+          "initial_plan_valid": true,
+          "predicted": "20",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_plan_valid": true,
+          "gold": "145",
+          "id": "test-1077",
+          "initial_plan_valid": true,
+          "predicted": "150",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": false,
+          "final_plan_valid": true,
+          "gold": "2",
+          "id": "test-1199",
+          "initial_plan_valid": true,
+          "predicted": "2.666",
+          "recovered": false
+        },
+        {
+          "calls": 2,
+          "correct": true,
+          "final_plan_valid": true,
+          "gold": "29",
+          "id": "test-1209",
+          "initial_plan_valid": true,
+          "predicted": "29",
+          "recovered": false
+        }
+      ]
+    }
+  },
+  "experiment_totals": {
+    "failed_http_attempts": 0,
+    "http_attempts": 33,
+    "measured_agent_calls": 33,
+    "measured_cost_usd": 0.00145844
+  },
+  "limitations": [
+    "Only four evaluation tasks; metrics are descriptive and have very high uncertainty.",
+    "The answer-blind stress slice is not a representative estimate of GSM8K accuracy.",
+    "GSM8K may be present in model training data; this does not establish contamination-free generalization.",
+    "The procedural contract is admitted from tiny observational evidence and is not statistically validated.",
+    "Provider inference can be nondeterministic even at temperature zero."
+  ],
+  "memory_construction": {
+    "construction_agent_calls": 0,
+    "copromem_contract": {
+      "admitted": true,
+      "evidence": {
+        "build_failures": 1,
+        "failures_with_observable_violation": 1,
+        "successful_valid_handoffs": 2
+      },
+      "interface": "planner_to_solver",
+      "recovery": "return_to_planner",
+      "required_fields": [
+        "operations",
+        "answer_unit",
+        "check"
+      ],
+      "verifier": "non-empty typed fields"
+    },
+    "success_only_memory_available": true,
+    "success_only_source": "first correct build trajectory with verifier-valid plan"
+  },
+  "paired": {
+    "copromem_vs_no_memory": {
+      "beneficial_flips": 0,
+      "harmful_flips": 2,
+      "net_gain": -2
+    },
+    "copromem_vs_success_only_memory": {
+      "beneficial_flips": 0,
+      "harmful_flips": 1,
+      "net_gain": -1
+    }
+  },
+  "protocol": {
+    "arms": [
+      "no_memory",
+      "success_only_memory",
+      "copromem"
+    ],
+    "benchmark": "GSM8K",
+    "build_tasks": 3,
+    "dataset_source": {
+      "test": "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl",
+      "train": "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/train.jsonl"
+    },
+    "evaluation_tasks": 4,
+    "model": {
+      "context_length": 131072,
+      "id": "mistralai/ministral-3b-2512",
+      "name": "Mistral: Ministral 3 3B 2512",
+      "pricing_usd_per_token": {
+        "completion": "0.0000001",
+        "input_cache_read": "0.00000001",
+        "prompt": "0.0000001"
+      }
+    },
+    "sampling": "answer-blind longest-question stress slice; not representative random sampling",
+    "temperature": 0
+  }
+}
