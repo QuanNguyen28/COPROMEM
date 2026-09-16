@@ -1,0 +1,22 @@
+{
+  "cycle_id": "cycle03-structural-induction-gemma-20260916",
+  "output_directory": "artifacts/research/cycle03_induction",
+  "model": "google/gemma-3-4b-it",
+  "provider": "deepinfra/bf16",
+  "selection_seed": 601,
+  "selection_offset": 7,
+  "seed": 41,
+  "build_rollouts": 3,
+  "build_size": 12,
+  "dev_size": 8,
+  "audit_size": 4,
+  "evaluation_size": 8,
+  "evaluation_replicates": 2,
+  "max_candidates": 2,
+  "max_usd": 0.25,
+  "max_http_attempts": 400,
+  "primary_metric": "number of candidates satisfying unchanged independent replay and harm gates",
+  "falsification": "No admitted bank rejects this corpus/backend/grammar configuration; signature collisions diagnose representational limits",
+  "selection_note": "Same build and reserved development partitions as cycle02; model sensitivity, not independent benchmark confirmation; final test unopened",
+  "interpretation": "Report both model cycles; a nonempty bank alone is not a quality or novelty win"
+}

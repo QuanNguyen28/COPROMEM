@@ -1,0 +1,44 @@
+{
+  "kind": "post_cycle22_static_inspection_and_constructed_information_counterexamples",
+  "date": "2026-09-16",
+  "branch": "codex/copromem-research-loop",
+  "head": "18025102c010e85f26b0b3fb1144a1cb684b587e",
+  "public_api_document": "artifacts/research/cycle15_reflection_source/public_bundle/data/api_docs/standard/spotify.json",
+  "public_api_document_sha256": "CF630CCFF1AEDF0C055B2BCB3B81A43882E35F066E615BE49BC251DBA3F09BE1",
+  "documented_listing_defaults": {
+    "show_liked_songs": {"page_index": 0, "page_limit": 5, "page_limit_maximum": 20},
+    "show_playlist_library": {"page_index": 0, "page_limit": 5, "page_limit_maximum": 20}
+  },
+  "all_artist_source_cases": [
+    {
+      "record": 12,
+      "case_digest": "892672904956f6466103f29a6695e75dbc6b773ca6f56e83f287bec6b45d319a",
+      "program_digest": "4f6c645b2c094c578b62e62b4539e256aa049103c2adebd4ab4bd5f842dbf38b",
+      "selection": "song_details['artists'][0]['id']",
+      "saved_native_success": false
+    },
+    {
+      "record": 13,
+      "case_digest": "bd376286eeb6592c7c81e3f2ff0ef82502ed4d7718f92458b74b623936a658e7",
+      "program_digest": "548ab092677e5acee1fcd5ff8e81d90c33a046ca5cdcd499ac765b608d467ffe",
+      "selection": "song_details['artists'][0]['id']",
+      "saved_native_success": true
+    }
+  ],
+  "exact_actual_source_normalization_collision": {
+    "source_record": 13,
+    "mutation": "Replace only the string comparator of the single song_details['genre'] comparison from classical to __counterexample_other_genre__; ast.unparse; leave public presence envelope unchanged.",
+    "original_program_digest": "548ab092677e5acee1fcd5ff8e81d90c33a046ca5cdcd499ac765b608d467ffe",
+    "altered_program_digest": "b1c51183d77757f23c876d7c5a3a016015bcb9aaeb8de4b1d27028a44b1609c7",
+    "normalizer": "research/scripts/monitor_proposal_inputs.py:runtime_input",
+    "common_runtime_input_digest": "444c26e9a072d6a8f6fc67d7320f884af5a44b45e68b72f1a7b0fdc91eb9f420",
+    "views_are_exactly_equal": true,
+    "predicate_truth_for_constructed_classical_item": {"original": true, "altered": false},
+    "altered_program_native_execution": false,
+    "altered_program_native_score": null
+  },
+  "model_calls": 0,
+  "native_executions": 0,
+  "api_usd": 0,
+  "limitation": "Public-code/doc inspection plus constructed information counterexamples; no new native task result, validated manual checker, learned candidate, held-out comparison or general security proof. The successful saved instance is not relabeled as failure."
+}

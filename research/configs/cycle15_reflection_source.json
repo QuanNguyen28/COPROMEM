@@ -1,0 +1,53 @@
+{
+  "cycle_id": "cycle15-appworld-reflection-source-20260916",
+  "output_directory": "artifacts/research/cycle15_reflection_source",
+  "native_data": "artifacts/research/appworld_preflight_20260916/data",
+  "preregistration": "research/028_CYCLE15_REFLECTION_SOURCE_PREREGISTRATION.md",
+  "image_id": "sha256:b5f9aaedde041e30fc4ff795ab46d47849cfc72701b9ffc8c8983fdefe36fcf6",
+  "model": "qwen/qwen3-coder",
+  "provider": "deepinfra/turbo",
+  "prompt_price_per_million": 0.5,
+  "completion_price_per_million": 2.0,
+  "prompt_version": "public-onboarding-v2",
+  "executor_format": "python",
+  "context_version": "public-history-retry-v3",
+  "history_output_chars": 16000,
+  "history_program_chars": 6000,
+  "selection_seed": 160906,
+  "seed": 61,
+  "environment_seed": 100,
+  "excluded_scenarios": ["07b42fd"],
+  "build_groups": 8,
+  "dev_groups": 4,
+  "audit_groups": 3,
+  "evaluation_groups": 4,
+  "replicates": 1,
+  "reflection_source_replicate": 0,
+  "retry_replicate": 2,
+  "reflection_tokens": 512,
+  "reflection_context_chars": 64000,
+  "reflection_note_chars": 4000,
+  "max_steps": 50,
+  "planner_tokens": 384,
+  "executor_tokens": 768,
+  "context_chars": 64000,
+  "max_usd": 4.0,
+  "max_http_attempts": 1000,
+  "prior_sources": [
+    {
+      "store": "artifacts/research/cycle11_appworld_source",
+      "protocol_digest": "e844b0b9503467908b15672cc3ec5b2c4cf090dccb3e14244898e7ee7f35be77",
+      "selection_digest": "d194069342e9f142cdd0228b9ec66fa1e47ede9dadea453cd3e78ec2bd66ab9d",
+      "audit_id": "533d57244a03fbd412ee658d313596131fbb4d3c2743f3825afa16e6a5ce6f76"
+    },
+    {
+      "store": "artifacts/research/cycle14_appworld_source",
+      "protocol_digest": "89fb2e1bb70be45d67fe980385296b8d63a26ccaee1b4ac2d2dc97a6e8e247a1",
+      "selection_digest": "4b14e2bd1fa1c6bff8c4786aa779df08020a2f894a9e8339693222485ec33b9c",
+      "audit_id": "0ca2f7651af62e9fa84d452f4920d37f4a1d6902f0940c2e431f6d1706f10bae"
+    }
+  ],
+  "primary_metric": "number of previously unmixed build scenarios that gain a replay-eligible opposite-outcome retry, using all eligible prior outcomes from cycles11/14",
+  "falsification": "Zero newly mixed scenarios rejects sufficiency of this one-retry source protocol; the already mixed aa8502b scenario cannot count as new support.",
+  "interpretation": "Build-only source acquisition with explicit binary outcome feedback and fallible textual reflection. Not a learned executable contract, held-out gain, exact ExpeL reproduction or causal estimate of reflection versus another draw."
+}

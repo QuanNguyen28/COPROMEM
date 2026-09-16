@@ -1,0 +1,9 @@
+*
+!Dockerfile
+!Dockerfile.longsource
+!worker.py
+!worker_long_source.py
+!evaluator.py
+!oracle.py
+!requirements-linux-amd64.lock
+!.dockerignore

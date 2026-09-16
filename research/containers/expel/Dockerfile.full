@@ -1,0 +1,16 @@
+FROM python:3.9.17-slim@sha256:42a5da33675ec5a692e8cdbb09ffa4e39588c10dd9a96235e543c498484ee18e
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 MPLBACKEND=Agg MPLCONFIGDIR=/tmp/matplotlib \
+    ALFWORLD_DATA=/tmp/alfworld XDG_CACHE_HOME=/tmp/cache
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential libffi-dev libgl1 libglib2.0-0
+COPY requirements-upstream.txt constraints-full.txt /opt/
+RUN --mount=type=cache,target=/root/.cache/pip python -m pip install --report /opt/torch-install.json \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch==2.0.1+cpu torchvision==0.15.2+cpu -c /opt/constraints-full.txt
+RUN --mount=type=cache,target=/root/.cache/pip python -m pip install --report /opt/full-install.json \
+    -r /opt/requirements-upstream.txt -c /opt/constraints-full.txt \
+    --only-binary=textworld 'alfworld[full]==0.3.5' termcolor==2.3.0 faiss-cpu==1.7.4
+RUN python -m pip check
+USER 10001:10001
+WORKDIR /vendor
+ENTRYPOINT ["python"]

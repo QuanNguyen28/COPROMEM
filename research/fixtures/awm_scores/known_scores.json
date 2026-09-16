@@ -1,0 +1,8 @@
+[
+  {
+    "element_acc": [1, 0, 1, 0],
+    "action_f1": [1, 1, 1, 0],
+    "step_success": [1, 0, 1, 0],
+    "success": [1, 0]
+  }
+]

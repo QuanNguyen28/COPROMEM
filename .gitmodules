@@ -1,0 +1,9 @@
+[submodule "vendor/ExpeL"]
+	path = vendor/ExpeL
+	url = https://github.com/LeapLabTHU/ExpeL.git
+[submodule "vendor/agent-workflow-memory"]
+	path = vendor/agent-workflow-memory
+	url = https://github.com/zorazrw/agent-workflow-memory.git
+[submodule "vendor/ProphetNet"]
+	path = vendor/ProphetNet
+	url = https://github.com/microsoft/ProphetNet.git

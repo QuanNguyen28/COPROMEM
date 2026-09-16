@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "copromem"
+version = "0.1.0"
+description = "Executable counterfactual procedural contracts for multi-agent handoffs"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+copromem-demo = "copromem.experiment:main"
+copromem-tiny = "copromem.tiny_experiment:main"
+copromem-gsm8k-real = "copromem.real_gsm8k_experiment:main"
+copromem-gsm8k-literature = "copromem.literature_baselines_experiment:main"
+copromem-gsm8k-induction = "copromem.induction_pilot:main"
+copromem-gsm8k-paired-schema = "copromem.research_pilot:main"
+copromem-structural-audit = "copromem.structural_audit:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

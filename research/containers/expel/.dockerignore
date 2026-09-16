@@ -1,0 +1,7 @@
+*
+!Dockerfile
+!requirements-probe.txt
+!.dockerignore
+!Dockerfile.full
+!constraints-full.txt
+!requirements-upstream.txt

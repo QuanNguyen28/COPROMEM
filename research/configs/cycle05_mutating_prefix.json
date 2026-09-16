@@ -1,0 +1,1 @@
+{"task_id":"07b42fd_1","seed":100,"actions":["probe_counter = 1\nprobe_draw = random.random()\nprint(probe_draw)","probe_counter = 2\nprint(apis.supervisor.complete_task())","print(apis.supervisor.show_active_task())\nprint(probe_counter)"]}

@@ -1,0 +1,18 @@
+{
+  "cycle_id": "cycle01-paired-20260916",
+  "output_directory": "artifacts/research/cycle01_paired",
+  "model": "mistralai/ministral-3b-2512",
+  "provider": "mistral",
+  "selection_seed": 601,
+  "seed": 17,
+  "replicates": 2,
+  "build_size": 3,
+  "evaluation_size": 4,
+  "max_usd": 0.25,
+  "max_http_attempts": 100,
+  "primary_metric": "causal invariant violations; required zero",
+  "quality_metrics": "descriptive only; paired success difference and task-cluster bootstrap interval",
+  "sampling": "hash-ranked GSM8K training IDs; disjoint build and development",
+  "falsification": "checkpoint mismatch, contamination, unequal static/contract path, or unrecorded costs invalidates pilot",
+  "promotion": "no superiority or final-test claim from this diagnostic pilot"
+}

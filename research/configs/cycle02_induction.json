@@ -1,0 +1,22 @@
+{
+  "cycle_id": "cycle02-structural-induction-20260916",
+  "output_directory": "artifacts/research/cycle02_induction",
+  "model": "mistralai/ministral-3b-2512",
+  "provider": "mistral",
+  "selection_seed": 601,
+  "selection_offset": 7,
+  "seed": 23,
+  "build_rollouts": 3,
+  "build_size": 12,
+  "dev_size": 8,
+  "audit_size": 4,
+  "evaluation_size": 8,
+  "evaluation_replicates": 2,
+  "max_candidates": 2,
+  "max_usd": 0.25,
+  "max_http_attempts": 400,
+  "primary_metric": "number of candidates satisfying the preregistered independent replay and harm gates",
+  "falsification": "No qualifying same-task pairs, predicates, or admitted bank rejects this corpus/grammar configuration",
+  "selection_note": "Continue the fixed cycle01 hash order after its seven already used tasks; final GSM8K test remains unopened",
+  "interpretation": "A structural grammar recovering a predefined prompt schema is not a novelty or accuracy win"
+}

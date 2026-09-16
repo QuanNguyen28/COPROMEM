@@ -1,0 +1,15 @@
+{
+  "cycle_id": "cycle13-procedural-diff-20260916",
+  "source_store": "artifacts/research/cycle12_action_crossover",
+  "source_protocol_digest": "e575d8e9adb8b79fc89b8638697d3cd066254d60d1dd8efe686bc0a9b3b58f3b",
+  "source_report_id": "669e67cf8164c3cd4e31d0e029bc3c4069ca26436ff17d9b5ac4cea0956aea5a",
+  "public_bundle": "artifacts/research/cycle11_appworld_source/public_bundle",
+  "native_data": "artifacts/research/appworld_preflight_20260916/data",
+  "output_directory": "artifacts/research/cycle13_procedural_diff",
+  "preregistration": "research/023_CYCLE13_PROCEDURAL_DIFF_PREREGISTRATION.md",
+  "image_id": "sha256:b5f9aaedde041e30fc4ff795ab46d47849cfc72701b9ffc8c8983fdefe36fcf6",
+  "max_variants_per_pair": 12,
+  "model_calls": 0,
+  "primary_metric": "number of automatically derived initial block transplants passing native success, completion, no new action error, supported state and independent replay at both source origins",
+  "interpretation": "Build-only evidence-derived local program edit search; no independent-task support, learned scope, contract admission, minimum semantic clause, transfer or superiority claim."
+}
