@@ -9,8 +9,11 @@ from dataclasses import asdict
 
 from .bank import ContractBank
 from .contracts import Contract
+from .credit_assignment import localize_structural_failure
+from .schema import DecompositionSchema
 from .types import (
     CostLedger,
+    EpisodicTrace,
     HandoffEvent,
     JoinTask,
     PlanArtifact,
@@ -136,6 +139,105 @@ class WorkflowEngine:
         return WorkflowRun(
             task, mode, plan, solution, review, handoffs, recoveries, cost
         )
+
+    def run_with_schema(
+        self,
+        task: JoinTask,
+        profile: RoleProfile,
+        schema: DecompositionSchema,
+        seed: int,
+    ) -> tuple[WorkflowRun, EpisodicTrace]:
+        """Execute a task guided by a DecompositionSchema and produce an EpisodicTrace with 4-tier credit assignment."""
+        cost = CostLedger()
+        handoffs: list[HandoffEvent] = []
+        recoveries: list[RecoveryEvent] = []
+
+        edge_contract = (
+            schema.get_contract_for_edge("plan", "exec")
+            or schema.get_contract_for_edge("planner", "solver")
+        )
+
+        plan = self._plan(task, profile, RunMode.CONTRACT_CHECK, seed, attempt=0, force_complete=False)
+        cost.planner_calls += 1
+
+        event = HandoffEvent(
+            interface="planner_to_solver",
+            source_role="planner",
+            target_role="solver",
+            artifact=asdict(plan),
+            observable_state=task.observable_state(),
+        )
+
+        verifications: list[VerificationResult] = []
+        eligible_contracts: list[Contract] = []
+        if edge_contract and edge_contract.is_eligible(event):
+            eligible_contracts.append(edge_contract)
+        elif self.bank:
+            eligible_contracts.extend(self.bank.retrieve(event))
+
+        for contract in eligible_contracts:
+            result = contract.verify(event, self.verifier_cost)
+            verifications.append(result)
+            cost.verifier_cost += result.cost
+            cost.injected_contract_tokens += contract.estimated_read_tokens
+
+        violation = bool(verifications) and not all(result.passed for result in verifications)
+        if violation:
+            plan = self._plan(task, profile, RunMode.CONTRACT_CHECK, seed, attempt=1, force_complete=True)
+            cost.planner_calls += 1
+            recoveries.append(
+                RecoveryEvent(
+                    contract_id=eligible_contracts[0].contract_id,
+                    route=eligible_contracts[0].recovery_route,
+                    owner=eligible_contracts[0].owner,
+                    successful=plan.declared_cardinality is not None,
+                )
+            )
+
+        handoffs.append(
+            HandoffEvent(
+                interface=event.interface,
+                source_role=event.source_role,
+                target_role=event.target_role,
+                artifact=asdict(plan),
+                observable_state=event.observable_state,
+                verifier_results=tuple(verifications),
+            )
+        )
+
+        solution = self._solve(task, plan, profile, seed)
+        cost.solver_calls += 1
+        solver_event = HandoffEvent(
+            interface="solver_to_reviewer",
+            source_role="solver",
+            target_role="reviewer",
+            artifact=asdict(solution),
+            observable_state=task.observable_state(),
+        )
+        handoffs.append(solver_event)
+        review = self._review(task, solution, profile, seed)
+        cost.reviewer_calls += 1
+
+        run = WorkflowRun(
+            task, RunMode.CONTRACT_CHECK, plan, solution, review, handoffs, recoveries, cost
+        )
+
+        credit_result = localize_structural_failure(run, schema=schema)
+        surprise = 1.0 if not run.success else 0.0
+        uncertainty = round(max(0.0, 1.0 - schema.transfer_reliability), 3)
+
+        trace = EpisodicTrace(
+            trace_id=f"trace_{task.task_id}_{seed}",
+            task_id=task.task_id,
+            task_state=task.observable_state(),
+            schema_id=schema.schema_id,
+            handoff_events=tuple(handoffs),
+            success=run.success,
+            credit_result=credit_result,
+            surprise=surprise,
+            uncertainty=uncertainty,
+        )
+        return run, trace
 
     def _contracts_for_mode(self, mode: RunMode, event: HandoffEvent) -> list[Contract]:
         if mode is RunMode.CONTRACT_CHECK:

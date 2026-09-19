@@ -131,6 +131,16 @@ class BudgetedOpenRouterClient:
     ) -> CallResult:
         if max_tokens < 1 or self.prompt_price <= 0 or self.completion_price <= 0:
             raise ValueError("positive token/price caps required")
+        provider_block: dict[str, Any] = {
+            "allow_fallbacks": False,
+            "require_parameters": True,
+            "max_price": {
+                "prompt": self.prompt_price,
+                "completion": self.completion_price,
+            },
+        }
+        if self.provider:
+            provider_block["only"] = [self.provider]
         body = {
             "model": self.model,
             "temperature": 0,
@@ -140,15 +150,7 @@ class BudgetedOpenRouterClient:
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            "provider": {
-                "only": [self.provider],
-                "allow_fallbacks": False,
-                "require_parameters": True,
-                "max_price": {
-                    "prompt": self.prompt_price,
-                    "completion": self.completion_price,
-                },
-            },
+            "provider": provider_block,
         }
         # One token per UTF-8 byte plus generous chat framing overhead bounds
         # this text-only request; server-side endpoint price caps also apply.
@@ -187,9 +189,15 @@ class BudgetedOpenRouterClient:
                         "provider": self.provider,
                     },
                 )
-                # Error bodies may contain sensitive echoed headers; never persist them.
                 if exc.code not in {429, 502, 503, 504} or attempt == 2:
-                    raise RuntimeError(f"OpenRouter HTTP {exc.code}") from None
+                    err_msg = ""
+                    try:
+                        err_data = json.loads(exc.read().decode("utf-8", errors="replace"))
+                        err_msg = err_data.get("error", {}).get("message", "")
+                    except Exception:
+                        pass
+                    msg = f"OpenRouter HTTP {exc.code}" + (f": {err_msg}" if err_msg else "")
+                    raise RuntimeError(msg) from None
                 time.sleep(0.5 * (attempt + 1))
             except (OSError, ValueError):
                 self.failed_http_attempts += 1

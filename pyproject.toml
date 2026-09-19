@@ -9,6 +9,9 @@ description = "Executable counterfactual procedural contracts for multi-agent ha
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+
 [project.scripts]
 copromem-demo = "copromem.experiment:main"
 copromem-tiny = "copromem.tiny_experiment:main"

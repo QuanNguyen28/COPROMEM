@@ -223,3 +223,73 @@ def as_jsonable(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [as_jsonable(item) for item in value]
     return value
+
+
+@dataclass(frozen=True)
+class SubtaskNode:
+    """A subtask node in a task decomposition DAG."""
+
+    node_id: str
+    role: str
+    intent: str
+    input_keys: tuple[str, ...] = ()
+    output_keys: tuple[str, ...] = ()
+
+    def observable_dict(self) -> dict[str, Any]:
+        return {
+            "node_id": self.node_id,
+            "role": self.role,
+            "intent": self.intent,
+            "input_keys": list(self.input_keys),
+            "output_keys": list(self.output_keys),
+        }
+
+
+@dataclass(frozen=True)
+class DependencyEdge:
+    """A directed dependency edge between subtask nodes with optional contract."""
+
+    source_node: str
+    target_node: str
+    contract_id: str | None = None
+    condition: str | None = None
+
+    @property
+    def as_tuple(self) -> tuple[str, str]:
+        return (self.source_node, self.target_node)
+
+
+class FailureTier(str, Enum):
+    """The 4 tiers of structural failure attribution in COPROMEM 2.0."""
+
+    HANDOFF_VIOLATION = "handoff_violation"      # Tier 1: contract violated at boundary
+    DEPENDENCY_CONFLICT = "dependency_conflict"  # Tier 2: DAG dependency missing or inverted
+    SCOPE_MISMATCH = "scope_mismatch"            # Tier 3: contract vetoed or admitted incorrectly
+    LEAF_EXECUTION_ERROR = "leaf_execution_error"# Tier 4: leaf solver/tool runtime crash
+
+
+@dataclass(frozen=True)
+class CreditAssignmentResult:
+    """Precise structural attribution of an observed task outcome."""
+
+    tier: FailureTier
+    responsible_entity: str
+    reason: str
+    suggested_patch: str
+    confidence: float = 1.0
+
+
+@dataclass(frozen=True)
+class EpisodicTrace:
+    """Episodic memory record for fast storage and prioritized offline replay."""
+
+    trace_id: str
+    task_id: str
+    task_state: Mapping[str, Any]
+    schema_id: str | None
+    handoff_events: tuple[HandoffEvent, ...]
+    success: bool
+    credit_result: CreditAssignmentResult | None = None
+    surprise: float = 0.0
+    uncertainty: float = 0.0
+    replay_priority: float = 0.0

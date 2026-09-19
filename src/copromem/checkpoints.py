@@ -45,8 +45,8 @@ class RecordedCallError(RuntimeError):
 class RunStore:
     """Write-once JSON objects. Existing objects may only be read or verified."""
 
-    def __init__(self, root: Path | None = None):
-        self.root = root
+    def __init__(self, root: Path | str | None = None):
+        self.root = Path(root) if root is not None else None
         self._objects: dict[tuple[str, str], str] = {}
 
     @staticmethod

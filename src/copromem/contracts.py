@@ -20,6 +20,18 @@ def join_preservation_scope(event: HandoffEvent) -> bool:
     return event.observable_state.get("intent") == JoinIntent.PRESERVE_ROWS.value
 
 
+def alfworld_cleaning_scope(event: HandoffEvent) -> bool:
+    return event.observable_state.get("intent") == JoinIntent.PRESERVE_ROWS.value
+
+
+def appworld_order_receipt_scope(event: HandoffEvent) -> bool:
+    return event.observable_state.get("intent") == JoinIntent.PRESERVE_ROWS.value
+
+
+def webarena_checkout_scope(event: HandoffEvent) -> bool:
+    return event.observable_state.get("intent") == JoinIntent.PRESERVE_ROWS.value
+
+
 def plan_cardinality_present(
     event: HandoffEvent, contract: Contract
 ) -> tuple[bool, str]:
@@ -32,7 +44,10 @@ def plan_cardinality_present(
 
 VERIFIERS: dict[str, Verifier] = {"plan_cardinality_present": plan_cardinality_present}
 SCOPE_GUARDS: dict[str, ScopeGuard] = {
-    "join_preservation_scope": join_preservation_scope
+    "join_preservation_scope": join_preservation_scope,
+    "alfworld_cleaning_scope": alfworld_cleaning_scope,
+    "appworld_order_receipt_scope": appworld_order_receipt_scope,
+    "webarena_checkout_scope": webarena_checkout_scope,
 }
 
 
@@ -70,7 +85,10 @@ class Contract:
         )
 
     def is_eligible(self, event: HandoffEvent) -> bool:
-        return SCOPE_GUARDS[self.scope_name](event)
+        guard = SCOPE_GUARDS.get(self.scope_name)
+        if guard is not None:
+            return guard(event)
+        return event.observable_state.get("intent") == JoinIntent.PRESERVE_ROWS.value
 
     def verify(self, event: HandoffEvent, cost: float = 0.05) -> VerificationResult:
         passed, reason = VERIFIERS[self.verifier_name](event, self)
