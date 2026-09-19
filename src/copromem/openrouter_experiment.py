@@ -110,14 +110,23 @@ class OpenRouterMultiAgentRunner:
             "Output ONLY the JSON object, with no markdown fences or surrounding commentary."
         )
 
-        user_prompt = (
-            f"Task ID: {task.task_id}\n"
-            f"Intent: {task.intent.value}\n"
-            f"Left Rows: {task.left_rows}\n"
-            f"Actual Cardinality: {task.actual_cardinality}\n"
-            f"Expected Rows: {task.expected_rows}\n"
-            f"Join Keys: {list(task.join_keys)}"
-        )
+        user_prompt_lines = [
+            f"Task ID: {task.task_id}",
+            f"Intent: {task.intent.value}",
+        ]
+        if task.instruction:
+            user_prompt_lines.append(f"Web User Request: {task.instruction}")
+        if task.sites:
+            user_prompt_lines.append(f"Target Sites: {list(task.sites)}")
+        if task.start_url:
+            user_prompt_lines.append(f"Start URL: {task.start_url}")
+        user_prompt_lines.extend([
+            f"Left Rows: {task.left_rows}",
+            f"Actual Cardinality: {task.actual_cardinality}",
+            f"Expected Rows: {task.expected_rows}",
+            f"Join Keys: {list(task.join_keys)}",
+        ])
+        user_prompt = "\n".join(user_prompt_lines)
 
         call_result = self.client.chat(system_prompt, user_prompt, max_tokens=300, seed=seed)
         parsed = parse_json_object(call_result.text)
@@ -149,13 +158,18 @@ class OpenRouterMultiAgentRunner:
             "}"
         )
 
-        user_prompt = (
-            f"Task: {task.task_id}\n"
-            f"Intent: {task.intent.value}\n"
-            f"Input Rows: {task.left_rows}\n"
-            f"Expected Output Rows: {task.expected_rows}\n"
-            f"Verified Plan: {plan.fields()}"
-        )
+        user_prompt_lines = [
+            f"Task: {task.task_id}",
+            f"Intent: {task.intent.value}",
+        ]
+        if task.instruction:
+            user_prompt_lines.append(f"Web User Request: {task.instruction}")
+        user_prompt_lines.extend([
+            f"Input Rows: {task.left_rows}",
+            f"Expected Output Rows: {task.expected_rows}",
+            f"Verified Plan: {plan.fields()}",
+        ])
+        user_prompt = "\n".join(user_prompt_lines)
 
         call_result = self.client.chat(system_prompt, user_prompt, max_tokens=250, seed=seed)
         parsed = parse_json_object(call_result.text)

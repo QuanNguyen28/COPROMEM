@@ -8,7 +8,7 @@ observable workflow state it is allowed to retain.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
 
@@ -45,13 +45,18 @@ class JoinTask:
     expected_rows: int
     intent: JoinIntent = JoinIntent.PRESERVE_ROWS
     join_keys: tuple[str, ...] = ("customer_id",)
+    instruction: str = ""
+    sites: tuple[str, ...] = ()
+    start_url: str = ""
+    require_login: bool = False
+    eval_spec: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def requires_cardinality_rationale(self) -> bool:
         return self.intent is JoinIntent.PRESERVE_ROWS
 
     def observable_state(self) -> dict[str, Any]:
-        return {
+        state: dict[str, Any] = {
             "task_id": self.task_id,
             "group_id": self.group_id,
             "left_rows": self.left_rows,
@@ -60,6 +65,15 @@ class JoinTask:
             "intent": self.intent.value,
             "join_keys": list(self.join_keys),
         }
+        if self.instruction:
+            state["instruction"] = self.instruction
+        if self.sites:
+            state["sites"] = list(self.sites)
+        if self.start_url:
+            state["start_url"] = self.start_url
+        if self.require_login:
+            state["require_login"] = self.require_login
+        return state
 
 
 @dataclass(frozen=True)
