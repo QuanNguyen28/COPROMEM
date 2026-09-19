@@ -120,3 +120,6 @@ coverage.xml
 Thumbs.db
 Desktop.ini
 .ipynb_checkpoints/
+
+external/
+LIVE_MONITOR.md

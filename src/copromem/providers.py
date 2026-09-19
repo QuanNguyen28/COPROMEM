@@ -210,9 +210,11 @@ class BudgetedOpenRouterClient:
                         "provider": self.provider,
                     },
                 )
-                raise RuntimeError(
-                    "OpenRouter transport or JSON failure; reservation retained"
-                ) from None
+                if attempt == 2:
+                    raise RuntimeError(
+                        "OpenRouter transport or JSON failure; reservation retained"
+                    ) from None
+                time.sleep(1.0 * (attempt + 1))
         raw = result.get("usage") or {}
         actual = float(raw["cost"]) if raw.get("cost") is not None else bound
         self.ledger.settle(reservation, actual)

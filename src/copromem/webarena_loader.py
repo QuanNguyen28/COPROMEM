@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -130,11 +131,20 @@ def _raw_to_jointask(
     norm_action, twin_action = DOMAIN_ACTIONS.get(domain, ("standard_exec", "veto_action"))
 
     # Determine if task exhibits counterfactual/divergence characteristics
-    is_twin = False
     lower_intent = intent_text.lower()
-    veto_keywords = ("cancel", "revert", "delete", "stop", "locked", "reject", "deny", "diverge", "freeze")
-    if any(kw in lower_intent for kw in veto_keywords):
-        is_twin = True
+    cleaned_intent = (
+        lower_intent
+        .replace("one stop market", "onestop_store")
+        .replace("one stop shop", "onestop_store")
+        .replace("one-stop market", "onestop_store")
+        .replace("one-stop shop", "onestop_store")
+    )
+    is_twin = bool(
+        re.search(
+            r"\b(cancel|revert|delete|abort|locked|reject|deny|diverge|freeze)\b",
+            cleaned_intent,
+        )
+    )
 
     cardinality = twin_action if is_twin else norm_action
     expected_rows = 0 if is_twin else (2 + (index % 4))
@@ -186,7 +196,7 @@ def load_webarena_official_tasks(
     selected_tasks: list[JoinTask] = []
 
     if scale_normalized == "smoke":
-        # 1 task from shopping, 1 from gitlab
+        # 1 task from shopping, 1 from gitlab = 2 tasks
         shop_tasks = domains["web_shopping"][:1]
         git_tasks = domains["web_gitlab"][:1]
         for i, t in enumerate(shop_tasks):
@@ -194,13 +204,13 @@ def load_webarena_official_tasks(
         for i, t in enumerate(git_tasks):
             selected_tasks.append(_raw_to_jointask(t, "web_gitlab", i))
 
-    elif scale_normalized == "diagnostic":
+    elif scale_normalized in ("diagnostic", "conference"):
         # 4 tasks per domain across 5 domains = 20 tasks
         for d in DOMAIN_KEYS:
             for i, t in enumerate(domains[d][:4]):
                 selected_tasks.append(_raw_to_jointask(t, d, i))
 
-    elif scale_normalized in ("conference", "slice_100"):
+    elif scale_normalized in ("slice_100", "slice-100", "100"):
         # 20 tasks per domain across 5 domains = 100 tasks
         for d in DOMAIN_KEYS:
             for i, t in enumerate(domains[d][:20]):
@@ -213,9 +223,9 @@ def load_webarena_official_tasks(
                 selected_tasks.append(_raw_to_jointask(t, d, i))
 
     else:
-        # Default fallback: 20 per domain
+        # Default fallback: 20 tasks across 5 domains
         for d in DOMAIN_KEYS:
-            for i, t in enumerate(domains[d][:20]):
+            for i, t in enumerate(domains[d][:4]):
                 selected_tasks.append(_raw_to_jointask(t, d, i))
 
     if max_tasks is not None and max_tasks > 0:

@@ -89,11 +89,33 @@ class PatternSeparationEngine:
         # Calculate causal conflict based on preconditions and task invariants
         task_intent = task_state.get("intent")
         candidate_intent = (candidate_state or {}).get("intent")
-
         causal_conflict = 0.0
-        # If task intent is explicitly divergent (e.g. preserve rows vs intentional expansion)
+
+        # Check for explicit intent divergence (e.g. preserve rows vs intentional expansion)
+        task_constraints = task_state.get("constraints", {})
+        candidate_constraints = (candidate_state or {}).get("constraints", {})
+
         if candidate_intent and task_intent and task_intent != candidate_intent:
-            causal_conflict += 0.60
+            if not task_constraints and not candidate_constraints:
+                causal_conflict += 0.60
+            else:
+                opposing_pairs = [
+                    ("preserve", "expansion"),
+                    ("ascending", "descending"),
+                    ("create", "delete"),
+                    ("add", "remove"),
+                ]
+                t_lower = task_intent.lower()
+                c_lower = candidate_intent.lower()
+                for w1, w2 in opposing_pairs:
+                    if (w1 in t_lower and w2 in c_lower) or (w2 in t_lower and w1 in c_lower):
+                        causal_conflict += 0.60
+                        break
+
+        # Check for constraint divergence (e.g. target entity or temporal filtering conflict)
+        for k, v in candidate_constraints.items():
+            if k in task_constraints and task_constraints[k] != v:
+                causal_conflict += 0.50
 
         # Check for counterexamples in candidate contracts
         task_id = str(task_state.get("task_id", ""))
@@ -112,15 +134,22 @@ class PatternSeparationEngine:
 
         causal_conflict = min(1.0, causal_conflict)
 
-        # Check separation criterion
-        if semantic_sim >= self.semantic_threshold and causal_conflict >= self.causal_threshold:
+        # Check separation criterion:
+        # 1. High surface similarity with causal divergence (classic twin-task negative transfer)
+        # 2. Or explicit constraint conflict (e.g. target_type mismatch, temporal mismatch)
+        is_negative_transfer = (
+            semantic_sim >= self.semantic_threshold and causal_conflict >= self.causal_threshold
+        ) or (
+            causal_conflict >= 0.50 and semantic_sim >= 0.05
+        )
+
+        if is_negative_transfer:
             variant_id = f"{candidate.schema_id}_variant_{task_intent or 'separated'}"
             return PatternSeparationDecision(
                 should_separate=True,
                 reason=(
-                    f"Negative transfer risk: Semantic similarity is high ({semantic_sim:.2f} >= "
-                    f"{self.semantic_threshold:.2f}), but causal conflict is high "
-                    f"({causal_conflict:.2f} >= {self.causal_threshold:.2f})."
+                    f"Negative transfer risk: Causal conflict is high ({causal_conflict:.2f} >= "
+                    f"{self.causal_threshold:.2f}, semantic_sim={semantic_sim:.2f})."
                 ),
                 semantic_similarity=semantic_sim,
                 causal_distance=causal_conflict,
