@@ -8,10 +8,32 @@ from typing import Any
 from .schema import DecompositionSchema
 
 
-def token_jaccard_similarity(tokens_a: tuple[str, ...], tokens_b: tuple[str, ...]) -> float:
+import re
+
+
+def normalize_cues(tokens: tuple[str, ...] | list[str] | str) -> set[str]:
+    """Normalize text or tokens into clean word stems without punctuation or hyphens."""
+    if isinstance(tokens, str):
+        text = tokens
+    else:
+        text = " ".join(tokens)
+    words = re.findall(r"\w+", text.lower())
+    stopwords = {"a", "an", "the", "me", "my", "our", "about", "tell", "why", "what", "which", "who", "is", "are", "of", "in", "for"}
+    res = set()
+    for w in words:
+        if not w or w in stopwords:
+            continue
+        if w.endswith("s") and len(w) > 3 and not w.endswith("ss"):
+            res.add(w[:-1])
+        else:
+            res.add(w)
+    return res
+
+
+def token_jaccard_similarity(tokens_a: tuple[str, ...] | list[str] | str, tokens_b: tuple[str, ...] | list[str] | str) -> float:
     """Calculate token-level Jaccard similarity between two sets of semantic cues."""
-    set_a = {t.lower().strip() for t in tokens_a if t.strip()}
-    set_b = {t.lower().strip() for t in tokens_b if t.strip()}
+    set_a = normalize_cues(tokens_a)
+    set_b = normalize_cues(tokens_b)
     if not set_a and not set_b:
         return 1.0
     if not set_a or not set_b:
@@ -58,19 +80,25 @@ class PatternSeparationDecision:
     semantic_similarity: float
     causal_distance: float
     suggested_variant_id: str | None = None
+    divergent_constraints: dict[str, tuple[Any, Any]] = None
+
+    def __post_init__(self) -> None:
+        if self.divergent_constraints is None:
+            object.__setattr__(self, "divergent_constraints", {})
 
 
 class PatternSeparationEngine:
     """Detects when high surface semantic resemblance hides conflicting causal structure.
 
-    If semantic similarity exceeds semantic_threshold, but causal/graph distance exceeds
-    causal_threshold, the engine flags a negative-transfer hazard and recommends
-    isolating the schemas (Pattern Separation).
+    In cognitive architecture (hippocampal DG-CA3 circuits), negative transfer occurs
+    only when surface cues are deceptively similar (semantic_sim >= semantic_threshold),
+    while the underlying causal invariants or state constraints diverge (causal_conflict >= causal_threshold).
+    If surface similarity is low, the memories are merely orthogonal, not a negative transfer hazard.
     """
 
     def __init__(
         self,
-        semantic_threshold: float = 0.40,
+        semantic_threshold: float = 0.35,
         causal_threshold: float = 0.35,
     ) -> None:
         self.semantic_threshold = semantic_threshold
@@ -82,78 +110,97 @@ class PatternSeparationEngine:
         task_state: dict[str, Any],
         candidate: DecompositionSchema,
         candidate_state: dict[str, Any] | None = None,
+        task_schema: DecompositionSchema | None = None,
     ) -> PatternSeparationDecision:
         # Calculate semantic similarity between task cues and candidate cues
         semantic_sim = token_jaccard_similarity(task_cues, candidate.semantic_cues)
 
-        # Calculate causal conflict based on preconditions and task invariants
+        # Calculate causal conflict based on preconditions, intent, and constraints
         task_intent = task_state.get("intent")
         candidate_intent = (candidate_state or {}).get("intent")
         causal_conflict = 0.0
+        divergent_constraints: dict[str, tuple[Any, Any]] = {}
 
-        # Check for explicit intent divergence (e.g. preserve rows vs intentional expansion)
         task_constraints = task_state.get("constraints", {})
         candidate_constraints = (candidate_state or {}).get("constraints", {})
 
+        # Check for opposing intent keywords (e.g. preserve vs expansion, pending vs approved)
         if candidate_intent and task_intent and task_intent != candidate_intent:
-            if not task_constraints and not candidate_constraints:
-                causal_conflict += 0.60
-            else:
-                opposing_pairs = [
-                    ("preserve", "expansion"),
-                    ("ascending", "descending"),
-                    ("create", "delete"),
-                    ("add", "remove"),
-                ]
-                t_lower = task_intent.lower()
-                c_lower = candidate_intent.lower()
-                for w1, w2 in opposing_pairs:
-                    if (w1 in t_lower and w2 in c_lower) or (w2 in t_lower and w1 in c_lower):
-                        causal_conflict += 0.60
-                        break
+            opposing_pairs = [
+                ("preserve", "expansion"),
+                ("ascending", "descending"),
+                ("create", "delete"),
+                ("add", "remove"),
+                ("enable", "disable"),
+                ("include", "exclude"),
+            ]
+            t_lower = task_intent.lower()
+            c_lower = candidate_intent.lower()
+            for w1, w2 in opposing_pairs:
+                if (w1 in t_lower and w2 in c_lower) or (w2 in t_lower and w1 in c_lower):
+                    causal_conflict += 0.60
+                    divergent_constraints["opposing_intent"] = (w2, w1)
+                    break
 
-        # Check for constraint divergence (e.g. target entity or temporal filtering conflict)
+        # Check for explicit structural constraint divergence (entity type, temporal scope, status, aggregation, cardinality, sentiment, rank)
+        STRUCTURAL_KEYS = {"target_type", "temporal_scope", "status", "aggregation", "cardinality", "sentiment", "rank"}
         for k, v in candidate_constraints.items():
-            if k in task_constraints and task_constraints[k] != v:
+            if k in STRUCTURAL_KEYS and k in task_constraints and task_constraints[k] != v:
                 causal_conflict += 0.50
+                divergent_constraints[k] = (v, task_constraints[k])
 
         # Check for counterexamples in candidate contracts
         task_id = str(task_state.get("task_id", ""))
         for contract in candidate.contracts:
             if task_id and task_id in contract.counterexamples:
                 causal_conflict += 0.50
+                divergent_constraints["counterexample_task"] = (contract.contract_id, task_id)
             if task_intent and any(ce == task_intent for ce in contract.counterexamples):
                 causal_conflict += 0.50
+                divergent_constraints["counterexample_intent"] = (contract.contract_id, task_intent)
+        if task_id and task_id in candidate.structural_stats.get("counterexamples", ()):
+            causal_conflict += 0.50
+            divergent_constraints["counterexample_task"] = (candidate.schema_id, task_id)
 
         # Check preconditions in candidate
         missing_preconditions = [
-            p for p in candidate.preconditions if not task_state.get(p, True)
+            p for p in candidate.preconditions if not task_state.get(p, False)
         ]
         if missing_preconditions:
             causal_conflict += 0.40 * (len(missing_preconditions) / len(candidate.preconditions))
+            divergent_constraints["missing_preconditions"] = (candidate.preconditions, tuple(missing_preconditions))
+
+        if task_schema is not None:
+            graph_distance = calculate_graph_distance(task_schema, candidate)
+            if graph_distance >= self.causal_threshold:
+                causal_conflict = max(causal_conflict, graph_distance)
+                divergent_constraints["dag"] = (
+                    tuple(edge.as_tuple for edge in candidate.edges),
+                    tuple(edge.as_tuple for edge in task_schema.edges),
+                )
 
         causal_conflict = min(1.0, causal_conflict)
 
-        # Check separation criterion:
-        # 1. High surface similarity with causal divergence (classic twin-task negative transfer)
-        # 2. Or explicit constraint conflict (e.g. target_type mismatch, temporal mismatch)
+        # Strict cognitive separation criterion:
+        # Negative transfer ONLY occurs when surface resemblance is high (looks the same),
+        # but causal/constraint structure diverges (requires different actions/invariants).
         is_negative_transfer = (
             semantic_sim >= self.semantic_threshold and causal_conflict >= self.causal_threshold
-        ) or (
-            causal_conflict >= 0.50 and semantic_sim >= 0.05
         )
 
         if is_negative_transfer:
             variant_id = f"{candidate.schema_id}_variant_{task_intent or 'separated'}"
+            diff_desc = ", ".join(f"{k}: '{v[0]}' vs '{v[1]}'" for k, v in divergent_constraints.items())
             return PatternSeparationDecision(
                 should_separate=True,
                 reason=(
                     f"Negative transfer risk: Causal conflict is high ({causal_conflict:.2f} >= "
-                    f"{self.causal_threshold:.2f}, semantic_sim={semantic_sim:.2f})."
+                    f"{self.causal_threshold:.2f}, semantic_sim={semantic_sim:.2f}). Divergences: [{diff_desc}]."
                 ),
                 semantic_similarity=semantic_sim,
                 causal_distance=causal_conflict,
                 suggested_variant_id=variant_id,
+                divergent_constraints=divergent_constraints,
             )
 
         return PatternSeparationDecision(
@@ -162,4 +209,5 @@ class PatternSeparationEngine:
             semantic_similarity=semantic_sim,
             causal_distance=causal_conflict,
             suggested_variant_id=None,
+            divergent_constraints={},
         )

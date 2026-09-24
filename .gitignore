@@ -122,4 +122,5 @@ Desktop.ini
 .ipynb_checkpoints/
 
 external/
-LIVE_MONITOR.md
+results_*/
+memories_*/

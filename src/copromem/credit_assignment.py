@@ -12,7 +12,7 @@ def localize_structural_failure(
     run: WorkflowRun,
     schema: DecompositionSchema | None = None,
     observed_context: dict[str, Any] | None = None,
-) -> CreditAssignmentResult:
+) -> CreditAssignmentResult | None:
     """Classify the root cause of a task failure into one of 4 structural tiers:
 
     1. Handoff Violation (Tier 1): A boundary contract failed verification.
@@ -24,13 +24,7 @@ def localize_structural_failure(
 
     # If the task succeeded, there is no structural failure
     if run.success:
-        return CreditAssignmentResult(
-            tier=FailureTier.LEAF_EXECUTION_ERROR,
-            responsible_entity="none",
-            reason="Task succeeded. No structural failure detected.",
-            suggested_patch="None",
-            confidence=1.0,
-        )
+        return None
 
     # Tier 3 Check: Scope Mismatch
     # Did a contract intervene on an out-of-scope or intentional alternative task?
@@ -57,6 +51,11 @@ def localize_structural_failure(
     # Did any contract fail verification during handoff?
     for handoff in run.handoffs:
         for v in handoff.verifier_results:
+            if any(
+                recovery.contract_id == v.contract_id and recovery.successful
+                for recovery in run.recoveries
+            ):
+                continue
             if not v.passed:
                 return CreditAssignmentResult(
                     tier=FailureTier.HANDOFF_VIOLATION,
@@ -69,10 +68,46 @@ def localize_structural_failure(
     # Tier 2 Check: Dependency Conflict
     # Were prerequisite inputs required by downstream nodes missing in upstream outputs?
     if schema:
+        predecessors: dict[str, set[str]] = {node.node_id: set() for node in schema.nodes}
+        for edge in schema.edges:
+            predecessors[edge.target_node].add(edge.source_node)
+        producers: dict[str, set[str]] = {}
+        for node in schema.nodes:
+            for key in node.output_keys:
+                producers.setdefault(key, set()).add(node.node_id)
+
+        def ancestors(node_id: str) -> set[str]:
+            seen: set[str] = set()
+            pending = list(predecessors[node_id])
+            while pending:
+                parent = pending.pop()
+                if parent in seen:
+                    continue
+                seen.add(parent)
+                pending.extend(predecessors[parent])
+            return seen
+
+        for node in schema.nodes:
+            upstream = ancestors(node.node_id)
+            for key in node.input_keys:
+                expected_producers = producers.get(key, set()) - {node.node_id}
+                if expected_producers and not expected_producers.intersection(upstream):
+                    return CreditAssignmentResult(
+                        tier=FailureTier.DEPENDENCY_CONFLICT,
+                        responsible_entity=node.node_id,
+                        reason=(f"Dependency conflict: '{key}' is produced by "
+                                f"{sorted(expected_producers)} but no dependency path reaches "
+                                f"node '{node.node_id}'."),
+                        suggested_patch=f"Add an upstream dependency path for '{key}'.",
+                        confidence=0.9,
+                    )
+
         # Check node inputs against available artifacts
-        available_keys = set(ctx.keys())
+        available_keys = {key for key, value in ctx.items() if value is not None}
         if hasattr(run, "plan") and run.plan:
-            available_keys.update(run.plan.fields().keys() if hasattr(run.plan, "fields") else {})
+            available_keys.update(
+                key for key, value in run.plan.fields().items() if value is not None
+            )
 
         for node in schema.nodes:
             missing_inputs = [k for k in node.input_keys if k not in available_keys]
@@ -92,7 +127,7 @@ def localize_structural_failure(
 
     # Tier 4 Check: Leaf Execution Error
     # High-level structure and handoff contracts passed, but solver made an execution mistake
-    if not run.success:
+    if any(v.passed for handoff in run.handoffs for v in handoff.verifier_results):
         return CreditAssignmentResult(
             tier=FailureTier.LEAF_EXECUTION_ERROR,
             responsible_entity="solver",
@@ -108,11 +143,11 @@ def localize_structural_failure(
             confidence=0.80,
         )
 
-    # Task succeeded
+    # Failure without a valid observed boundary cannot be attributed to a leaf.
     return CreditAssignmentResult(
-        tier=FailureTier.LEAF_EXECUTION_ERROR,
-        responsible_entity="none",
-        reason="Task succeeded. No structural failure detected.",
-        suggested_patch="None",
-        confidence=1.0,
+        tier=FailureTier.UNKNOWN,
+        responsible_entity="unknown",
+        reason="No passing handoff verifier establishes valid leaf inputs.",
+        suggested_patch="Collect boundary verification evidence before assigning a tier.",
+        confidence=0.0,
     )

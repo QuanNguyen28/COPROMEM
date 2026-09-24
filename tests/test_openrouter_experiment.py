@@ -11,7 +11,9 @@ from copromem.openrouter_experiment import (
 from copromem.real_gsm8k_experiment import CallResult, Usage
 
 
-def test_load_api_key(tmp_path):
+def test_load_api_key(tmp_path, monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+
     # 1. From CLI
     assert load_api_key(cli_key="sk-cli-123") == "sk-cli-123"
 
@@ -153,6 +155,5 @@ def test_scale_smoke_vs_conference():
     # Max-tasks clipping
     tasks_clipped, _ = get_benchmark_suite("webarena", scale="conference", max_tasks=7)
     assert len(tasks_clipped) == 7
-
 
 

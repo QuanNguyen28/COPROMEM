@@ -1,0 +1,776 @@
+[
+  {
+    "index": 1,
+    "task_id": 94,
+    "category": "Customer Order History & Ranking",
+    "intent": "Telll me the grand total of invoice 000000001.",
+    "eval_type": "string_match",
+    "ground_truth": "['36.39']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 2,
+    "task_id": 95,
+    "category": "Customer Order History & Ranking",
+    "intent": "Telll me the grand total of invoice 000000002.",
+    "eval_type": "string_match",
+    "ground_truth": "['39.64']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 3,
+    "task_id": 41,
+    "category": "Customer Order History & Ranking",
+    "intent": "List the top 1 search terms in my store",
+    "eval_type": "string_match",
+    "ground_truth": "hollister",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 4,
+    "task_id": 42,
+    "category": "Customer Order History & Ranking",
+    "intent": "List the top 2 search terms in my store",
+    "eval_type": "string_match",
+    "ground_truth": "['hollister', 'Joust Bag']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 5,
+    "task_id": 43,
+    "category": "Customer Order History & Ranking",
+    "intent": "List the top 3 search terms in my store",
+    "eval_type": "string_match",
+    "ground_truth": "['hollister', 'Joust Bag', 'Antonia Racer Tank']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 6,
+    "task_id": 185,
+    "category": "Inventory & Stock Management",
+    "intent": "Give me the brand of the products that have 3 units left",
+    "eval_type": "string_match",
+    "ground_truth": "['Eos', 'Minerva']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 7,
+    "task_id": 201,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the customer name of the earliest fraud suspect order",
+    "eval_type": "string_match",
+    "ground_truth": "N/A",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 8,
+    "task_id": 198,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the customer name of the most recent cancelled order",
+    "eval_type": "string_match",
+    "ground_truth": "Lily Potter",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 9,
+    "task_id": 202,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the date of the most recent canlled order",
+    "eval_type": "string_match",
+    "ground_truth": "May 23, 2023",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 10,
+    "task_id": 203,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the purchase date and order id of the most recent pending order",
+    "eval_type": "string_match",
+    "ground_truth": "000000299, May 31, 2023, 2:55:09 AM",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 11,
+    "task_id": 200,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the billing name of the oldest complete order",
+    "eval_type": "string_match",
+    "ground_truth": "John Lee",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 12,
+    "task_id": 184,
+    "category": "Inventory & Stock Management",
+    "intent": "Give me the name of the products that have 0 units left",
+    "eval_type": "string_match",
+    "ground_truth": "Sinbad Fitness Tank",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 13,
+    "task_id": 186,
+    "category": "Inventory & Stock Management",
+    "intent": "Give me the product names and the sizes of the products that have 2-3 units left",
+    "eval_type": "string_match",
+    "ground_truth": "Eos V-Neck Hoodie: S Minera Luma Tech V-Tee: XS",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 14,
+    "task_id": 199,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the order ID of the newest pending order",
+    "eval_type": "string_match",
+    "ground_truth": "['299']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 15,
+    "task_id": 193,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the total payment amount of the last 2 completed orders",
+    "eval_type": "string_match",
+    "ground_truth": "['182.4']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 16,
+    "task_id": 194,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the total payment amount of the last 5 completed orders",
+    "eval_type": "string_match",
+    "ground_truth": "['555.2']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 17,
+    "task_id": 197,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the total payment amount of the last 5 non-cancelled orders",
+    "eval_type": "string_match",
+    "ground_truth": "['778.2']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 18,
+    "task_id": 6,
+    "category": "Bestseller & Sales Reports",
+    "intent": "What are the top-5 best-selling product in 2023",
+    "eval_type": "string_match",
+    "ground_truth": "['Sprite Yoga Strap 6 foot', 'Overnight Duffle', 'Ida Workout Parachute Pant-29-Purple', 'Hawkeye Yoga Short-32-Blue', 'Sprite Stasis Ball 65 cm']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 19,
+    "task_id": 204,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the product name and discounted price (low to high) of the most recent completed order",
+    "eval_type": "string_match",
+    "ground_truth": "Rapha Sports Short: $35 Thorpe Track Pant: $54.4 Mach Street Sweatshirt: $62",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 20,
+    "task_id": 127,
+    "category": "Search Terms Analytics",
+    "intent": "What brands appear most frequently among the top search terms?",
+    "eval_type": "string_match",
+    "ground_truth": "['Hollister', 'Joust', 'Antonia']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 21,
+    "task_id": 0,
+    "category": "Bestseller & Sales Reports",
+    "intent": "What is the top-1 best-selling product in 2022",
+    "eval_type": "string_match",
+    "ground_truth": "Quest Lumaflex™ Band",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 22,
+    "task_id": 119,
+    "category": "Bestseller & Sales Reports",
+    "intent": "Tell me the reasons why customers like Antonia Racer Tank",
+    "eval_type": "string_match",
+    "ground_truth": "Its color and style is good",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 23,
+    "task_id": 1,
+    "category": "Bestseller & Sales Reports",
+    "intent": "What is the top-1 best-selling brand in Quarter 1 2022",
+    "eval_type": "string_match",
+    "ground_truth": "Sprite",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 24,
+    "task_id": 3,
+    "category": "Bestseller & Sales Reports",
+    "intent": "What are the top-2 best-selling product in 2022",
+    "eval_type": "string_match",
+    "ground_truth": "['Quest Lumaflex™ Band', 'Sprite Stasis Ball 65 cm']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 25,
+    "task_id": 116,
+    "category": "Unhappy Customer Identification",
+    "intent": "Show me the name of the customers who have expressed dissatisfaction with tanks products?",
+    "eval_type": "string_match",
+    "ground_truth": "['Alexander', 'Carma', 'Dominic', 'Merrie', 'Monroe', 'Scotty', 'Shaunte', 'Teofila', 'Valorie']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 26,
+    "task_id": 62,
+    "category": "Customer Order History & Ranking",
+    "intent": "Which customer has completed the most number of orders in the entire history?",
+    "eval_type": "string_match",
+    "ground_truth": "['Jane Smith']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 27,
+    "task_id": 63,
+    "category": "Customer Order History & Ranking",
+    "intent": "Which customer(s) has completed the second most number of orders in the entire history?",
+    "eval_type": "string_match",
+    "ground_truth": "['Adam Garcia', 'Michael Nguyen', 'Sarah Miller']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 28,
+    "task_id": 107,
+    "category": "Bestseller & Sales Reports",
+    "intent": "Presents the monthly count of successful orders from May to December 2022 in MM:COUNT format",
+    "eval_type": "string_match",
+    "ground_truth": "May: 8 orders June: 13 orders July: 9 orders August: 8 orders Sepetember: 10 orders Octorbor: 4 orders November: 5 orders December: 10 orders  ",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 29,
+    "task_id": 196,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Compare the payment difference of the last 4 cancelled orders and completed orders",
+    "eval_type": "string_match",
+    "ground_truth": "['194.25']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 30,
+    "task_id": 288,
+    "category": "Sales & Cancellation Analytics",
+    "intent": "Tell me the name of the customer who has the most cancellations in the history",
+    "eval_type": "string_match",
+    "ground_truth": "Samantha Jones",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 31,
+    "task_id": 112,
+    "category": "Unhappy Customer Identification",
+    "intent": "Show me the customers who have expressed dissatisfaction with Circe fleece?",
+    "eval_type": "string_match",
+    "ground_truth": "Hannah Lim",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 32,
+    "task_id": 113,
+    "category": "Unhappy Customer Identification",
+    "intent": "Show me the customers who have expressed dissatisfaction with Olivia zip jacket?",
+    "eval_type": "string_match",
+    "ground_truth": "['Emma Lopez', 'Seam Miller']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 33,
+    "task_id": 114,
+    "category": "Unhappy Customer Identification",
+    "intent": "Show me the customers who have expressed dissatisfaction with Antonia racer tank?",
+    "eval_type": "string_match",
+    "ground_truth": "['Shaunte', 'Merrie']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 34,
+    "task_id": 115,
+    "category": "Unhappy Customer Identification",
+    "intent": "Show me the name of the customers who have expressed dissatisfaction with Chloe tank",
+    "eval_type": "string_match",
+    "ground_truth": "",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 35,
+    "task_id": 208,
+    "category": "Customer Contact & Profile",
+    "intent": "Find the customer name and email with phone number +1 2058812302",
+    "eval_type": "string_match",
+    "ground_truth": "['John Smith', 'john.smith.xyz@gmail.com']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 36,
+    "task_id": 209,
+    "category": "Customer Contact & Profile",
+    "intent": "Find the customer name and email with phone number 2137418080",
+    "eval_type": "string_match",
+    "ground_truth": "['Jennifer White', 'jennifer.white@yahoo.com']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 37,
+    "task_id": 210,
+    "category": "Customer Contact & Profile",
+    "intent": "Find the customer name and email with phone number 2065555555",
+    "eval_type": "string_match",
+    "ground_truth": "['Adam Garcia', 'gamingpro456@gmail.com']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 38,
+    "task_id": 211,
+    "category": "Customer Contact & Profile",
+    "intent": "Find the customer name and email with phone number 8015551212",
+    "eval_type": "string_match",
+    "ground_truth": "['Sean Miller', 'sean.miller@gmail.com']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 39,
+    "task_id": 212,
+    "category": "Customer Contact & Profile",
+    "intent": "Find the customer name and email with phone number 555-229-3326",
+    "eval_type": "string_match",
+    "ground_truth": "['Veronica Costello', 'roni_cost@example.com']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 40,
+    "task_id": 11,
+    "category": "Review Keyword Search",
+    "intent": "Tell me the the number of reviews that our store received by far that mention term \"disappointed\"",
+    "eval_type": "string_match",
+    "ground_truth": "['6']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 41,
+    "task_id": 12,
+    "category": "Review Keyword Search",
+    "intent": "Tell me the the number of reviews that our store received by far that mention term \"satisfied\"",
+    "eval_type": "string_match",
+    "ground_truth": "['2']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 42,
+    "task_id": 13,
+    "category": "Review Keyword Search",
+    "intent": "Tell me the the number of reviews that our store received by far that mention term \"decent\"",
+    "eval_type": "string_match",
+    "ground_truth": "['2']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 43,
+    "task_id": 14,
+    "category": "Review Keyword Search",
+    "intent": "Tell me the the number of reviews that our store received by far that mention term \"not useful\"",
+    "eval_type": "string_match",
+    "ground_truth": "['0']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 44,
+    "task_id": 15,
+    "category": "Review Keyword Search",
+    "intent": "Tell me the the number of reviews that our store received by far that mention term \"best\"",
+    "eval_type": "string_match",
+    "ground_truth": "['2']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 45,
+    "task_id": 77,
+    "category": "Review Status Aggregation",
+    "intent": "What is the total count of Pending reviews amongst all the reviews?",
+    "eval_type": "string_match",
+    "ground_truth": "['5']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 46,
+    "task_id": 78,
+    "category": "Review Status Aggregation",
+    "intent": "What is the total count of Approved reviews amongst all the reviews?",
+    "eval_type": "string_match",
+    "ground_truth": "['346']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 47,
+    "task_id": 79,
+    "category": "Review Status Aggregation",
+    "intent": "What is the total count of Not Approved reviews amongst all the reviews?",
+    "eval_type": "string_match",
+    "ground_truth": "['0']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 48,
+    "task_id": 213,
+    "category": "Customer Dissatisfaction & Complaints",
+    "intent": "What are the key aspects that the customers don't like about Antonia Racer Tank",
+    "eval_type": "string_match",
+    "ground_truth": "Not suitable for high-impact workouts",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 49,
+    "task_id": 214,
+    "category": "Customer Dissatisfaction & Complaints",
+    "intent": "What are the key aspects that the customers don't like about Zing Jump Rope",
+    "eval_type": "string_match",
+    "ground_truth": "It is hard to find the right size. Won't last long",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 50,
+    "task_id": 215,
+    "category": "Customer Dissatisfaction & Complaints",
+    "intent": "What are the key aspects that the customers don't like about Circe ice fleece",
+    "eval_type": "string_match",
+    "ground_truth": "Material quality, fit, insufficient warmth, color",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 51,
+    "task_id": 216,
+    "category": "Customer Dissatisfaction & Complaints",
+    "intent": "What are the key aspects that the customers don't like about Electra Bra Top",
+    "eval_type": "string_match",
+    "ground_truth": "Not true to size",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 52,
+    "task_id": 217,
+    "category": "Customer Dissatisfaction & Complaints",
+    "intent": "What are the key aspects that the customers don't like about Pursuit Tone Band",
+    "eval_type": "string_match",
+    "ground_truth": "Insufficient resistance for their workouts.",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 53,
+    "task_id": 243,
+    "category": "Unhappy Customer Identification",
+    "intent": "Show me the email address of the customer who is the most unhappy with Circe fleece",
+    "eval_type": "string_match",
+    "ground_truth": "hannah.lim@gmail.com",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 54,
+    "task_id": 244,
+    "category": "Unhappy Customer Identification",
+    "intent": "Show me the email address of the customer who is the most unhappy with Olivia zip jacket",
+    "eval_type": "string_match",
+    "ground_truth": "emma.lopez@gmail.com",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 55,
+    "task_id": 245,
+    "category": "Unhappy Customer Identification",
+    "intent": "Show me the name of the customer who is the most unhappy with Antonia racer tank",
+    "eval_type": "string_match",
+    "ground_truth": "Shaunte",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 56,
+    "task_id": 246,
+    "category": "Unhappy Customer Identification",
+    "intent": "Show me the name of the customer who is the most unhappy with Chloe tank",
+    "eval_type": "string_match",
+    "ground_truth": "Teofila",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 57,
+    "task_id": 247,
+    "category": "Unhappy Customer Identification",
+    "intent": "Show me the email address of the customer who is the most unhappy with the style of Zoe products",
+    "eval_type": "string_match",
+    "ground_truth": "N/A",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 58,
+    "task_id": 120,
+    "category": "Product Positive Feedback",
+    "intent": "Tell me the reasons why customers like Ana Running Short",
+    "eval_type": "string_match",
+    "ground_truth": "It is comfortable",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 59,
+    "task_id": 121,
+    "category": "Product Positive Feedback",
+    "intent": "Tell me the reasons why customers like Circe hooded fleece",
+    "eval_type": "string_match",
+    "ground_truth": "Warm and comfortable. True to size.",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 60,
+    "task_id": 122,
+    "category": "Product Positive Feedback",
+    "intent": "Tell me the reasons why customers like Olivia zip jacket",
+    "eval_type": "string_match",
+    "ground_truth": "Lightweight, comfortable, and stylish. Good design and details.",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 61,
+    "task_id": 123,
+    "category": "Product Positive Feedback",
+    "intent": "Tell me the reasons why customers like Circe's products",
+    "eval_type": "string_match",
+    "ground_truth": "Warm and comfortable. True to size.",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 62,
+    "task_id": 344,
+    "category": "Review Time-Period Analytics",
+    "intent": "How many reviews our shop received by far?",
+    "eval_type": "string_match",
+    "ground_truth": "['351']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 63,
+    "task_id": 345,
+    "category": "Review Time-Period Analytics",
+    "intent": "How many reviews our shop received in Apr 2023?",
+    "eval_type": "string_match",
+    "ground_truth": "['351']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 64,
+    "task_id": 346,
+    "category": "Review Time-Period Analytics",
+    "intent": "How many reviews our shop received during 2022?",
+    "eval_type": "string_match",
+    "ground_truth": "['0']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 65,
+    "task_id": 347,
+    "category": "Review Time-Period Analytics",
+    "intent": "How many reviews our shop received from the beginning of the shop?",
+    "eval_type": "string_match",
+    "ground_truth": "['351']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 66,
+    "task_id": 348,
+    "category": "Review Time-Period Analytics",
+    "intent": "How many reviews our shop received in May 2023?",
+    "eval_type": "string_match",
+    "ground_truth": "['0']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 67,
+    "task_id": 128,
+    "category": "Sales & Cancellation Analytics",
+    "intent": "What's the total number of items sold in the most recent 2 orders?",
+    "eval_type": "string_match",
+    "ground_truth": "['9']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 68,
+    "task_id": 129,
+    "category": "Sales & Cancellation Analytics",
+    "intent": "What's the total number of items sold in the most recent 4 orders?",
+    "eval_type": "string_match",
+    "ground_truth": "['16']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 69,
+    "task_id": 130,
+    "category": "Sales & Cancellation Analytics",
+    "intent": "What's the total number of items sold in the most recent 5 orders?",
+    "eval_type": "string_match",
+    "ground_truth": "['18']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 70,
+    "task_id": 131,
+    "category": "Sales & Cancellation Analytics",
+    "intent": "What's the total number of items sold in the most recent 7 orders?",
+    "eval_type": "string_match",
+    "ground_truth": "['25']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 71,
+    "task_id": 289,
+    "category": "Sales & Cancellation Analytics",
+    "intent": "Tell me the email address, name, phone number of the customer who has the most cancellations in the history",
+    "eval_type": "string_match",
+    "ground_truth": "email: coolcat321@hotmail.com name: Samantha Jones phone number: 3055551212",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 72,
+    "task_id": 290,
+    "category": "Sales & Cancellation Analytics",
+    "intent": "Tell me the product SKUs in the most recent cancelled orders of the customer who has the most cancellations in the history",
+    "eval_type": "string_match",
+    "ground_truth": "['WSH09-29-White', 'WSH09-28-Green', 'MSH11-34-Blue', 'WP09-29-Purple']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 73,
+    "task_id": 291,
+    "category": "Sales & Cancellation Analytics",
+    "intent": "Tell me the total spend on products in the most recent cancelled orders of the customer who has the most cancellations in the history",
+    "eval_type": "string_match",
+    "ground_truth": "['148']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 74,
+    "task_id": 292,
+    "category": "Sales & Cancellation Analytics",
+    "intent": "Tell me the total number of cancellations of the customer who has the most cancellations in the history",
+    "eval_type": "string_match",
+    "ground_truth": "['9']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 75,
+    "task_id": 183,
+    "category": "Inventory & Stock Management",
+    "intent": "Give me the SKU of the products that have 10 units left",
+    "eval_type": "string_match",
+    "ground_truth": "There is no product that has 10 quantities left.",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 76,
+    "task_id": 187,
+    "category": "Inventory & Stock Management",
+    "intent": "Give me the SKU of the products that have 1-3 units left",
+    "eval_type": "string_match",
+    "ground_truth": "['WH11-S-Blue', 'WS08-XS-Blue']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 77,
+    "task_id": 195,
+    "category": "Recent Orders & Payment Audit",
+    "intent": "Get the total payment amount of the last 5 pending orders",
+    "eval_type": "string_match",
+    "ground_truth": "['885.4']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 78,
+    "task_id": 2,
+    "category": "Bestseller & Sales Reports",
+    "intent": "What is the top-1 best-selling product type in Quarter 1 2022",
+    "eval_type": "string_match",
+    "ground_truth": "Yoga ball",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 79,
+    "task_id": 4,
+    "category": "Bestseller & Sales Reports",
+    "intent": "What are the top-3 best-selling product in Jan 2023",
+    "eval_type": "string_match",
+    "ground_truth": "['Impulse Duffle', 'Overnight Duffle', 'Hawkeye Yoga Short-32-Blue']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 80,
+    "task_id": 5,
+    "category": "Bestseller & Sales Reports",
+    "intent": "What is the top-1 best-selling product type in Jan 2023",
+    "eval_type": "string_match",
+    "ground_truth": "Duffle",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 81,
+    "task_id": 64,
+    "category": "Customer Order History & Ranking",
+    "intent": "Which customer has placed 2 orders in the entire history?",
+    "eval_type": "string_match",
+    "ground_truth": "['Lisa Kim', 'Lisa Green', 'Julia Williams', 'Brian Smith', 'Alexander Thomas']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 82,
+    "task_id": 65,
+    "category": "Customer Order History & Ranking",
+    "intent": "Which customer has completed the fifth most number of orders in the entire history?",
+    "eval_type": "string_match",
+    "ground_truth": "['Jane Doe']",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 83,
+    "task_id": 108,
+    "category": "Bestseller & Sales Reports",
+    "intent": "Presents the monthly count of successful orders 01/2023-05/2023 in MM:COUNT format",
+    "eval_type": "string_match",
+    "ground_truth": "January: 12 orders Febulary: 7 orders March: 5 orders Apirl: 9 orders May: 5 orders",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 84,
+    "task_id": 109,
+    "category": "Bestseller & Sales Reports",
+    "intent": "Presents the monthly count of successful orders from Jan to December 2022 in MM:COUNT format",
+    "eval_type": "string_match",
+    "ground_truth": "January: 11 orders Feburary: 16 orders March: 14 orders April: 7 orders May: 8 orders June: 13 orders July: 9 orders August: 8 orders Sepetember: 10 orders Octorbor: 4 orders November: 5 orders December: 10 orders  ",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 85,
+    "task_id": 110,
+    "category": "Bestseller & Sales Reports",
+    "intent": "Presents the monthly count of successful orders from Jan to Nov 2022 in MM:COUNT format",
+    "eval_type": "string_match",
+    "ground_truth": "January: 11 orders Feburary: 16 orders March: 14 orders April: 7 orders May: 8 orders June: 13 orders July: 9 orders August: 8 orders Sepetember: 10 orders Octorbor: 4 orders November: 5 orders  ",
+    "start_url": "http://localhost:7780/admin"
+  },
+  {
+    "index": 86,
+    "task_id": 111,
+    "category": "Bestseller & Sales Reports",
+    "intent": "Presents the monthly count of successful orders from Feb to Nov 2022 in MM:COUNT format",
+    "eval_type": "string_match",
+    "ground_truth": "Feburary: 16 orders March: 14 orders April: 7 orders May: 8 orders June: 13 orders July: 9 orders August: 8 orders Sepetember: 10 orders Octorbor: 4 orders November: 5 orders  ",
+    "start_url": "http://localhost:7780/admin"
+  }
+]

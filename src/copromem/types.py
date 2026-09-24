@@ -280,6 +280,7 @@ class FailureTier(str, Enum):
     DEPENDENCY_CONFLICT = "dependency_conflict"  # Tier 2: DAG dependency missing or inverted
     SCOPE_MISMATCH = "scope_mismatch"            # Tier 3: contract vetoed or admitted incorrectly
     LEAF_EXECUTION_ERROR = "leaf_execution_error"# Tier 4: leaf solver/tool runtime crash
+    UNKNOWN = "unknown"                      # Insufficient observable evidence
 
 
 @dataclass(frozen=True)

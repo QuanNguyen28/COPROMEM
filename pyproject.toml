@@ -5,12 +5,30 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "copromem"
 version = "0.1.0"
-description = "Executable counterfactual procedural contracts for multi-agent handoffs"
+description = "Structural task decomposition and procedural memory for agent workflows"
 requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
-test = ["pytest>=7.0"]
+test = ["pytest>=7.0", "python-dotenv>=1.0"]
+benchmark = [
+  "browsergym==0.14.2",
+  "browsergym-experiments==0.14.2",
+  "browsergym-webarena==0.14.2",
+  "playwright>=1.44,<2",
+  "openai>=2,<4",
+  "anthropic>=1,<2",
+  "google-genai>=2,<3",
+  "langchain-core>=1,<2",
+  "langchain-community>=0.4,<0.5",
+  "langchain-anthropic>=1,<2",
+  "transformers>=4.50,<5",
+  "torch>=2,<3",
+  "python-dotenv>=1",
+  "rich>=13",
+  "requests>=2.30",
+  "tiktoken>=0.7",
+]
 
 [project.scripts]
 copromem-demo = "copromem.experiment:main"
@@ -29,4 +47,5 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "."]
 addopts = "-q"

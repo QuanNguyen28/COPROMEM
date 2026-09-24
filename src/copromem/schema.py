@@ -131,3 +131,23 @@ class DecompositionSchema:
 
     def as_dict(self) -> dict[str, Any]:
         return as_jsonable(asdict(self))
+
+    @classmethod
+    def from_dict(cls, raw: dict[str, Any]) -> DecompositionSchema:
+        return cls(
+            schema_id=raw["schema_id"],
+            task_family=raw["task_family"],
+            semantic_cues=tuple(raw.get("semantic_cues", ())),
+            nodes=tuple(SubtaskNode(**{**n, "input_keys": tuple(n.get("input_keys", ())),
+                                       "output_keys": tuple(n.get("output_keys", ()))})
+                        for n in raw.get("nodes", ())),
+            edges=tuple(DependencyEdge(**e) for e in raw.get("edges", ())),
+            preconditions=tuple(raw.get("preconditions", ())),
+            contracts=tuple(
+                Contract(**{**c, "counterexamples": tuple(c.get("counterexamples", ())),
+                            "required_fields": tuple(c.get("required_fields", ()))})
+                for c in raw.get("contracts", ())
+            ),
+            structural_stats=dict(raw.get("structural_stats", {})),
+            status=raw.get("status", "candidate"),
+        )

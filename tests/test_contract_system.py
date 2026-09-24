@@ -1,5 +1,5 @@
 from copromem.bank import ContractBank
-from copromem.contracts import contract_from_failure
+from copromem.contracts import Contract, contract_from_failure
 from copromem.experiment import (
     SOURCE_PROFILE,
     TRANSFER_PROFILE,
@@ -7,7 +7,7 @@ from copromem.experiment import (
     run_experiment,
 )
 from copromem.synthetic import grouped_split
-from copromem.types import JoinIntent, RunMode
+from copromem.types import HandoffEvent, JoinIntent, RunMode
 from copromem.workflow import WorkflowEngine, run_many
 
 
@@ -44,6 +44,19 @@ def test_counterexample_is_vetoed() -> None:
     )
     assert run.handoffs[0].verifier_results == ()
     assert run.recoveries == []
+
+
+def test_task_id_counterexample_overrides_matching_scope() -> None:
+    contract = Contract(
+        "veto", "planner_to_solver", "plan is complete", "solver can run",
+        "plan_cardinality_present", "planner", "replan",
+        "join_preservation_scope", ("excluded_task",), ("declared_cardinality",),
+    )
+    event = HandoffEvent(
+        "planner_to_solver", "planner", "solver", {"declared_cardinality": "one_to_one"},
+        {"task_id": "excluded_task", "intent": JoinIntent.PRESERVE_ROWS.value},
+    )
+    assert not contract.is_eligible(event)
 
 
 def test_admitted_bank_round_trips_without_executable_code(tmp_path) -> None:

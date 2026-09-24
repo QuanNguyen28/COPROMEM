@@ -2,6 +2,8 @@
 
 > **Tuyên ngôn cốt lõi:** Thay vì bắt Agent ghi nhớ vẹt các lời giải trong quá khứ (*Memory of Solutions*), hãy dạy Agent **học và tích lũy cấu trúc phân rã của bài toán** (*Memory of Task Structure*).
 
+> **Trạng thái:** Đây là đề xuất phương pháp và giả thuyết nghiên cứu, không phải tuyên bố rằng mọi trụ cột đã được xác nhận thực nghiệm. Trong code hiện tại, workflow tổng hợp có verifier ở handoff planner → solver; BrowserGym mới có verifier quan sát được cho action → browser. Các milestone phân rã trong BrowserGym vẫn là hướng dẫn trong prompt, chưa có verifier ngữ nghĩa tại từng milestone.
+
 ---
 
 ## 1. Một Phút Nắm Trọn Ý Tưởng (The 1-Minute Pitch)
@@ -20,7 +22,7 @@ Biến việc **chia nhỏ bài toán** thành một **Vật Thể Trí Nhớ Đ
 * Một sơ đồ đồ thị (DAG) chỉ rõ nhiệm vụ nào phụ thuộc vào nhiệm vụ nào.
 * Kèm theo **Hợp đồng bàn giao (Handoff Contract)**: Bước A giao việc cho Bước B thì bắt buộc phải thỏa mãn điều kiện gì.
 * Tự động phát hiện hai bài toán có câu từ giống nhau nhưng bản chất khác nhau để **tách riêng (Pattern Separation)**.
-* Khi thất bại, **chỉ mặt đặt tên đúng 1 trong 4 nguyên nhân** để sửa đúng chỗ, không phá vỡ cấu trúc tổng thể.
+* Khi thất bại, **gán một trong 4 nguyên nhân khi có đủ bằng chứng quan sát được**; nếu không, giữ nhãn *unknown* và yêu cầu thêm quan sát trước khi sửa cấu trúc.
 
 ---
 
@@ -75,7 +77,7 @@ Biến việc **chia nhỏ bài toán** thành một **Vật Thể Trí Nhớ Đ
 | **Bẫy RAG Bề Mặt** *(Negative Transfer)* | Hai bài toán có câu từ giống nhau 90% nhưng logic ngược nhau. RAG lôi quy trình cũ ra chạy $\rightarrow$ **Thất bại thảm hại**. | **Pattern Separation**: Đo khoảng cách đồ thị nhân quả ($D_{\text{causal}}$). Nếu câu chữ giống mà đồ thị xung đột $\rightarrow$ Tách đôi schema ngay lập tức. |
 | **Bẫy Phản Tư Vu Vơ** *(Vague Reflection)* | Khi thất bại, Agent tự kiểm điểm chung chung bằng văn bản. Thường đổ lỗi sai (lỗi do chia việc thì lại đi sửa câu lệnh prompt). | **4-Tier Credit Assignment**: Truy vết lỗi theo cây quyết định 4 tầng. Lỗi tầng nào sửa tầng đó, giữ nguyên các tầng còn lại. |
 | **Bẫy Rung Lắc Bộ Nhớ** *(Catastrophic Interference)* | Chạy xong 1 task là cập nhật bộ nhớ ngay lập tức. Gặp 1 ca ngoại lệ (outlier) là ghi đè, làm hỏng các bài toán bình thường khác. | **CLS Fast/Slow Memory**: Lưu trajectory thô vào bộ nhớ tạm. Chỉ củng cố vào bộ nhớ chậm ngoại tuyến khi đạt điểm ưu tiên cao (Need $\times$ Gain $\times$ Surprise). |
-| **Bẫy Khóa Chặt Suy Nghĩ** *(Retrieval Lock-in)* | Một phương án từng đúng 1 lần sẽ liên tục được chọn lại, dập tắt mọi phương án khác, triệt tiêu tính sáng tạo. | **Anti-Lock-in Retrieval**: Luôn trả về 1 phương án tối ưu + 1 phương án cấu trúc khác biệt + 1 nhánh tự do khám phá. |
+| **Bẫy Khóa Chặt Suy Nghĩ** *(Retrieval Lock-in)* | Một phương án từng đúng 1 lần sẽ liên tục được chọn lại, dập tắt mọi phương án khác, triệt tiêu tính sáng tạo. | **Anti-Lock-in Retrieval**: Trả về phương án ưu tiên, phương án khác biệt nếu có schema đủ bằng chứng, và nhánh khám phá khi độ bất định còn cao. |
 
 ---
 
@@ -98,11 +100,12 @@ DecompositionSchema:
 
 ### Trụ cột 2: Engine Phân Tách Mẫu (Pattern Separation)
 Lấy cảm hứng từ vùng Hồi hải mã của não người. Đo độ tương đồng ngữ nghĩa bằng $S_{\text{semantic}}$ và khoảng cách đồ thị nhân quả bằng $D_{\text{causal}}$:
-$$\text{Trigger Separation} = \text{True} \quad \Longleftrightarrow \quad S_{\text{semantic}} \ge 0.40 \quad \text{và} \quad D_{\text{causal}} \ge 0.35$$
+$$\text{Trigger Separation} = \text{True} \quad \Longleftrightarrow \quad S_{\text{semantic}} \ge \tau_s \quad \text{và} \quad D_{\text{causal}} \ge \tau_c$$
+Giá trị khởi đầu trong implementation là $\tau_s=0.40$ và $\tau_c=0.35$; cần hiệu chỉnh trên tập development và báo cáo độ nhạy, tỷ lệ veto đúng/sai trên task chưa thấy.
 Khi phát hiện rủi ro "bẫy ngữ nghĩa", hệ thống lập tức phân nhánh và đưa task vào danh sách cấm (*counterexamples*) của schema cũ.
 
 ### Trụ cột 3: Quy Gán Lỗi Cấu Trúc 4 Tầng (Structural Credit Assignment)
-Chẩn đoán chính xác nguyên nhân gốc rễ:
+Chẩn đoán nguyên nhân dựa trên bằng chứng tại ranh giới thực thi. Nếu một lỗi đã được recovery sửa thành công, không tiếp tục quy lỗi cuối cùng cho lỗi đó. Nếu không có đủ bằng chứng, trả về *unknown*:
 1. **Tier 1 (Handoff Violation):** Dữ liệu qua cổng bàn giao không đạt hợp đồng verifier $\rightarrow$ Kích hoạt tuyến phục hồi (recovery route).
 2. **Tier 2 (Dependency Conflict):** Bước sau thiếu dữ liệu từ bước trước $\rightarrow$ Thêm cạnh phụ thuộc vào đồ thị DAG.
 3. **Tier 3 (Scope Mismatch):** Áp dụng nhầm hợp đồng cho tác vụ ngoại lệ $\rightarrow$ Cập nhật điều kiện phủ quyết (veto).
@@ -110,11 +113,11 @@ Chẩn đoán chính xác nguyên nhân gốc rễ:
 
 ### Trụ cột 4: Bộ Nhớ Hai Tầng CLS & Replay Ngoại Tuyến Có Ưu Tiên
 Mô phỏng hệ thống học bổ trợ của não bộ:
-* **Bộ nhớ nhanh (Fast Episodic Buffer):** Ghi nhận tức thời mọi trajectory thô cùng nhãn lỗi 4 tầng.
+* **Bộ nhớ nhanh (Fast Episodic Buffer):** Ghi nhận tức thời trajectory quan sát được cùng nhãn lỗi khi có bằng chứng; nếu thiếu bằng chứng, giữ *unknown*.
 * **Bộ nhớ chậm (Slow Consolidated Schema Bank):** Chỉ lưu các quy trình đã được chứng minh bền vững.
 * **Điểm ưu tiên Replay (Công thức Mattar–Daw mở rộng):**
   $$\text{Priority} = \text{Need} \times \text{Gain} \times (1 + \text{Surprise}) \times (1 + \text{Uncertainty})$$
-  Ưu tiên mổ xẻ các ca **thất bại bất ngờ** và các bài toán có **độ bất định cấu trúc cao** trong pha ngoại tuyến.
+  Ưu tiên mổ xẻ các ca **thất bại bất ngờ** và các bài toán có **độ bất định cấu trúc cao** trong pha ngoại tuyến. *Gain* phải là ước lượng lợi ích có kiểm chứng; không nên mặc định mọi failure đều đáng củng cố. Trace đã củng cố không được xử lý lặp lại.
 
 ---
 
@@ -170,7 +173,7 @@ Mô phỏng hệ thống học bổ trợ của não bộ:
 
 ## 6. Bảng "Vũ Khí Cạnh Tranh" Đối Đầu Reviewer
 
-Khi gửi bài báo đến các hội nghị hàng đầu (ICLR / NeurIPS / ACL), bảng so sánh này chứng minh tính mới tuyệt đối của COPROMEM 2.0:
+Bảng dưới đây là giả thuyết so sánh để thiết kế đối chứng; không chứng minh tính mới hay ưu thế thực nghiệm của COPROMEM 2.0:
 
 | Tiêu chí so sánh | Các bài Procedural Memory<br>*(AWM, ReMe, MemP, LEGOMem)* | Các bài Adaptive Decomposition<br>*(ADaPT, AdaPlan-H, Least-to-Most)* | **COPROMEM 2.0**<br>*(Phương pháp đề xuất)* |
 |---|---|---|---|

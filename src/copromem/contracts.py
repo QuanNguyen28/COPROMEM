@@ -32,6 +32,21 @@ def webarena_checkout_scope(event: HandoffEvent) -> bool:
     return event.observable_state.get("intent") == JoinIntent.PRESERVE_ROWS.value
 
 
+def browser_action_scope(event: HandoffEvent) -> bool:
+    return event.interface == "agent_to_browser"
+
+
+def browser_action_accepted(
+    event: HandoffEvent, contract: Contract
+) -> tuple[bool, str]:
+    if not str(event.artifact.get("action", "")).strip():
+        return False, "browser action is empty"
+    error = str(event.observable_state.get("last_action_error", "")).strip()
+    if error:
+        return False, error
+    return True, "browser accepted the action"
+
+
 def plan_cardinality_present(
     event: HandoffEvent, contract: Contract
 ) -> tuple[bool, str]:
@@ -42,12 +57,16 @@ def plan_cardinality_present(
     return True, "all required plan fields present"
 
 
-VERIFIERS: dict[str, Verifier] = {"plan_cardinality_present": plan_cardinality_present}
+VERIFIERS: dict[str, Verifier] = {
+    "plan_cardinality_present": plan_cardinality_present,
+    "browser_action_accepted": browser_action_accepted,
+}
 SCOPE_GUARDS: dict[str, ScopeGuard] = {
     "join_preservation_scope": join_preservation_scope,
     "alfworld_cleaning_scope": alfworld_cleaning_scope,
     "appworld_order_receipt_scope": appworld_order_receipt_scope,
     "webarena_checkout_scope": webarena_checkout_scope,
+    "browser_action_scope": browser_action_scope,
 }
 
 
@@ -85,6 +104,12 @@ class Contract:
         )
 
     def is_eligible(self, event: HandoffEvent) -> bool:
+        task_id = str(event.observable_state.get("task_id", ""))
+        intent = str(event.observable_state.get("intent", ""))
+        if (task_id and task_id in self.counterexamples) or (
+            intent and intent in self.counterexamples
+        ):
+            return False
         guard = SCOPE_GUARDS.get(self.scope_name)
         if guard is not None:
             return guard(event)

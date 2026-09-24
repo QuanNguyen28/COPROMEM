@@ -96,6 +96,21 @@ def test_credit_assignment_tier2_dependency_conflict():
     assert "missing_foreign_key" in result.reason
 
 
+def test_dependency_conflict_detects_missing_edge_even_with_present_artifact():
+    run = create_base_run(verifier_passed=True)
+    schema = DecompositionSchema(
+        schema_id="missing_edge", task_family="Join", semantic_cues=("join",),
+        nodes=(
+            SubtaskNode("plan", "planner", "plan", output_keys=("declared_cardinality",)),
+            SubtaskNode("solve", "solver", "solve", input_keys=("declared_cardinality",)),
+        ),
+        edges=(),
+    )
+    result = localize_structural_failure(run, schema=schema)
+    assert result.tier is FailureTier.DEPENDENCY_CONFLICT
+    assert "no dependency path" in result.reason
+
+
 def test_credit_assignment_tier3_scope_mismatch():
     # Task has intentional_expansion intent, but contract intervened and failed
     run = create_base_run(

@@ -81,7 +81,7 @@ def test_copromem_v2_complete_loop():
     assert run.recoveries[0].successful
     assert run.success
     assert trace.success
-    assert trace.credit_result.tier == FailureTier.LEAF_EXECUTION_ERROR  # no structural failure
+    assert trace.credit_result is None  # successful tasks have no failure tier
 
     # Add trace to Fast Episodic Store
     bank.fast_buffer.add_trace(trace, task_frequency=1.0)

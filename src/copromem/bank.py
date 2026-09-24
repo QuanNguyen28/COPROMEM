@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from .contracts import Contract, validate_contract
 from .types import (
@@ -13,6 +14,9 @@ from .types import (
     HandoffEvent,
     ReplayEvidence,
     ScopeEvidence,
+    CreditAssignmentResult,
+    FailureTier,
+    VerificationResult,
     as_jsonable,
 )
 
@@ -180,8 +184,13 @@ class FastEpisodicBuffer:
     @staticmethod
     def calculate_priority(trace: EpisodicTrace, task_frequency: float = 1.0) -> float:
         need = max(0.1, task_frequency)
-        # Gain is higher for failures where structural repair has high expected value
-        gain = 1.0 if not trace.success else 0.25
+        # A verified, localized failure is more actionable than an unexplained
+        # outcome. This is a repairability proxy, not an observed causal gain.
+        gain = (
+            1.0 if not trace.success and trace.credit_result is not None
+            and trace.credit_result.tier is not FailureTier.UNKNOWN
+            else 0.25
+        )
         surprise_term = 1.0 + max(0.0, trace.surprise)
         uncertainty_term = 1.0 + max(0.0, trace.uncertainty)
         return float(need * gain * surprise_term * uncertainty_term)
@@ -197,6 +206,44 @@ class StructuralSchemaBank:
 
     schemas: list[DecompositionSchema] = field(default_factory=list)
     fast_buffer: FastEpisodicBuffer = field(default_factory=FastEpisodicBuffer)
+    consolidated_trace_ids: set[str] = field(default_factory=set)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schemas": [schema.as_dict() for schema in self.schemas],
+            "traces": [as_jsonable(trace) for trace in self.fast_buffer.traces],
+            "max_capacity": self.fast_buffer.max_capacity,
+            "consolidated_trace_ids": sorted(self.consolidated_trace_ids),
+        }
+
+    @classmethod
+    def from_dict(cls, raw: dict[str, Any]) -> StructuralSchemaBank:
+        from .schema import DecompositionSchema
+
+        bank = cls(
+            schemas=[DecompositionSchema.from_dict(item) for item in raw.get("schemas", ())],
+            fast_buffer=FastEpisodicBuffer(max_capacity=int(raw.get("max_capacity", 200))),
+            consolidated_trace_ids=set(raw.get("consolidated_trace_ids", ())),
+        )
+        for item in raw.get("traces", ()):
+            credit = item.get("credit_result")
+            if credit is not None:
+                credit = CreditAssignmentResult(
+                    **{**credit, "tier": FailureTier(credit["tier"])}
+                )
+            handoffs = tuple(
+                HandoffEvent(
+                    **{**event, "verifier_results": tuple(
+                        VerificationResult(**result)
+                        for result in event.get("verifier_results", ())
+                    )}
+                )
+                for event in item.get("handoff_events", ())
+            )
+            bank.fast_buffer.traces.append(EpisodicTrace(
+                **{**item, "handoff_events": handoffs, "credit_result": credit}
+            ))
+        return bank
 
     def admit_schema(self, schema: DecompositionSchema) -> None:
         admitted = schema.admitted()
@@ -209,20 +256,32 @@ class StructuralSchemaBank:
         task_state: dict[str, Any],
         semantic_threshold: float = 0.35,
         exploration_uncertainty: float = 0.70,
+        task_schema: DecompositionSchema | None = None,
     ) -> tuple[DecompositionSchema | None, DecompositionSchema | None, bool]:
         """Retrieve primary exploit schema and diverse alternative schema (Anti-Lock-in).
 
         Returns:
             (exploit_schema, diverse_alternative_schema, should_explore)
         """
-        from .pattern_separation import PatternSeparationEngine, token_jaccard_similarity
+        from .pattern_separation import PatternSeparationEngine
 
         engine = PatternSeparationEngine(semantic_threshold=semantic_threshold)
         candidates: list[tuple[float, DecompositionSchema]] = []
 
         for schema in self.schemas:
-            decision = engine.evaluate(task_cues, task_state, schema)
-            if not decision.should_separate:
+            if schema.status != "admitted":
+                continue
+            if task_state.get("domain") and schema.task_family != f"Domain_{task_state['domain']}":
+                continue
+            decision = engine.evaluate(
+                task_cues, task_state, schema,
+                candidate_state={
+                    "constraints": schema.structural_stats.get("constraints", {}),
+                    "intent": schema.structural_stats.get("source_intent"),
+                },
+                task_schema=task_schema,
+            )
+            if not decision.should_separate and decision.semantic_similarity >= semantic_threshold:
                 # Rank by semantic similarity + historical reliability
                 reliability = schema.transfer_reliability
                 score = 0.6 * decision.semantic_similarity + 0.4 * reliability
@@ -245,13 +304,20 @@ class StructuralSchemaBank:
                 break
 
         # Anti-lock-in exploration branch if uncertainty is high or single strategy monopoly
-        should_explore = exploit_schema.execution_count > 10 and exploit_schema.transfer_reliability < exploration_uncertainty
+        should_explore = (
+            diverse_alternative is None
+            or exploit_schema.transfer_reliability < exploration_uncertainty
+        )
 
         return exploit_schema, diverse_alternative, should_explore
 
     def consolidate_offline(self, min_priority: float = 0.40) -> int:
         """Consolidate high-priority episodic traces into persistent schema reliability stats."""
-        top_traces = [t for t in self.fast_buffer.sample_prioritized(50) if t.replay_priority >= min_priority]
+        top_traces = [
+            t for t in self.fast_buffer.sample_prioritized(self.fast_buffer.max_capacity)
+            if t.replay_priority >= min_priority
+            and t.trace_id not in self.consolidated_trace_ids
+        ]
         consolidated_count = 0
 
         schema_map = {s.schema_id: s for s in self.schemas}
@@ -268,8 +334,16 @@ class StructuralSchemaBank:
             updated = schema.with_stats(
                 execution_count=exec_count,
                 transfer_reliability=round(new_rel, 3),
+                success_count=int(schema.structural_stats.get("success_count", 0)) + int(trace.success),
             )
+            if (
+                updated.status == "candidate"
+                and updated.structural_stats["success_count"] >= 2
+                and updated.transfer_reliability >= 0.7
+            ):
+                updated = updated.admitted()
             schema_map[trace.schema_id] = updated
+            self.consolidated_trace_ids.add(trace.trace_id)
             consolidated_count += 1
 
         self.schemas = list(schema_map.values())
