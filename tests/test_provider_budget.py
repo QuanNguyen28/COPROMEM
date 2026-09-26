@@ -23,6 +23,7 @@ def test_transport_pins_provider_logs_seed_and_accounts_cost(monkeypatch, tmp_pa
     requests = []
 
     class Response:
+        headers = {"x-fixture": "true"}
         def __enter__(self):
             return self
 
@@ -54,11 +55,13 @@ def test_transport_pins_provider_logs_seed_and_accounts_cost(monkeypatch, tmp_pa
 
     monkeypatch.setattr("urllib.request.urlopen", open_request)
     ledger = BudgetLedger(RunStore(tmp_path), 0.1, 10)
-    client = BudgetedOpenRouterClient("SENSITIVE", "mock/model", "mistral", ledger)
+    client = BudgetedOpenRouterClient("SENSITIVE", "mock/model", "mistral", ledger, reasoning_effort="none", max_transport_attempts=1)
     result = client.chat("system", "user", 100, seed=42)
     assert requests[0]["seed"] == 42
     assert requests[0]["provider"]["allow_fallbacks"] is False
     assert requests[0]["provider"]["only"] == ["mistral"]
+    assert requests[0]["reasoning_effort"] == "none"
+    assert result.metadata["response_headers"] == {"x-fixture": "true"}
     assert result.text == ""  # null must not turn into the bogus memory string 'None'
     assert ledger.charged_or_reserved == pytest.approx(0.00001)
     assert result.metadata["finish_reason"] == "length"
@@ -71,6 +74,15 @@ def test_no_request_can_start_after_attempt_cap():
     ledger.reserve(0.001)
     with pytest.raises(BudgetExceeded):
         ledger.reserve(0.001)
+
+
+def test_extensions_cannot_relax_pinned_model_route_or_nonthinking_mode(tmp_path):
+    ledger = BudgetLedger(RunStore(tmp_path), 0.1, 2)
+    client = BudgetedOpenRouterClient("fixture", "exact/model", "", ledger, reasoning_effort="none")
+    with pytest.raises(ValueError):
+        client.chat("s", "u", 1, request_extensions={"model": "other/model"})
+    with pytest.raises(ValueError):
+        client.chat("s", "u", 1, request_extensions={"provider": {"allow_fallbacks": True}})
 
 
 def test_invalid_or_higher_than_authorized_budget_rejected():
