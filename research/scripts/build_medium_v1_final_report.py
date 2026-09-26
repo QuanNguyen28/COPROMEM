@@ -4,7 +4,10 @@ from __future__ import annotations
 import hashlib, json, math, pathlib
 from collections import defaultdict
 
-ROOT=pathlib.Path("/mnt/e/Project/AAMAS/COPROMEM")
+# Resolve from the repository rather than assuming WSL syntax.  This script is
+# intentionally replayable from either Windows Python or WSL Python against
+# the same E-backed working tree.
+ROOT=pathlib.Path(__file__).resolve().parents[2]
 RUN=ROOT/"artifacts/research/official_reme_copromem_pilot/medium_v1"
 OUT=ROOT/"research/medium_v1_results"; ARMS=["no_memory","official_upstream_reme_fixed","official_upstream_reme_dynamic","copromem_v2"]
 def sha_path(p): return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -21,7 +24,7 @@ def main():
     artifacts=[]; evidence=[]
     for p in sorted((RUN/"evaluation").glob("*.json")):
         x=json.loads(p.read_text()); artifacts.append({k:x[k] for k in ("task_id","seed","trial","arm","after_score","actions")})
-        evidence.append({"path":str(p.relative_to(ROOT)),"sha256":sha_path(p),"kind":"evaluation_artifact"})
+        evidence.append({"path":p.relative_to(ROOT).as_posix(),"sha256":sha_path(p),"kind":"evaluation_artifact"})
     if len(artifacts)!=640: raise SystemExit(f"incomplete evaluation: {len(artifacts)}/640")
     expected_keys={(t,s,i,a) for t in manifest["evaluation"]["task_ids"] for i,s in enumerate(manifest["evaluation"]["seeds"],1) for a in ARMS}
     actual_keys={(x["task_id"],x["seed"],x["trial"],x["arm"]) for x in artifacts}
@@ -53,7 +56,7 @@ def main():
     ledger=rows(RUN/"successor-ledger.jsonl"); latest={}
     for x in ledger:
         if x.get("event") in ("reserve","settle"):latest[x["id"]]=float(x["usd"])
-    evidence += [{"path":str((RUN/"manifest.json").relative_to(ROOT)),"sha256":sha_path(RUN/"manifest.json"),"kind":"manifest"},{"path":str((RUN/"progress.jsonl").relative_to(ROOT)),"sha256":sha_path(RUN/"progress.jsonl"),"kind":"progress"},{"path":str((RUN/"successor-ledger.jsonl").relative_to(ROOT)),"sha256":sha_path(RUN/"successor-ledger.jsonl"),"kind":"ledger"}]
+    evidence += [{"path":(RUN/"manifest.json").relative_to(ROOT).as_posix(),"sha256":sha_path(RUN/"manifest.json"),"kind":"manifest"},{"path":(RUN/"progress.jsonl").relative_to(ROOT).as_posix(),"sha256":sha_path(RUN/"progress.jsonl"),"kind":"progress"},{"path":(RUN/"successor-ledger.jsonl").relative_to(ROOT).as_posix(),"sha256":sha_path(RUN/"successor-ledger.jsonl"),"kind":"ledger"}]
     OUT.mkdir(parents=True,exist_ok=True)
     (OUT/"manifest.json").write_text(json.dumps(manifest,sort_keys=True,indent=2)+"\n")
     (OUT/"manifest.sha256").write_text(expected+"\n")
