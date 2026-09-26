@@ -7,7 +7,7 @@ import math
 import time
 import urllib.error
 import urllib.request
-from typing import Any
+from typing import Any, Mapping
 
 from .checkpoints import RunStore
 from .real_gsm8k_experiment import OPENROUTER_URL, CallResult, Usage
@@ -97,6 +97,8 @@ class BudgetedOpenRouterClient:
         *,
         prompt_price_per_million: float = 0.25,
         completion_price_per_million: float = 0.5,
+        reasoning_effort: str | None = None,
+        max_transport_attempts: int = 3,
     ):
         for value in (prompt_price_per_million, completion_price_per_million):
             if (
@@ -111,6 +113,12 @@ class BudgetedOpenRouterClient:
         self.ledger = ledger
         self.prompt_price = prompt_price_per_million
         self.completion_price = completion_price_per_million
+        if reasoning_effort not in {None, "none"}:
+            raise ValueError("only non-thinking mode is permitted by this transport")
+        self.reasoning_effort = reasoning_effort
+        if type(max_transport_attempts) is not int or max_transport_attempts < 1:
+            raise ValueError("max_transport_attempts must be a positive integer")
+        self.max_transport_attempts = max_transport_attempts
         self.seed = None
         self.calls = 0
         self.http_attempts = 0
@@ -127,7 +135,13 @@ class BudgetedOpenRouterClient:
         }
 
     def chat(
-        self, system: str, user: str, max_tokens: int, *, seed: int | None = None
+        self,
+        system: str,
+        user: str,
+        max_tokens: int,
+        *,
+        seed: int | None = None,
+        request_extensions: Mapping[str, Any] | None = None,
     ) -> CallResult:
         if max_tokens < 1 or self.prompt_price <= 0 or self.completion_price <= 0:
             raise ValueError("positive token/price caps required")
@@ -152,6 +166,14 @@ class BudgetedOpenRouterClient:
             ],
             "provider": provider_block,
         }
+        if self.reasoning_effort is not None:
+            body["reasoning_effort"] = self.reasoning_effort
+        if request_extensions:
+            forbidden = {"model", "provider", "messages", "max_tokens", "reasoning_effort"}
+            overlap = forbidden.intersection(request_extensions)
+            if overlap:
+                raise ValueError(f"request extensions cannot override: {sorted(overlap)}")
+            body.update(dict(request_extensions))
         # One token per UTF-8 byte plus generous chat framing overhead bounds
         # this text-only request; server-side endpoint price caps also apply.
         bound = (
@@ -160,7 +182,7 @@ class BudgetedOpenRouterClient:
             + max_tokens * self.completion_price
         ) / 1_000_000
         started = time.perf_counter()
-        for attempt in range(3):
+        for attempt in range(self.max_transport_attempts):
             reservation = self.ledger.reserve(bound)
             request = urllib.request.Request(
                 OPENROUTER_URL,
@@ -176,6 +198,7 @@ class BudgetedOpenRouterClient:
             try:
                 with urllib.request.urlopen(request, timeout=45) as response:
                     result = json.loads(response.read().decode("utf-8"))
+                    response_headers = dict(response.headers.items())
                 break
             except urllib.error.HTTPError as exc:
                 self.failed_http_attempts += 1
@@ -189,7 +212,7 @@ class BudgetedOpenRouterClient:
                         "provider": self.provider,
                     },
                 )
-                if exc.code not in {429, 502, 503, 504} or attempt == 2:
+                if exc.code not in {429, 502, 503, 504} or attempt == self.max_transport_attempts - 1:
                     err_msg = ""
                     try:
                         err_data = json.loads(exc.read().decode("utf-8", errors="replace"))
@@ -210,7 +233,7 @@ class BudgetedOpenRouterClient:
                         "provider": self.provider,
                     },
                 )
-                if attempt == 2:
+                if attempt == self.max_transport_attempts - 1:
                     raise RuntimeError(
                         "OpenRouter transport or JSON failure; reservation retained"
                     ) from None
@@ -250,7 +273,9 @@ class BudgetedOpenRouterClient:
                 "system_fingerprint": result.get("system_fingerprint"),
                 "request_seed": seed,
                 "finish_reason": choice.get("finish_reason"),
+                "tool_calls": (choice.get("message") or {}).get("tool_calls"),
                 "raw_usage": raw,
+                "response_headers": response_headers,
                 "cost_is_reserved_upper_bound": raw.get("cost") is None,
                 "budget_reservation": reservation,
             },

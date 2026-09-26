@@ -197,15 +197,29 @@ class COPROMEMMemoryModule:
         api_key: str | None = None,
         model: str = "google/gemini-2.5-flash",
         include_contract_guidance: bool = False,
+        seed_default_memories: bool = True,
+        provider_only: str | None = None,
+        reasoning_effort: str | None = None,
+        llm_json_call: Callable[..., dict[str, Any] | None] | None = None,
     ) -> None:
         self.bank = schema_bank or StructuralSchemaBank()
         self.fast_buffer = self.bank.fast_buffer
         self.pattern_engine = PatternSeparationEngine(semantic_threshold=0.40, causal_threshold=0.35)
         # Library use is offline unless a caller explicitly opts into LLM calls.
-        self.decomposer = RecursiveTaskDecomposer(api_key=api_key or "", model=model)
+        self.decomposer = RecursiveTaskDecomposer(
+            api_key=api_key or "",
+            model=model,
+            provider_only=provider_only,
+            reasoning_effort=reasoning_effort,
+            llm_json_call=llm_json_call,
+        )
         self._structural_decomposer = RecursiveTaskDecomposer(api_key="", model=model)
         self.include_contract_guidance = include_contract_guidance
-        self.memories: list[ProceduralMemoryItem] = list(DEFAULT_PROCEDURAL_MEMORIES)
+        # The production/default module retains its generic bootstrap guidance.
+        # Matched comparisons can explicitly start from an empty acquired bank.
+        self.memories: list[ProceduralMemoryItem] = (
+            list(DEFAULT_PROCEDURAL_MEMORIES) if seed_default_memories else []
+        )
         self.pending_memories: list[ProceduralMemoryItem] = []
 
         if memories_path:
@@ -802,6 +816,7 @@ class COPROMEMMemoryModule:
         task_state: dict[str, Any],
         schema: DecompositionSchema | dict[str, Any] | None,
         handoffs: list[HandoffEvent] | tuple[HandoffEvent, ...] = (),
+        episode_id: str | None = None,
     ) -> CreditAssignmentResult | None:
         """Record episodic trace and consolidate schema statistics."""
         if schema is None:
@@ -846,7 +861,9 @@ class COPROMEMMemoryModule:
                     confidence=0.0,
                 )
         trace = EpisodicTrace(
-            trace_id=f"trace_{task_id}_{arm}",
+            # Preserve the historical identifier for existing callers, while
+            # allowing benchmark adapters to retain repeated trajectories.
+            trace_id=episode_id or f"trace_{task_id}_{arm}",
             task_id=task_id,
             task_state=task_state,
             schema_id=s_id,

@@ -93,21 +93,50 @@ def _call_openrouter_json(
     max_tokens: int = 768,
     temperature: float = 0.0,
     usage_sink: Callable[[dict[str, Any]], None] | None = None,
+    provider_only: str | None = None,
+    reasoning_effort: str | None = None,
 ) -> dict[str, Any] | None:
     """Call OpenRouter LLM expecting a structured JSON response."""
     url = "https://openrouter.ai/api/v1/chat/completions"
-    payload = json.dumps(
-        {
-            "model": model,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "response_format": {"type": "json_object"},
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+    request_body: dict[str, Any] = {
+        "model": model,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": False,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    }
+    if provider_only:
+        request_body["provider"] = {
+            "only": [provider_only],
+            "allow_fallbacks": False,
+            "require_parameters": True,
         }
-    ).encode("utf-8")
+    if reasoning_effort is not None:
+        if reasoning_effort != "none":
+            raise ValueError("only non-thinking decomposition is supported")
+        request_body["reasoning_effort"] = reasoning_effort
+    # The locked successor route uses the same voluntary native-tool protocol
+    # for decomposition as for executors.  The algorithm still receives a
+    # mapping; only the transport serialization changes.
+    if provider_only:
+        request_body["tools"] = [{
+            "type": "function",
+            "function": {
+                "name": "return_decomposition_json",
+                "description": "Return the requested decomposition object.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"result": {"type": "object"}},
+                    "required": ["result"],
+                    "additionalProperties": False,
+                },
+            },
+        }]
+        request_body["tool_choice"] = "auto"
+    payload = json.dumps(request_body).encode("utf-8")
 
     req = urllib.request.Request(
         url,
@@ -126,13 +155,25 @@ def _call_openrouter_json(
             data = json.loads(resp.read().decode("utf-8"))
             if usage_sink is not None:
                 usage_sink(data.get("usage") or {})
-            content = data["choices"][0]["message"]["content"]
+            message = data["choices"][0]["message"]
+            if provider_only:
+                calls = message.get("tool_calls") or []
+                if len(calls) != 1 or (calls[0].get("function") or {}).get("name") != "return_decomposition_json":
+                    raise RuntimeError("locked decomposition requires exactly one native tool call")
+                arguments = json.loads(calls[0]["function"]["arguments"])
+                result = arguments.get("result")
+                if not isinstance(result, dict):
+                    raise RuntimeError("locked decomposition tool result is not an object")
+                return result
+            content = message["content"]
             # Clean JSON if wrapped in markdown code blocks
             m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", content)
             raw_json = m.group(1) if m else content
             return json.loads(raw_json)
     except Exception as e:
         logger.warning("OpenRouter decomposition JSON call failed: %s", e)
+        if provider_only:
+            raise RuntimeError("locked decomposition transport failed") from e
         return None
 
 
@@ -199,21 +240,55 @@ class RecursiveTaskDecomposer:
         model: str = "google/gemini-2.5-flash",
         max_depth: int = 3,
         similarity_threshold: float = 0.45,
+        max_llm_calls: int | None = None,
+        before_llm_call: Callable[[], None] | None = None,
+        provider_only: str | None = None,
+        reasoning_effort: str | None = None,
+        llm_json_call: Callable[..., dict[str, Any] | None] | None = None,
     ) -> None:
         self.api_key = _get_api_key(api_key)
         self.model = model
         self.max_depth = max_depth
         self.similarity_threshold = similarity_threshold
+        self.max_llm_calls = max_llm_calls
+        self.before_llm_call = before_llm_call
+        self.provider_only = provider_only
+        self.reasoning_effort = reasoning_effort
+        self.llm_json_call = llm_json_call
+        self.llm_request_count = 0
         self._plan_cache: dict[str, HierarchicalExecutionPlan] = {}
         self._complexity_cache: dict[str, tuple[bool, str]] = {}
         self.api_cost_usd = 0.0
         self.api_prompt_tokens = 0
         self.api_completion_tokens = 0
 
+    def _call_json(self, *, system_prompt: str, user_prompt: str, max_tokens: int, schema_name: str | None = None) -> dict[str, Any] | None:
+        if self.llm_json_call is not None:
+            return self.llm_json_call(system_prompt=system_prompt, user_prompt=user_prompt, max_tokens=max_tokens, schema_name=schema_name)
+        return _call_openrouter_json(api_key=self.api_key, model=self.model, system_prompt=system_prompt,
+            user_prompt=user_prompt, max_tokens=max_tokens, temperature=0.0, usage_sink=self._record_usage,
+            provider_only=self.provider_only, reasoning_effort=self.reasoning_effort)
+
     def _record_usage(self, usage: dict[str, Any]) -> None:
         self.api_cost_usd += float(usage.get("cost") or 0.0)
         self.api_prompt_tokens += int(usage.get("prompt_tokens") or 0)
         self.api_completion_tokens += int(usage.get("completion_tokens") or 0)
+
+    def _allow_llm_call(self) -> bool:
+        """Reserve one bounded decomposition request, if configured."""
+        if not self.api_key:
+            return False
+        if self.max_llm_calls is not None and self.llm_request_count >= self.max_llm_calls:
+            # A configured key means this path is part of the registered model
+            # budget.  Failing closed prevents a cap breach from silently
+            # changing the method into its offline fallback.
+            raise RuntimeError("registered RecursiveTaskDecomposer call cap exhausted")
+        if self.before_llm_call is not None:
+            # Reserve before constructing a request.  A reservation failure must
+            # prevent both the network call and an algorithm-changing fallback.
+            self.before_llm_call()
+        self.llm_request_count += 1
+        return True
 
     def assess_complexity(
         self,
@@ -228,7 +303,7 @@ class RecursiveTaskDecomposer:
             return self._complexity_cache[cache_key]
 
         # 1. LLM Semantic Complexity Assessment if API key is configured
-        if self.api_key:
+        if self._allow_llm_call():
             system_prompt = (
                 "You are an expert Autonomous Agent Cognitive Task Complexity Classifier.\n"
                 f"Operating Environment Context: {benchmark_context}.\n\n"
@@ -243,15 +318,7 @@ class RecursiveTaskDecomposer:
                 "Return strictly JSON: {\"is_compound\": bool, \"rationale\": str}"
             )
             user_prompt = f"User Intent: \"{intent}\"\nEvaluate whether this intent is atomic or compound."
-            resp = _call_openrouter_json(
-                api_key=self.api_key,
-                model=self.model,
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                max_tokens=200,
-                temperature=0.0,
-                usage_sink=self._record_usage,
-            )
+            resp = self._call_json(system_prompt=system_prompt, user_prompt=user_prompt, max_tokens=200, schema_name="copromem_complexity_v1")
             if resp and "is_compound" in resp:
                 is_comp = bool(resp["is_compound"])
                 rationale = str(resp.get("rationale", ""))
@@ -726,15 +793,9 @@ class RecursiveTaskDecomposer:
             )
             user_prompt = f"User Intent: \"{intent}\"\n\nList the operational milestones in order."
 
-        resp_dict = _call_openrouter_json(
-            api_key=self.api_key,
-            model=self.model,
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            max_tokens=600,
-            temperature=0.0,
-            usage_sink=self._record_usage,
-        )
+        if not self._allow_llm_call():
+            return []
+        resp_dict = self._call_json(system_prompt=system_prompt, user_prompt=user_prompt, max_tokens=600, schema_name="copromem_subgoals_v1")
 
         if resp_dict and "subgoals" in resp_dict and isinstance(resp_dict["subgoals"], list):
             return resp_dict["subgoals"]
