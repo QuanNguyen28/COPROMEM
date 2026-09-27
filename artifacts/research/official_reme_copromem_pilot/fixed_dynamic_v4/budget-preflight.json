@@ -1,0 +1,18 @@
+{
+  "all_in_usd": 142.090671394,
+  "copromem_decomposition_calls": 320,
+  "copromem_decomposition_usd": 3.93216,
+  "dispatchable_usd": 123.2535552,
+  "embedding_calls": 216,
+  "embedding_usd": 0.1769472,
+  "executor_calls": 9600,
+  "executor_usd": 117.9648,
+  "fits_hard_cap": true,
+  "hard_cap_usd": 160.0,
+  "historical_charged_or_reserved_usd": 0.34908291400000035,
+  "ledger_dispatch_cap_usd": 141.51196672,
+  "non_dispatchable_contingency_fraction": 0.15,
+  "non_dispatchable_contingency_usd": 18.48803328,
+  "reme_lifecycle_calls": 96,
+  "reme_lifecycle_usd": 1.179648
+}

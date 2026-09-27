@@ -1,0 +1,117 @@
+{
+  "acquisition": {
+    "copromem_bank_sha256": "b706c873697b0d226271dab63f843a8afcb343c031f9a3dad3e4f9c22dd98528",
+    "provider_calls": 0,
+    "retrieval_gate_path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v4/copromem/acquisition-retrieval-gate.json",
+    "retrieval_gate_sha256": "d98ec6131b3b2e40b0eb990ae0d679e4e942307106f278798e1ed3f91052c664",
+    "source": "32 immutable preserved trajectories"
+  },
+  "arms": [
+    "no_memory",
+    "official_upstream_reme_fixed",
+    "official_upstream_reme_dynamic",
+    "copromem_fixed",
+    "copromem_dynamic"
+  ],
+  "budget": {
+    "all_in_usd": 142.090671394,
+    "copromem_decomposition_calls": 320,
+    "copromem_decomposition_usd": 3.93216,
+    "dispatchable_usd": 123.2535552,
+    "embedding_calls": 216,
+    "embedding_usd": 0.1769472,
+    "executor_calls": 9600,
+    "executor_usd": 117.9648,
+    "fits_hard_cap": true,
+    "hard_cap_usd": 160.0,
+    "historical_charged_or_reserved_usd": 0.34908291400000035,
+    "ledger_dispatch_cap_usd": 141.51196672,
+    "non_dispatchable_contingency_fraction": 0.15,
+    "non_dispatchable_contingency_usd": 18.48803328,
+    "reme_lifecycle_calls": 96,
+    "reme_lifecycle_usd": 1.179648
+  },
+  "controls": {
+    "max_actions": 30,
+    "max_completion_tokens": 2048,
+    "max_input_tokens": 32768,
+    "native_appworld": true,
+    "official_scorer": true,
+    "temperature": 0.7,
+    "top_p": 1.0
+  },
+  "embedding": {
+    "dimensions": 1024,
+    "model": "openai/text-embedding-3-small",
+    "provider_only": [
+      "azure"
+    ]
+  },
+  "evaluation": {
+    "expected_trajectories": 320,
+    "seeds": [
+      8101,
+      8102,
+      8103,
+      8104
+    ],
+    "task_ids": [
+      "dac78d9_3",
+      "042a9fc_1",
+      "9016950_1",
+      "2c544f9_1",
+      "31dc501_2",
+      "d18139b_1",
+      "ccf4b82_3",
+      "425a494_1",
+      "09b0ee6_1",
+      "652485c_2",
+      "21abae1_1",
+      "d6ac34d_2",
+      "0d01c76_1",
+      "9ef798c_3",
+      "552869a_3",
+      "166f4ff_2"
+    ],
+    "trial_ids": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "git_commit": "95e7cd2e5aa4efa878d68a1b1591c01f65368ae2",
+  "ledger_audit": {
+    "records_scanned": 2699
+  },
+  "limitations": [
+    "exploratory faithful adaptation; not an exact ReMe reproduction",
+    "exact-ID holdout only; no task-family or benchmark-wide generalization claim"
+  ],
+  "protocol": "corrected_fixed_dynamic_v4",
+  "restart_idempotency": {
+    "no_lifecycle_or_retrieval_gate_calls_on_resume": true,
+    "no_replay_settled_calls": true,
+    "require_exact_checkpoint_hashes": true
+  },
+  "route": {
+    "allow_fallbacks": false,
+    "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+    "model": "deepseek/deepseek-v4.1-flash",
+    "provider_only": [
+      "deepseek"
+    ],
+    "reasoning_effort": "none",
+    "stream": false
+  },
+  "selection": {
+    "exact_id_holdout_only": true,
+    "family_holdout": true,
+    "files_scanned": 146,
+    "historical_exposure_ids_sha256": "b741e28b4b1ac8f68b0c4482e405596bb0c43d1ba8f89c2681ad595d61b0fb1a",
+    "id_count": 36,
+    "salt": "fixed_dynamic_v4_test_normal_id_only_20260927",
+    "source": "test_normal ID-only inventory"
+  },
+  "status": "frozen_pre_payload"
+}
