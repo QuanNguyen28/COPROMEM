@@ -1,0 +1,15 @@
+# v4 code walkthrough
+
+Read canonical review code first. Historical links are immutable and identify behavior of the exact experiment commit.
+
+1. **Entry point and control flow:** [canonical review source](../../src/copromem/experiments/reme_copromem/config.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/scripts/run_fixed_dynamic_v4.py).
+2. **Common AppWorld executor and scorer:** [canonical review source](../../src/copromem/experiments/reme_copromem/runner.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/research/official_pilot/five_arm_runner.py).
+3. **Official-upstream ReMe integration:** [canonical review source](../../src/copromem/integrations/reme/upstream_executor.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/research/official_pilot/upstream_executor.py).
+4. **ReMe Fixed lifecycle:** [canonical review source](../../src/copromem/integrations/reme/lifecycle.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/research/official_pilot/evaluation_lifecycle.py).
+5. **ReMe Dynamic lifecycle and update timing:** [canonical review source](../../src/copromem/integrations/reme/lifecycle.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/research/official_pilot/evaluation_lifecycle.py).
+6. **CoProMem bank and retrieval:** [canonical review source](../../src/copromem/benchmarks/appworld/adapter.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/src/copromem/appworld_comparison_adapter.py).
+7. **CoProMem Fixed lifecycle:** [canonical review source](../../src/copromem/benchmarks/appworld/adapter.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/src/copromem/appworld_comparison_adapter.py).
+8. **CoProMem Dynamic lifecycle and update timing:** [canonical review source](../../src/copromem/benchmarks/appworld/adapter.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/src/copromem/appworld_comparison_adapter.py).
+9. **Retrieval provenance:** [canonical review source](../../src/copromem/benchmarks/appworld/adapter.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/scripts/run_fixed_dynamic_v4.py).
+10. **Journaling, restart, integrity:** [canonical review source](../../src/copromem/experiments/reme_copromem/runner.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/research/official_pilot/five_arm_runner.py).
+11. **Report generation:** [canonical review source](build_v4_results.py); [exact v4 source](https://github.com/QuanNguyen28/COPROMEM/blob/28d3dab36cb12ea03572376ab1fee35423c50871/research/scripts/build_fixed_dynamic_v4_report.py).
