@@ -1,0 +1,182 @@
+{
+  "acquisition": {
+    "combined_trajectory_count": 32,
+    "full_successes": 16,
+    "gate_passed": true,
+    "new_trajectories": [
+      {
+        "actions": 30,
+        "artifact_sha256": "bde4d666f233f4a1b78bdf60be86a2962198a48228c58d3969a0471578035e96",
+        "score": 0.8888888888888888,
+        "task_id": "afc0fce_1"
+      },
+      {
+        "actions": 28,
+        "artifact_sha256": "0c862c8dd0633430acf5e179a4977ee9679d0f1376df27a098289145dcf2687c",
+        "score": 1.0,
+        "task_id": "e3d6c94_1"
+      },
+      {
+        "actions": 30,
+        "artifact_sha256": "90dad9d3dda10763610798bf54e039bac6bbe58accc7c5e5c0f410c481bdd6bb",
+        "score": 0.0,
+        "task_id": "b0a8eae_1"
+      },
+      {
+        "actions": 16,
+        "artifact_sha256": "85ae026c05a864140afa863a3947888874ad790157d0e9f3c4743fac1e4cb152",
+        "score": 1.0,
+        "task_id": "d0b1f43_1"
+      },
+      {
+        "actions": 23,
+        "artifact_sha256": "c8207cb5631b9127ae976cae4bbf5e98f36a6a1f4fdeeaa43df4c16da219eb6c",
+        "score": 0.8571428571428571,
+        "task_id": "692c77d_1"
+      },
+      {
+        "actions": 15,
+        "artifact_sha256": "a64311e5faf661eeef731e723442d2fb8402fdf00b1ec4a4a662fc632d857338",
+        "score": 1.0,
+        "task_id": "cf6abd2_3"
+      },
+      {
+        "actions": 25,
+        "artifact_sha256": "1d2a291119b5e0fc068cc93bc2c24a28ad7a87a2187532fddfb894f3770fe79c",
+        "score": 0.7,
+        "task_id": "6104387_1"
+      },
+      {
+        "actions": 17,
+        "artifact_sha256": "317062dda971605595e7c472c6e450233f8217f0eb410821aff344eb8b11675c",
+        "score": 1.0,
+        "task_id": "60d0b5b_2"
+      }
+    ],
+    "successful_families": 9
+  },
+  "budget_amendment": {
+    "hard_cap_usd": 160.0,
+    "prior_usd_140_record_preserved": true,
+    "version": 1
+  },
+  "decision": "NO-GO",
+  "decision_basis": "The acquisition gate passed, but the mandatory upstream-ReMe lifecycle and retrieval-integrity gate could not be completed under the frozen 32,768-token input ceiling. No evaluation task, scorer, or model call was dispatched.",
+  "evaluation": {
+    "completed_trajectories": 0,
+    "expected_trajectories": 320,
+    "metrics": null
+  },
+  "evidence": [
+    {
+      "kind": "budget_160_manifest",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/manifest-budget-160.json",
+      "sha256": "baaafc7df34a4e51b5b928dcaf74a6e0f974ae356325e177856b73787d13c85c"
+    },
+    {
+      "kind": "budget_160_preflight",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/budget-preflight-budget-160.json",
+      "sha256": "00914e3a72514e7facac56dd23e62842df39e07c6b52d9b5c89eb561d7e4e42c"
+    },
+    {
+      "kind": "budget_amendment",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/budget-amendment-v1.json",
+      "sha256": "1e5744f64a4d1245bf335f03efb495173dd584164fd98a42683b7a04ca379671"
+    },
+    {
+      "kind": "original_140_results",
+      "path": "research/fixed_dynamic_v2_results/final-report.json",
+      "sha256": "13750d040ecbdd25c86dd01df0d0f4a2bc47a065bc3732887adef29ff00a1beb"
+    },
+    {
+      "kind": "combined_acquisition_gate",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/acquisition/combined-gate.json",
+      "sha256": "03249d6e0d383f6852c3ba780d22ae225cda1a908d8b56f10c18d257e43420bf"
+    },
+    {
+      "kind": "lifecycle_checkpoint",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/reme/construction.jsonl",
+      "sha256": "ef176f406b81b2fe92beb78bbb67c9149b0bd9358a218faabb325e540877c4e6"
+    },
+    {
+      "kind": "ledger",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/ledger.jsonl",
+      "sha256": "708d7bee19f5874600bb9cb9f07cc9238a1560263653783c80fea4b35bf79689"
+    },
+    {
+      "kind": "progress",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/progress.jsonl",
+      "sha256": "64b286ad7ed5dc7b7642e54c713898700451f3ff34238c7f3edaece62fe6179b"
+    },
+    {
+      "kind": "new_acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/acquisition/afc0fce_1",
+      "sha256": "bde4d666f233f4a1b78bdf60be86a2962198a48228c58d3969a0471578035e96"
+    },
+    {
+      "kind": "new_acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/acquisition/e3d6c94_1",
+      "sha256": "0c862c8dd0633430acf5e179a4977ee9679d0f1376df27a098289145dcf2687c"
+    },
+    {
+      "kind": "new_acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/acquisition/b0a8eae_1",
+      "sha256": "90dad9d3dda10763610798bf54e039bac6bbe58accc7c5e5c0f410c481bdd6bb"
+    },
+    {
+      "kind": "new_acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/acquisition/d0b1f43_1",
+      "sha256": "85ae026c05a864140afa863a3947888874ad790157d0e9f3c4743fac1e4cb152"
+    },
+    {
+      "kind": "new_acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/acquisition/692c77d_1",
+      "sha256": "c8207cb5631b9127ae976cae4bbf5e98f36a6a1f4fdeeaa43df4c16da219eb6c"
+    },
+    {
+      "kind": "new_acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/acquisition/cf6abd2_3",
+      "sha256": "a64311e5faf661eeef731e723442d2fb8402fdf00b1ec4a4a662fc632d857338"
+    },
+    {
+      "kind": "new_acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/acquisition/6104387_1",
+      "sha256": "1d2a291119b5e0fc068cc93bc2c24a28ad7a87a2187532fddfb894f3770fe79c"
+    },
+    {
+      "kind": "new_acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/acquisition/60d0b5b_2",
+      "sha256": "317062dda971605595e7c472c6e450233f8217f0eb410821aff344eb8b11675c"
+    }
+  ],
+  "label": "corrected successor; terminal lifecycle-integrity NO-GO",
+  "ledger": {
+    "charged_or_retained_exposure_usd": 0.106199076,
+    "hard_cap_usd": 160.0,
+    "ledger_records": 645,
+    "unsettled_reservation_ids": [
+      "carry-forward-fixed-dynamic-v1-usd-0.048008"
+    ]
+  },
+  "lifecycle": {
+    "evaluation_dispatched": false,
+    "paid_request_for_terminal_failure": false,
+    "permitted_resolution_not_applied": [
+      "raise the frozen input ceiling",
+      "truncate or alter upstream lifecycle input"
+    ],
+    "reme_checkpoint_state_counts": {
+      "persisted": 17,
+      "summarized": 17
+    },
+    "reme_persisted_input_count": 17,
+    "terminal_failure": "frozen input-token ceiling rejected an upstream ReMe failure-extraction prompt before dispatch; the service surfaced this pre-dispatch condition as HTTP 500"
+  },
+  "limitations": [
+    "The USD 160 amendment made the registered conservative cost bound feasible; budget was not the terminal condition.",
+    "This is a terminal protocol-integrity result, not a method comparison and supports no efficacy, superiority, transfer, or generalization claim.",
+    "The predecessor USD 140 NO-GO record and all raw local artifacts remain immutable and outside this sanitized package."
+  ],
+  "manifest_sha256": "baaafc7df34a4e51b5b928dcaf74a6e0f974ae356325e177856b73787d13c85c",
+  "protocol": "corrected_fixed_dynamic_appworld_v2"
+}
