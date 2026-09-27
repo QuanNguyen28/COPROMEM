@@ -382,6 +382,7 @@ def induce_from_trajectory(
         domain=domain or ("web_shopping_admin" if "admin" in goal.lower() else "web_shopping"),
         success=True,
         schema_id=schema_id,
+        source_task_id=str(task_id),
     )
 
 

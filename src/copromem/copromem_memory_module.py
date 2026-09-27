@@ -20,6 +20,7 @@ from typing import Any
 from .bank import StructuralSchemaBank
 from .contracts import Contract
 from .decomposition import HierarchicalExecutionPlan, RecursiveTaskDecomposer
+from .evidence_policy import EvidenceBank, TransferObservation
 from .pattern_separation import PatternSeparationEngine, token_jaccard_similarity
 from .schema import DecompositionSchema
 from .types import (
@@ -46,6 +47,8 @@ class MemoryInjectionResult:
     should_veto: bool = False
     alternative_schema: DecompositionSchema | None = None
     should_explore: bool = False
+    selected_memory_id: str | None = None
+    selection_reason: str = ""
 
 
 @dataclass
@@ -63,6 +66,7 @@ class ProceduralMemoryItem:
     is_macro: bool = False
     schema_id: str | None = None
     source: str = "observed"
+    source_task_id: str | None = None
 
 
 # Domain-agnostic seed guidance; not task-specific evidence.
@@ -207,6 +211,7 @@ class COPROMEMMemoryModule:
         self.include_contract_guidance = include_contract_guidance
         self.memories: list[ProceduralMemoryItem] = list(DEFAULT_PROCEDURAL_MEMORIES)
         self.pending_memories: list[ProceduralMemoryItem] = []
+        self.evidence_bank = EvidenceBank()
 
         if memories_path:
             p = Path(memories_path)
@@ -236,6 +241,7 @@ class COPROMEMMemoryModule:
                         is_macro=data.get("is_macro", False),
                         schema_id=data.get("schema_id"),
                         source=data.get("source", "observed"),
+                        source_task_id=data.get("source_task_id"),
                     )
                     self.memories.append(mem)
                     loaded += 1
@@ -261,16 +267,21 @@ class COPROMEMMemoryModule:
                     "is_macro": mem.is_macro,
                     "schema_id": mem.schema_id,
                     "source": mem.source,
+                    "source_task_id": mem.source_task_id,
                 }) + "\n")
 
     def add_memory(self, item: ProceduralMemoryItem, *, defer_until_admitted: bool = False) -> None:
         """Keep unreviewed procedures out of slow retrieval until replay admits them."""
+        if self.evidence_bank.frozen:
+            raise ValueError("evaluation bank is frozen")
         if defer_until_admitted:
             self.pending_memories.append(item)
         else:
             self.memories.append(item)
 
     def consolidate_offline(self, min_priority: float = 0.20) -> int:
+        if self.evidence_bank.frozen:
+            raise ValueError("evaluation bank is frozen")
         consolidated = self.bank.consolidate_offline(min_priority=min_priority)
         admitted_ids = {schema.schema_id for schema in self.bank.schemas if schema.status == "admitted"}
         ready = [item for item in self.pending_memories if item.schema_id in admitted_ids]
@@ -286,6 +297,7 @@ class COPROMEMMemoryModule:
             "memories": [asdict(item) for item in self.memories],
             "pending_memories": [asdict(item) for item in self.pending_memories],
             "schema_bank": self.bank.as_dict(),
+            "evidence_bank": self.evidence_bank.as_dict(),
         }
 
     def load_state(self, state: dict[str, Any]) -> None:
@@ -295,6 +307,20 @@ class COPROMEMMemoryModule:
         ]
         self.bank = StructuralSchemaBank.from_dict(state["schema_bank"])
         self.fast_buffer = self.bank.fast_buffer
+        self.evidence_bank = EvidenceBank.from_dict(state.get("evidence_bank", {}))
+
+    def record_transfer_observation(self, observation: TransferObservation) -> None:
+        """Admit only a valid paired calibration result, never an evaluation result."""
+        memory = next((item for item in self.memories
+                       if item.memory_id == observation.memory_id), None)
+        if memory is None:
+            raise ValueError("observation references an unavailable memory")
+        if memory.source_task_id != observation.source_task_id:
+            raise ValueError("observation source does not match memory provenance")
+        self.evidence_bank.add(observation)
+
+    def freeze_evaluation(self, task_ids: set[str]) -> None:
+        self.evidence_bank.freeze(task_ids)
 
     def retrieve_memory(
         self,
@@ -316,10 +342,15 @@ class COPROMEMMemoryModule:
         if arm == "semantic_rag":
             return self._retrieve_semantic_rag(intent, domain)
 
-        if arm == "copromem_v2":
+        if arm in ("copromem_v2", "copromem_evidence"):
+            if (arm == "copromem_evidence" and self.evidence_bank.frozen
+                    and task_id not in self.evidence_bank.evaluation_task_ids):
+                raise ValueError("task is outside the frozen evaluation allocation")
             result = self._retrieve_copromem_v2(
-                task_id, intent, domain, sites, start_url, agent_prompt_wrapper
+                task_id, intent, domain, sites, start_url, agent_prompt_wrapper,
+                evidence_gate=arm == "copromem_evidence",
             )
+            result.arm = arm
             _, alternate, explore = self.bank.retrieve_with_anti_lockin(
                 tuple(intent.lower().split()),
                 {"intent": intent, "domain": domain,
@@ -332,6 +363,9 @@ class COPROMEMMemoryModule:
                 else None
             ) if result.schema else alternate
             result.should_explore = explore
+            if arm == "copromem_evidence":
+                # Alternative procedures have not passed this memory's evidence gate.
+                result.alternative_schema = None
             if result.alternative_schema is not None:
                 alternate = result.alternative_schema
                 steps = " -> ".join(node.intent for node in alternate.topological_sort())
@@ -424,6 +458,7 @@ class COPROMEMMemoryModule:
         sites: tuple[str, ...] | list[str],
         start_url: str,
         agent_prompt_wrapper: str = "",
+        evidence_gate: bool = False,
     ) -> MemoryInjectionResult:
         """Retrieve structural plan guidance and filter incompatible memories.
         
@@ -463,9 +498,14 @@ class COPROMEMMemoryModule:
         sep_decision = None
         conflict_schema: DecompositionSchema | None = None
         selected_schema: DecompositionSchema | None = None
+        selection_reason = "no compatible observed memory"
 
         if self.memories:
             scored: list[tuple[float, ProceduralMemoryItem]] = []
+            admitted_schemas: dict[str, DecompositionSchema] = {}
+            for admitted_schema in self.bank.schemas:
+                if admitted_schema.status == "admitted":
+                    admitted_schemas.setdefault(admitted_schema.schema_id, admitted_schema)
             for mem in self.memories:
                 if not mem.success:
                     continue
@@ -482,11 +522,7 @@ class COPROMEMMemoryModule:
             for similarity, mem in scored:
                 if similarity < self.pattern_engine.semantic_threshold:
                     break
-                cand_schema = next(
-                    (s for s in self.bank.schemas if s.schema_id == mem.schema_id
-                     and s.status == "admitted"),
-                    None,
-                )
+                cand_schema = admitted_schemas.get(mem.schema_id)
                 if cand_schema is None:
                     cand_schema = DecompositionSchema(
                         schema_id=f"unbound_{mem.memory_id}",
@@ -508,6 +544,14 @@ class COPROMEMMemoryModule:
                         if cand_schema.status == "admitted":
                             conflict_schema = cand_schema
                     continue
+                if evidence_gate:
+                    eligible, reason = self.evidence_bank.decision(mem.memory_id, t_constraints)
+                    if not eligible:
+                        selection_reason = f"{mem.memory_id}: {reason}"
+                        continue
+                    selection_reason = f"{mem.memory_id}: {reason}"
+                else:
+                    selection_reason = f"{mem.memory_id}: ungated semantic/pattern match"
                 candidate_mem = mem
                 top_sim = similarity
                 sep_decision = None
@@ -520,10 +564,11 @@ class COPROMEMMemoryModule:
             counterexamples = set(conflict_schema.structural_stats.get("counterexamples", ()))
             counterexamples.add(task_id)
             updated = conflict_schema.with_stats(counterexamples=sorted(counterexamples))
-            self.bank.schemas = [
-                updated if item.schema_id == updated.schema_id else item
-                for item in self.bank.schemas
-            ]
+            if not self.evidence_bank.frozen:
+                self.bank.schemas = [
+                    updated if item.schema_id == updated.schema_id else item
+                    for item in self.bank.schemas
+                ]
         allowed_memories = [candidate_mem] if candidate_mem is not None else []
         plan = self.decomposer.decompose(
             intent=intent, memories=allowed_memories,
@@ -644,6 +689,8 @@ class COPROMEMMemoryModule:
                 should_veto=should_veto,
                 alternative_schema=alternative_schema,
                 should_explore=should_explore,
+                selected_memory_id=candidate_mem.memory_id if candidate_mem else None,
+                selection_reason=selection_reason,
             )
 
         # Step 4: Atomic Tasks
@@ -656,6 +703,7 @@ class COPROMEMMemoryModule:
                 contract=contract,
                 separated=True,
                 should_veto=True,
+                selection_reason=selection_reason,
             )
 
         # Cold start (no memories yet)
@@ -669,6 +717,7 @@ class COPROMEMMemoryModule:
                     contract=contract,
                     separated=False,
                     should_veto=False,
+                    selection_reason=selection_reason,
                 )
             injected = ["# Task Execution Guidance: [Autonomous Exploration]"]
             if self.include_contract_guidance:
@@ -684,6 +733,7 @@ class COPROMEMMemoryModule:
                 contract=contract,
                 separated=False,
                 should_veto=False,
+                selection_reason=selection_reason,
             )
 
         # Low similarity / orthogonal candidate memory (no past memory directly matches)
@@ -697,6 +747,7 @@ class COPROMEMMemoryModule:
                     contract=contract,
                     separated=False,
                     should_veto=False,
+                    selection_reason=selection_reason,
                 )
             target_scope = task_state.get("constraints", {}).get("target_type", "target query")
             injected = [
@@ -718,6 +769,7 @@ class COPROMEMMemoryModule:
                 contract=contract,
                 separated=False,
                 should_veto=False,
+                selection_reason=selection_reason,
             )
 
         # Compatible procedure
@@ -742,6 +794,8 @@ class COPROMEMMemoryModule:
             contract=contract,
             separated=False,
             should_veto=False,
+            selected_memory_id=candidate_mem.memory_id,
+            selection_reason=selection_reason,
         )
 
     def _get_or_create_default_schema(
@@ -791,7 +845,8 @@ class COPROMEMMemoryModule:
             },
         )
         # A new plan remains a candidate until offline evidence is reviewed.
-        self.bank.schemas.append(schema)
+        if not self.evidence_bank.frozen:
+            self.bank.schemas.append(schema)
         return schema
 
     def record_episode(
@@ -804,6 +859,8 @@ class COPROMEMMemoryModule:
         handoffs: list[HandoffEvent] | tuple[HandoffEvent, ...] = (),
     ) -> CreditAssignmentResult | None:
         """Record episodic trace and consolidate schema statistics."""
+        if self.evidence_bank.frozen:
+            raise ValueError("evaluation bank is frozen")
         if schema is None:
             s_id = None
             rel = 0.0

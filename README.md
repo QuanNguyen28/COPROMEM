@@ -61,6 +61,11 @@ Chỉ khi cần so sánh chế độ contract, thêm `--contract_guidance` và c
 
 ## Đọc kết quả và giới hạn thực nghiệm
 
+Pilot chọn memory theo bằng chứng chuyển giao, chạy local với Ollama và chỉ
+chấm native WebArena, được mô tả trong
+[`docs/EVIDENCE_PILOT.md`](docs/EVIDENCE_PILOT.md). Pilot này là phép thử phát
+triển có cổng dừng, không phải kết quả SOTA.
+
 Report `report_head_to_head.md` là báo cáo **đang cập nhật**: số liệu chỉ nên so trên các cặp task mà cả hai arm đã hoàn thành. Task chưa xong/đang chạy không phải một thất bại đã được chấm. Một số số liệu chi phí/bước là ước lượng theo heuristic, không thay thế hóa đơn provider. Report trong workspace từng bị dừng giữa chừng không được đưa vào Git và không nên diễn giải như kết quả của đủ 86 task.
 
 “ReasoningBank baseline” ở đây là logic memory ReasoningBank trên checkout upstream **đã patch để tích hợp BrowserGym/OpenRouter và hỗ trợ cùng harness**; không phải release upstream nguyên trạng. Patch và commit upstream được lưu trong repo để tái lập. Benchmark vẫn chịu ảnh hưởng bởi tính ngẫu nhiên của model, trạng thái website, episode memory tích lũy, thứ tự task và thay đổi phía provider. Muốn kết luận về hiệu năng nên chạy nhiều seed/lần độc lập, chốt dữ liệu/môi trường và phân tích theo từng task, không chỉ nhìn một tỷ lệ thắng tổng.

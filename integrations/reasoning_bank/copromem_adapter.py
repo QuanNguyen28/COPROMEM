@@ -39,9 +39,12 @@ class COPROMEMReasoningBankAdapter:
         api_key: str | None = None,
         model: str = "google/gemini-2.5-flash",
     ) -> None:
-        if not api_key:
+        local_only = os.environ.get("COPROMEM_LOCAL_ONLY") == "1"
+        if local_only:
+            api_key = ""
+        elif not api_key:
             api_key = os.environ.get("OPENROUTER_API_KEY")
-        if not api_key:
+        if not api_key and not local_only:
             # Fallback to .env file
             env_file = REPO_ROOT / ".env"
             if env_file.exists():
@@ -83,6 +86,7 @@ class COPROMEMReasoningBankAdapter:
                     domain=data.get("domain", "web_shopping_admin"),
                     constraints=data.get("constraints", {}),
                     is_macro=bool(data.get("is_macro", False)),
+                    source_task_id=str(data.get("source_task_id") or data.get("task_id") or "") or None,
                 )
                 self.memory_module.add_memory(mem)
                 loaded += 1
@@ -109,8 +113,11 @@ class COPROMEMReasoningBankAdapter:
             self.memory_module.load_state(json.loads(state_path.read_text(encoding="utf-8")))
 
         # Retrieve through COPROMEM cognitive architecture
+        arm = os.environ.get("COPROMEM_RETRIEVAL_ARM", "copromem_v2")
+        if arm not in {"copromem_v2", "copromem_evidence"}:
+            raise ValueError(f"Unsupported COPROMEM_RETRIEVAL_ARM: {arm}")
         res = self.memory_module.retrieve_memory(
-            arm="copromem_v2",
+            arm=arm,
             task_id=str(task_id),
             intent=query,
             domain=domain,
@@ -120,6 +127,8 @@ class COPROMEMReasoningBankAdapter:
         state = self.memory_module.export_state()
         state["active_task_id"] = str(task_id)
         state["active_schema_id"] = res.schema.schema_id if res.schema else None
+        state["active_memory_id"] = res.selected_memory_id
+        state["selection_reason"] = res.selection_reason
         state_path.write_text(json.dumps(state), encoding="utf-8")
         return res.injected_text or ""
 
@@ -140,6 +149,8 @@ class COPROMEMReasoningBankAdapter:
         if state.get("active_task_id") != str(task_id):
             raise ValueError(f"COPROMEM state is not for task {task_id}")
         self.memory_module.load_state(state)
+        if self.memory_module.evidence_bank.frozen:
+            raise ValueError("evaluation state is frozen; episode updates are forbidden")
         schema_id = state.get("active_schema_id")
         schema = next((s for s in self.memory_module.bank.schemas if s.schema_id == schema_id), None)
         induced = induce_from_trajectory(
