@@ -46,7 +46,10 @@ def main() -> None:
     run_dir = pathlib.Path(os.environ["OFFICIAL_REME_RUN_DIR"])
     progress = pathlib.Path(os.environ["OFFICIAL_REME_PROGRESS"])
     ledger_path = pathlib.Path(os.environ.get("OFFICIAL_REME_LEDGER", str(run_dir / "ledger.jsonl")))
-    ledger = AppendOnlyLedger(ledger_path, 35.0)
+    # The service shares the run's single append-only experiment ledger.  The
+    # cap is provided by the frozen manifest launcher, never inferred from the
+    # service's historical reduced-v2 default.
+    ledger = AppendOnlyLedger(ledger_path, float(os.environ.get("OFFICIAL_PILOT_HARD_CAP", "35")))
 
     # These are transport boundaries only.  The pinned upstream algorithms,
     # prompts, request contents and vector-store lifecycle remain unchanged.
