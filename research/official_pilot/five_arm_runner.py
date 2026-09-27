@@ -237,15 +237,17 @@ def acquisition_pool(*, run: pathlib.Path, progress: pathlib.Path, ledger: Appen
 
 def acquisition_gate(records: list[dict[str, Any]], *, expected_records: int = 24,
                      minimum_full_successes: int = 8,
-                     minimum_successful_families: int = 6) -> dict[str, Any]:
+                     minimum_successful_families: int = 6,
+                     fail_closed: bool = True) -> dict[str, Any]:
     successes = [row for row in records if float(row.get("after_score", 0)) == 1.0]
     families = {str(row["task_id"])[:7] for row in successes}
     result = {"planned": len(records), "full_successes": len(successes),
               "successful_families": len(families), "input_sha256": digest([
                   {"identity": row["acquisition_identity"], "artifact": row["source_artifact_sha256"]}
                   for row in records])}
-    if (len(records) != expected_records or len(successes) < minimum_full_successes
-            or len(families) < minimum_successful_families):
+    result["passed"] = (len(records) == expected_records and len(successes) >= minimum_full_successes
+                        and len(families) >= minimum_successful_families)
+    if fail_closed and not result["passed"]:
         raise RuntimeError("preregistered acquisition gate failed")
     return result
 

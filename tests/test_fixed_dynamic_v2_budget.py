@@ -10,3 +10,9 @@ def test_v2_minimum_evaluation_envelope_is_fail_closed_at_140_usd():
     value = budget(16)
     assert value["all_in_usd"] > value["hard_cap_usd"]
     assert not value["fits_hard_cap"]
+
+
+def test_v2_minimum_evaluation_envelope_fits_the_authorized_160_usd_amendment():
+    value = budget(16, hard_cap_usd=160.0)
+    assert value["all_in_usd"] < value["hard_cap_usd"]
+    assert value["fits_hard_cap"]

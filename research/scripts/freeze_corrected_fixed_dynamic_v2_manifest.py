@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import subprocess
+import argparse
 from pathlib import Path
 
 
@@ -82,7 +83,7 @@ def historical_execution_ids(*, evaluation_only: bool = False) -> set[str]:
     return result
 
 
-def budget(eval_tasks: int = 16) -> dict:
+def budget(eval_tasks: int = 16, *, hard_cap_usd: float = 140.0) -> dict:
     """All maxima are registered, not expected early-stop values."""
     if eval_tasks < 16:
         raise ValueError("protocol forbids fewer than 16 evaluation task IDs")
@@ -100,7 +101,7 @@ def budget(eval_tasks: int = 16) -> dict:
     contingency = dispatchable * 0.15
     all_in = carried + dispatchable + contingency
     return {
-        "hard_cap_usd": 140.0,
+        "hard_cap_usd": hard_cap_usd,
         "carried_v1_exposure_usd": carried,
         "executor_calls": executor_calls,
         "executor_usd": executor,
@@ -114,7 +115,7 @@ def budget(eval_tasks: int = 16) -> dict:
         "nondispatchable_contingency_fraction": 0.15,
         "nondispatchable_contingency_usd": contingency,
         "all_in_usd": all_in,
-        "fits_hard_cap": all_in <= 140.0,
+        "fits_hard_cap": all_in <= hard_cap_usd,
     }
 
 
@@ -168,6 +169,14 @@ def verify_v1_evaluation_custody() -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--hard-cap-usd", type=float, default=140.0)
+    parser.add_argument("--amendment", action="store_true")
+    args = parser.parse_args()
+    if args.hard_cap_usd not in {140.0, 160.0}:
+        raise SystemExit("only the immutable USD 140 record or authorized USD 160 amendment is permitted")
+    if args.amendment != (args.hard_cap_usd == 160.0):
+        raise SystemExit("USD 160 requires --amendment; USD 140 may not be overwritten as an amendment")
     carry = verify_v1()
     verify_v1_evaluation_custody()
     train = set((ROOT / "research/train_ids.txt").read_text(encoding="utf-8").split())
@@ -181,7 +190,13 @@ def main() -> None:
     historical_ids = historical_execution_ids()
     if set(NEW_ACQUISITION) & historical_ids:
         raise RuntimeError("successor acquisition reuses a historically executed exact ID")
-    cost = budget(len(V1_EVALUATION))
+    cost = budget(len(V1_EVALUATION), hard_cap_usd=args.hard_cap_usd)
+    if args.amendment:
+        prior_manifest = RUN / "manifest.json"
+        prior_hash = (RUN / "manifest.sha256").read_text(encoding="utf-8").strip()
+        if not prior_manifest.is_file() or sha_file(prior_manifest) != prior_hash:
+            raise RuntimeError("immutable USD 140 manifest is absent or modified")
+        cost["ledger_dispatch_cap_usd"] = args.hard_cap_usd - cost["nondispatchable_contingency_usd"]
     manifest = {
         "protocol": "corrected_fixed_dynamic_appworld_v2",
         "git_commit": subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip(),
@@ -199,11 +214,18 @@ def main() -> None:
         "historical_execution_id_count": len(historical_ids),
         "historical_execution_ids_sha256": canonical_sha(sorted(historical_ids)),
     }
+    if args.amendment:
+        manifest["budget_amendment"] = {"version": 1, "authorized_hard_cap_usd": 160.0,
+                                          "preserved_prior_manifest_sha256": prior_hash,
+                                          "reason": "explicit user authorization"}
     RUN.mkdir(parents=True, exist_ok=True)
     raw = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    (RUN / "manifest.json").write_bytes(raw)
-    (RUN / "manifest.sha256").write_text(hashlib.sha256(raw).hexdigest() + "\n", encoding="utf-8")
-    (RUN / "budget-preflight.json").write_text(json.dumps(cost, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    suffix = "-budget-160" if args.amendment else ""
+    (RUN / f"manifest{suffix}.json").write_bytes(raw)
+    (RUN / f"manifest{suffix}.sha256").write_text(hashlib.sha256(raw).hexdigest() + "\n", encoding="utf-8")
+    (RUN / f"budget-preflight{suffix}.json").write_text(json.dumps(cost, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    if args.amendment:
+        (RUN / "budget-amendment-v1.json").write_text(json.dumps(manifest["budget_amendment"], sort_keys=True, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"manifest_sha256": hashlib.sha256(raw).hexdigest(), "budget": cost}, sort_keys=True))
 
 
