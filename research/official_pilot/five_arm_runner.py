@@ -88,7 +88,7 @@ class ReMeService:
             if self.proc.poll() is not None:
                 raise RuntimeError(f"official ReMe service {self.name} exited ({self.proc.returncode})")
             try:
-                with urllib.request.urlopen(self.base_url + "/health", timeout=2) as response:
+                with urllib.request.urlopen(self.base_url.rstrip("/") + "/health", timeout=2) as response:
                     if response.status == 200:
                         return
             except OSError:
