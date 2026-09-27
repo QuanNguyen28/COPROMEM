@@ -108,7 +108,10 @@ def copro_retrieval(arm: str, adapter: CoProMemAppWorldAdapter, task_id: str, tr
             return CoProMemAppWorldAdapter.reproduce_retrieval(adapter.export_state(), intent, record["provenance"])
         before = adapter.semantic_state_hash()
         guidance, provenance = adapter.retrieve_with_provenance(TrialInput(task_id, intent, domain, base_prompt=intent), trial)
-        reproduced = CoProMemAppWorldAdapter.reproduce_retrieval(json.loads((RUN / "copromem/initial-state.json").read_text()), intent, provenance)
+        # Dynamic streams legitimately diverge after a durably scored trial;
+        # reproduce against the exact exported pre-retrieval state, never a
+        # process-local cache or the initial bank by assumption.
+        reproduced = CoProMemAppWorldAdapter.reproduce_retrieval(provenance["pre_retrieval_state"], intent, provenance)
         if guidance != reproduced:
             raise RuntimeError("CoProMem guidance cannot be reproduced offline")
         write_json(path, {"task_id": task_id, "trial": trial, "arm": arm, "pre_state_sha256": before,
