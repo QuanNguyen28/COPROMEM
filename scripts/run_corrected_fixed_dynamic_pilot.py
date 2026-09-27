@@ -2,7 +2,7 @@
 """Resumable corrected five-arm AppWorld pilot; historical runs are untouched."""
 from __future__ import annotations
 
-import argparse
+import argparse, atexit
 import hashlib
 import json
 import os
@@ -54,6 +54,26 @@ def status(state: str, **extra: Any) -> None:
                         "manifest_sha256": (RUN / "manifest.sha256").read_text().strip(), **extra})
 
 
+def acquire_runner_lock() -> pathlib.Path:
+    """Prevent concurrent dispatch; a stale lock is removed only after PID proof."""
+    lock = RUN / "runner.lock"
+    if lock.exists():
+        try: pid = int(json.loads(lock.read_text(encoding="utf-8"))["pid"])
+        except Exception: raise RuntimeError("runner lock is malformed; preserve it for audit")
+        try: os.kill(pid, 0)
+        except ProcessLookupError: lock.unlink()
+        except PermissionError: raise RuntimeError("existing runner lock owner cannot be verified")
+        else: raise RuntimeError(f"another corrected pilot runner is active (PID {pid})")
+    write_json(lock, {"pid": os.getpid(), "created_ns": time.time_ns()})
+    def release() -> None:
+        if lock.exists():
+            try:
+                if int(json.loads(lock.read_text(encoding="utf-8"))["pid"]) == os.getpid(): lock.unlink()
+            except Exception: pass
+    atexit.register(release)
+    return lock
+
+
 def artifact(arm: str, task_id: str, trial_id: int) -> pathlib.Path:
     return RUN / "evaluation" / arm / task_id / f"trial-{trial_id}.json"
 
@@ -83,6 +103,7 @@ def main() -> None:
     spec = manifest()
     if c_free_gb() < 5: raise RuntimeError("Windows C storage floor is below 5 GB")
     RUN.mkdir(parents=True, exist_ok=True)
+    acquire_runner_lock()
     ledger = AppendOnlyLedger(LEDGER, CAP)
     api_key = env_value("OPENROUTER_API_KEY")
     status("preflight", c_free_gb=c_free_gb(), registered_bound=spec["budget"]["registered_conservative_usd"])
