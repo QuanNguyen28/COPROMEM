@@ -1,6 +1,10 @@
 from __future__ import annotations
 import unittest
+import json
+import pathlib
+import tempfile
 from src.copromem.appworld_comparison_adapter import CoProMemAppWorldAdapter, TrialInput
+import scripts.run_fixed_dynamic_v4 as v4
 
 class ProvenanceTest(unittest.TestCase):
     def test_exact_offline_reproduction_and_tamper_rejection(self) -> None:
@@ -17,5 +21,30 @@ class ProvenanceTest(unittest.TestCase):
         trial=TrialInput("x", "Inspect a record.", "appworld", base_prompt="Inspect a record.")
         adapter.retrieve_with_provenance(trial, 1)
         with self.assertRaises(RuntimeError): adapter.retrieve_with_provenance(trial, 1)
+
+    def test_v4_retrieval_restart_uses_persisted_pre_state_and_rejects_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            previous, v4.RUN = v4.RUN, pathlib.Path(directory)
+            try:
+                fixed = CoProMemAppWorldAdapter(); before = fixed.semantic_state_hash()
+                callback = v4.copro_retrieval("copromem_fixed", fixed, "task-x", 1)
+                guidance = callback("Inspect a record.", "appworld", {})
+                self.assertEqual(before, fixed.semantic_state_hash())  # fixed reads do not mutate semantic state
+                path = v4.RUN / "retrieval/copromem_fixed/task-x/trial-1.json"
+                stored = json.loads(path.read_text())
+                self.assertIn("pre_state", stored["provenance"])
+                # A restored dynamic stream has exactly the state expected for
+                # this trajectory and can reuse the durable record with no new
+                # retrieval/decomposition/provider callback.
+                dynamic = CoProMemAppWorldAdapter(); dynamic.clone_from_state(stored["provenance"]["pre_state"])
+                dynamic.retrieve_with_provenance = lambda *_a, **_k: self.fail("cached restart must not retrieve")
+                resumed = v4.copro_retrieval("copromem_fixed", dynamic, "task-x", 1)("Inspect a record.", "appworld", {})
+                self.assertEqual(guidance, resumed)
+                stored["provenance"]["pre_state_sha256"] = "0" * 64
+                path.write_text(json.dumps(stored), encoding="utf-8")
+                with self.assertRaises(RuntimeError):
+                    v4.copro_retrieval("copromem_fixed", dynamic, "task-x", 1)("Inspect a record.", "appworld", {})
+            finally:
+                v4.RUN = previous
 
 if __name__ == "__main__": unittest.main()

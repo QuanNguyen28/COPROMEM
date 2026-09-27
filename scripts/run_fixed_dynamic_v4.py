@@ -110,14 +110,20 @@ def copro_retrieval(arm: str, adapter: CoProMemAppWorldAdapter, task_id: str, tr
     def call(intent: str, domain: str, _: dict[str, Any]) -> str:
         if path.exists():
             record = json.loads(path.read_text(encoding="utf-8"))
-            return CoProMemAppWorldAdapter.reproduce_retrieval(adapter.export_state(), intent, record["provenance"])
+            provenance = record.get("provenance")
+            if (not isinstance(provenance, dict) or not isinstance(provenance.get("task_input"), dict) or
+                    CoProMemAppWorldAdapter._digest(provenance["task_input"]) != provenance.get("task_input_sha256")):
+                raise RuntimeError("persisted CoProMem retrieval provenance is invalid")
+            if adapter.semantic_state_hash() != provenance.get("pre_state_sha256"):
+                raise RuntimeError("CoProMem restart state does not match persisted retrieval pre-state")
+            guidance = CoProMemAppWorldAdapter.reproduce_retrieval(provenance["pre_state"], provenance["task_input"], provenance)
+            if hashlib.sha256(guidance.encode("utf-8")).hexdigest() != provenance.get("guidance_sha256"):
+                raise RuntimeError("persisted CoProMem guidance hash mismatch")
+            return guidance
         before = adapter.semantic_state_hash()
         guidance, provenance = adapter.retrieve_with_provenance(TrialInput(task_id, intent, domain, base_prompt=intent), trial)
-        # Dynamic streams legitimately diverge after a durably scored trial;
-        # reproduce against the exact exported pre-retrieval state, never a
-        # process-local cache or the initial bank by assumption.
-        reproduced = CoProMemAppWorldAdapter.reproduce_retrieval(provenance["pre_retrieval_state"], intent, provenance)
-        if guidance != reproduced:
+        reproduced = CoProMemAppWorldAdapter.reproduce_retrieval(provenance["pre_state"], provenance["task_input"], provenance)
+        if guidance != reproduced or hashlib.sha256(guidance.encode("utf-8")).hexdigest() != provenance["guidance_sha256"]:
             raise RuntimeError("CoProMem guidance cannot be reproduced offline")
         write_json(path, {"task_id": task_id, "trial": trial, "arm": arm, "pre_state_sha256": before,
                           "post_state_sha256": adapter.semantic_state_hash(), "guidance_sha256": provenance["guidance_sha256"],
