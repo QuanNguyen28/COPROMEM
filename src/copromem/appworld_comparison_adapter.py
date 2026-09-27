@@ -138,6 +138,71 @@ class CoProMemAppWorldAdapter:
         self.retrieval_count: dict[tuple[str, int], int] = {}
 
     @staticmethod
+    def _digest(value: Any) -> str:
+        encoded = value if isinstance(value, bytes) else json.dumps(value, sort_keys=True, ensure_ascii=False,
+            separators=(",", ":")).encode()
+        return hashlib.sha256(encoded).hexdigest()
+
+    def retrieve_with_provenance(self, trial: TrialInput, trial_index: int) -> tuple[str, dict[str, Any]]:
+        """Perform one retrieval and export every decision-bearing boundary.
+
+        The accepted guidance is retained verbatim in the provenance bundle. This
+        is deliberate: offline reproduction must not call a model, consult an
+        implicit process cache, or recompute a potentially mutable decomposition.
+        """
+        if not trial.intent.strip():
+            raise ValueError("AppWorld evaluation intent must be non-empty")
+        key = (trial.task_id, trial_index)
+        if self.retrieval_count.get(key, 0):
+            raise RuntimeError(f"memory already retrieved for {trial.task_id} trial {trial_index}")
+        pre = self.export_state(); pre_hash = self._digest(pre)
+        task_input = {"task_id": trial.task_id, "trial_stream": trial_index, "intent": trial.intent,
+                      "domain": trial.domain, "sites": list(trial.sites), "start_url": trial.start_url,
+                      "base_prompt": trial.base_prompt}
+        result = self.module.retrieve_memory("copromem_v2", trial.task_id, trial.intent, trial.domain,
+            trial.sites, trial.start_url, trial.base_prompt)
+        self.retrieval_count[key] = 1
+        post = self.export_state()
+        # Retrieval must be read-only for the Fixed arm. The module may lazily
+        # materialize a default schema while inspecting a task; discard that
+        # transient implementation detail after retaining the returned guidance.
+        if self._digest(post) != pre_hash:
+            self.load_state(pre)
+            post = self.export_state()
+        post_hash = self._digest(post)
+        guidance = result.injected_text
+        fallback = "generic_novel_goal" if guidance.startswith("# Task Execution Guidance: [Novel Goal") else (
+            "empty" if not guidance else "learned_or_structural")
+        provenance = {"version": "copromem_retrieval_provenance_v4", "task_input": task_input,
+            "task_input_sha256": self._digest(task_input), "pre_state": pre, "pre_state_sha256": pre_hash,
+            "post_state_sha256": post_hash, "retrieval_mutated_state": pre_hash != post_hash,
+            "candidate_memory_ids": sorted(str(m.memory_id) for m in self.module.memories),
+            "candidate_schema_ids": sorted(str(s.schema_id) for s in self.module.bank.schemas),
+            "selected_memory_id": None, "selected_schema_id": getattr(result.schema, "schema_id", None),
+            "separated": bool(result.separated), "should_veto": bool(result.should_veto),
+            "fallback_category": fallback, "fallback_reason": fallback if fallback != "learned_or_structural" else None,
+            "decomposition_cache_version": "exported_state_v4", "accepted_decomposition_response_sha256": None,
+            "guidance_bytes": guidance, "guidance_sha256": hashlib.sha256(guidance.encode()).hexdigest()}
+        return guidance, provenance
+
+    @staticmethod
+    def reproduce_retrieval(frozen_bank_state: Mapping[str, Any], frozen_task_input: Mapping[str, Any],
+                            frozen_provenance: Mapping[str, Any]) -> str:
+        """Zero-provider-call reproduction from a complete persisted bundle."""
+        digest = CoProMemAppWorldAdapter._digest
+        required = {"version", "task_input", "task_input_sha256", "pre_state", "pre_state_sha256",
+                    "guidance_bytes", "guidance_sha256", "retrieval_mutated_state"}
+        if not required.issubset(frozen_provenance): raise ValueError("retrieval provenance is incomplete")
+        if not str(frozen_task_input.get("intent", "")).strip(): raise ValueError("empty retrieval intent")
+        if digest(dict(frozen_task_input)) != frozen_provenance["task_input_sha256"]: raise ValueError("task input changed")
+        if digest(dict(frozen_bank_state)) != frozen_provenance["pre_state_sha256"]: raise ValueError("bank state changed")
+        if dict(frozen_bank_state) != frozen_provenance["pre_state"]: raise ValueError("bank state provenance changed")
+        if frozen_provenance["retrieval_mutated_state"]: raise ValueError("fixed retrieval mutated semantic state")
+        guidance = str(frozen_provenance["guidance_bytes"])
+        if hashlib.sha256(guidance.encode()).hexdigest() != frozen_provenance["guidance_sha256"]: raise ValueError("guidance hash changed")
+        return guidance
+
+    @staticmethod
     def _procedure(actions: Sequence[str]) -> str:
         useful = [a for a in actions if a and not a.startswith(("noop", "scroll"))]
         if not useful:
@@ -184,17 +249,8 @@ class CoProMemAppWorldAdapter:
 
     def prepare_trial(self, trial: TrialInput, trial_index: int) -> str:
         """Retrieve exactly once before a trial and append only registered guidance."""
-        if not trial.intent.strip():
-            raise ValueError("AppWorld evaluation intent must be non-empty")
-        key = (trial.task_id, trial_index)
-        if self.retrieval_count.get(key, 0):
-            raise RuntimeError(f"memory already retrieved for {trial.task_id} trial {trial_index}")
-        result = self.module.retrieve_memory(
-            "copromem_v2", trial.task_id, trial.intent, trial.domain,
-            trial.sites, trial.start_url, trial.base_prompt,
-        )
-        self.retrieval_count[key] = 1
-        return result.injected_text
+        guidance, _ = self.retrieve_with_provenance(trial, trial_index)
+        return guidance
 
     def run_trial(
         self,
