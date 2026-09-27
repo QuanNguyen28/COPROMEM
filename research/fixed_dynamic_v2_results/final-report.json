@@ -1,0 +1,44 @@
+{
+  "budget": {
+    "all_in_usd": 145.18108447999998,
+    "carried_v1_exposure_usd": 0.048008,
+    "copromem_decomposition_calls": 320,
+    "copromem_decomposition_usd": 3.93216,
+    "dispatchable_usd": 126.2026752,
+    "embedding_calls": 216,
+    "embedding_usd": 0.1769472,
+    "executor_calls": 9840,
+    "executor_usd": 120.91392,
+    "fits_hard_cap": false,
+    "hard_cap_usd": 140.0,
+    "nondispatchable_contingency_fraction": 0.15,
+    "nondispatchable_contingency_usd": 18.930401279999998,
+    "reme_lifecycle_calls": 96,
+    "reme_lifecycle_usd": 1.179648
+  },
+  "decision": "NO-GO",
+  "evaluation": {
+    "executed_trajectory_count": 0,
+    "planned_task_count": 16
+  },
+  "manifest_sha256": "0ac9e5c270121dc9217a5f4bc4088170cd217eaa165314fafbda17bf64633e0d",
+  "new_acquisition": {
+    "executed_trajectory_count": 0,
+    "planned_task_count": 8
+  },
+  "protocol": "corrected_fixed_dynamic_appworld_v2",
+  "provider_dispatch": {
+    "v2_embedding_calls": 0,
+    "v2_lifecycle_calls": 0,
+    "v2_model_calls": 0
+  },
+  "reason": "The 16-task minimum remains above the USD 140 all-inclusive cap after the required 15% nondispatchable contingency.",
+  "required_change_to_proceed": "A new preregistered protocol with an explicit budget authorization sufficient for USD 145.18108448 or more; no other scientific parameter may be silently reduced.",
+  "source_commit": "1bfe2228b6f274b18b387698c15760fa57004f72",
+  "source_tree": "4a809c76740d338bb92b7a33123eb1d12d941515",
+  "v1_carry_forward": {
+    "exposure_usd": 0.048008,
+    "hash_verified": true,
+    "trajectory_count": 24
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "evidence": [
+    {
+      "kind": "v2_manifest",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/manifest.json",
+      "sha256": "0ac9e5c270121dc9217a5f4bc4088170cd217eaa165314fafbda17bf64633e0d"
+    },
+    {
+      "kind": "v2_budget_preflight",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2/budget-preflight.json",
+      "sha256": "32f31e5eb22568dbd9a3535a1f3c03e33896be17542233bfd965d0fdfe7db373"
+    },
+    {
+      "kind": "v1_no_go_report",
+      "path": "research/fixed_dynamic_v1_results/no-go-report.json",
+      "sha256": "5ef3e6c50e36852201ac1d5390ff71d85e115f53295da9a2926f8e0721067993"
+    }
+  ]
+}
