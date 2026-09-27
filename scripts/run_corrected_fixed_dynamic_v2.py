@@ -110,6 +110,22 @@ def update_marker(arm: str, task_id: str, trial: int) -> pathlib.Path:
     return RUN / "evaluation_updates" / arm / task_id / f"trial-{trial}.json"
 
 
+def assert_copromem_clone_states(*, fixed: Any, dynamic: dict[int, Any], initial_hash: str,
+                                 restored_dynamic_states: dict[int, dict[str, Any]]) -> None:
+    """Verify immutable fixed state and each independent dynamic stream on resume.
+
+    A dynamic stream with a durable post-trial snapshot is intentionally no
+    longer equal to the initial bank.  Comparing it to the initial bank made
+    restart fail after a valid dynamic update and risked tempting a replay.
+    """
+    if fixed.semantic_state_hash() != initial_hash:
+        raise RuntimeError("CoProMem fixed clone mismatch")
+    for trial, adapter in dynamic.items():
+        expected = digest(restored_dynamic_states[trial]) if trial in restored_dynamic_states else initial_hash
+        if adapter.semantic_state_hash() != expected:
+            raise RuntimeError(f"CoProMem dynamic clone mismatch for trial {trial}")
+
+
 def update_live_summary(spec: dict[str, Any], stage: str, last_error: str | None = None) -> None:
     acq = list((RUN / "acquisition").glob("*.json"))
     eval_rows: list[dict[str, Any]] = []
@@ -246,11 +262,15 @@ def main() -> None:
             if dynamic_snapshot.exists():
                 official_post(svc[f"reme-dynamic-{trial}"].base_url, "load_memory", {"load_file_path": str(dynamic_snapshot), "clear_existing": True})
         copro_fixed = make_copro(copro_state); copro_dynamic = {trial: make_copro(copro_state) for trial in spec["evaluation"]["trial_ids"]}
+        restored_copro_dynamic: dict[int, dict[str, Any]] = {}
         for trial, adapter in copro_dynamic.items():
             dynamic_snapshot = RUN / "copromem" / f"dynamic-trial-{trial}.json"
             if dynamic_snapshot.exists():
-                adapter.clone_from_state(json.loads(dynamic_snapshot.read_text(encoding="utf-8")))
-        if copro_fixed.semantic_state_hash() != copro_hash or any(x.semantic_state_hash() != copro_hash for x in copro_dynamic.values()): raise RuntimeError("CoProMem initial clone mismatch")
+                restored = json.loads(dynamic_snapshot.read_text(encoding="utf-8"))
+                adapter.clone_from_state(restored)
+                restored_copro_dynamic[trial] = restored
+        assert_copromem_clone_states(fixed=copro_fixed, dynamic=copro_dynamic, initial_hash=copro_hash,
+                                     restored_dynamic_states=restored_copro_dynamic)
         retrieval = validate_retrieval(rows=combined, reme_url=svc["reme-fixed"].base_url, copro=copro_fixed)
         write_json(RUN / "lifecycle/retrieval-gate.json", retrieval); append(PROGRESS, {"event": "retrieval_gate_passed", **retrieval})
         for task_id in spec["evaluation"]["task_ids"]:

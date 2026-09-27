@@ -11,6 +11,11 @@ ARMS=["no_memory","official_upstream_reme_fixed","official_upstream_reme_dynamic
 
 def mean(values: list[float]) -> float: return sum(values)/len(values)
 def sha(path: pathlib.Path) -> str: return hashlib.sha256(path.read_bytes()).hexdigest()
+def atomic_text(path: pathlib.Path, content: str) -> None:
+    temporary=path.with_suffix(path.suffix+".tmp")
+    with temporary.open("w",encoding="utf-8") as handle:
+        handle.write(content); handle.flush(); os.fsync(handle.fileno())
+    os.replace(temporary,path)
 def rows(path: pathlib.Path) -> list[dict[str,Any]]:
     return [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()] if path.exists() else []
 
@@ -68,18 +73,29 @@ def main() -> None:
     for row in ledger_rows:
         if row.get("event") in {"reserve","settle"}:exposure[row["id"]]=float(row["usd"])
     acquisition=list((RUN/"acquisition").glob("*.json"));
-    expected_new_acquisition=len(manifest["acquisition"].get("new_task_ids", manifest["acquisition"].get("task_ids", [])))
-    if len(acquisition)!=expected_new_acquisition: raise SystemExit(f"incomplete acquisition: {len(acquisition)}/{expected_new_acquisition}")
+    frozen_combined=manifest.get("acquisition",{}).get("frozen_combined_count")
+    if frozen_combined is not None:
+        gate_path=RUN/"acquisition"/"combined-gate.json"
+        if not gate_path.exists(): raise SystemExit("missing frozen combined acquisition gate")
+        gate=json.loads(gate_path.read_text())
+        if not gate.get("passed") or int(gate.get("planned",-1))!=int(frozen_combined):
+            raise SystemExit("frozen combined acquisition gate is invalid")
+        acquisition_completed=int(frozen_combined); acquisition_expected=int(frozen_combined)
+        evidence.append({"path":str(gate_path.relative_to(ROOT)),"sha256":sha(gate_path),"kind":"frozen_acquisition_gate"})
+    else:
+        expected_new_acquisition=len(manifest["acquisition"].get("new_task_ids", manifest["acquisition"].get("task_ids", [])))
+        if len(acquisition)!=expected_new_acquisition: raise SystemExit(f"incomplete acquisition: {len(acquisition)}/{expected_new_acquisition}")
+        acquisition_completed=len(acquisition); acquisition_expected=expected_new_acquisition
     evidence += [{"path":str((RUN/f"{manifest_name}.json").relative_to(ROOT)),"sha256":sha(RUN/f"{manifest_name}.json"),"kind":"manifest"},{"path":str((RUN/"progress.jsonl").relative_to(ROOT)),"sha256":sha(RUN/"progress.jsonl"),"kind":"progress"},{"path":str((RUN/"ledger.jsonl").relative_to(ROOT)),"sha256":sha(RUN/"ledger.jsonl"),"kind":"ledger"}]
     carry=int(manifest.get("acquisition",{}).get("carry_forward_v1_count",0)); cap=float(manifest["budget"]["hard_cap_usd"])
-    report={"protocol":manifest["protocol"],"label":"exploratory exact-ID custody; corrected fixed/dynamic faithful adaptation","manifest_sha256":expected,"completion":{"acquisition":f"{carry + len(acquisition)}/{carry + expected_new_acquisition}","evaluation":f"{len(records)}/{expected_evaluation}","complete":True},"metrics":metrics,"paired_copromem_dynamic":paired,"official_scores":records,"calls_tokens_latency_cost":dict(calls),"ledger":{"hard_cap_usd":cap,"charged_or_retained_usd":sum(exposure.values()),"records":len(ledger_rows)},"evidence":evidence,"limitations":["Exact-ID custody only; no task-family or benchmark-wide claim.","Official upstream ReMe service/executor is used through OpenRouter compatibility boundaries; embedding model is the amended Azure OpenRouter text-embedding-3-small route.","This pilot does not support superiority without the preregistered beneficial-flip and compute-parity conditions."],"decision":"REVISE"}
-    out=RUN/"final-report.json"; md=RUN/"FINAL_REPORT.md"; out.write_text(json.dumps(report,sort_keys=True,indent=2)+"\n")
+    report={"protocol":manifest["protocol"],"label":"exploratory exact-ID custody; corrected fixed/dynamic faithful adaptation","manifest_sha256":expected,"completion":{"acquisition":f"{acquisition_completed}/{acquisition_expected}","evaluation":f"{len(records)}/{expected_evaluation}","complete":True},"metrics":metrics,"paired_copromem_dynamic":paired,"official_scores":records,"calls_tokens_latency_cost":dict(calls),"ledger":{"hard_cap_usd":cap,"charged_or_retained_usd":sum(exposure.values()),"records":len(ledger_rows)},"evidence":evidence,"limitations":["Exact-ID custody only; no task-family or benchmark-wide claim.","Official upstream ReMe service/executor is used through OpenRouter compatibility boundaries; embedding model is the amended Azure OpenRouter text-embedding-3-small route.","This pilot does not support superiority without the preregistered beneficial-flip and compute-parity conditions."],"decision":"REVISE"}
+    out=RUN/"final-report.json"; md=RUN/"FINAL_REPORT.md"; atomic_text(out,json.dumps(report,sort_keys=True,indent=2)+"\n")
     lines=["# Corrected fixed/dynamic AppWorld pilot","","**Exploratory exact-ID custody; faithful ReMe adaptation.**","",f"Manifest SHA-256: `{expected}`","", "| Arm | Avg@4 | Pass@4 | mean score | success rate | actions |","|---|---:|---:|---:|---:|---:|"]
     for arm in ARMS:
         metric=metrics[arm]; lines.append(f"| {arm} | {metric['avg_at_4']:.4f} | {metric['pass_at_4']:.4f} | {metric['mean_official_score']:.4f} | {metric['full_success_rate']:.4f} | {metric['mean_actions']:.2f} |")
     lines += ["","## Paired CoProMem Dynamic comparisons","","| Comparator | pairs | mean difference | 95% cluster CI | W/L/T |","|---|---:|---:|---:|---:|"]
     for arm,result in paired.items(): lines.append(f"| {arm} | {result['complete_pair_denominator']} | {result['mean_difference']:.4f} | {result['cluster_bootstrap_95_ci']} | {result['wins']}/{result['losses']}/{result['ties']} |")
     lines += ["",f"Ledger exposure: **USD {sum(exposure.values()):.6f} / USD {cap:.2f}**.","","## Limitations","",*[f"- {x}" for x in report["limitations"]],"","**REVISE:** interpret only after the preregistered beneficial-flip and compute-parity review."]
-    md.write_text("\n".join(lines)+"\n")
+    atomic_text(md,"\n".join(lines)+"\n")
     print(f"corrected_report=passed rows={len(records)}")
 if __name__=="__main__":main()
