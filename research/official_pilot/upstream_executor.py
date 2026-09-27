@@ -131,4 +131,21 @@ def load_official_agent(*, allowed_tasks: list[str], api_key: str, ledger: Appen
     source = pathlib.Path(__import__("inspect").getsourcefile(cls)).resolve()
     if SOURCE not in source.parents or any(name.endswith("reme_paper_lifecycle") for name in sys.modules):
         raise RuntimeError("official upstream executor integrity violation")
+
+    # The pinned source retries every exception up to 100 times.  That is
+    # incompatible with a preregistered no-replay budget.  This narrow
+    # transport wrapper preserves the source's message construction, code
+    # extraction and lifecycle decisions while issuing precisely one ledgered
+    # request per executor iteration.
+    def call_llm_once(self: Any, messages: list[dict[str, Any]]) -> str:
+        response = self.llm_client.chat.completions.create(
+            model=self.model_name,
+            messages=messages,
+            temperature=self.temperature,
+            top_p=1.0,
+            extra_body={"enable_thinking": False},
+        )
+        return response.choices[0].message.content
+
+    cls.call_llm = call_llm_once
     return cls

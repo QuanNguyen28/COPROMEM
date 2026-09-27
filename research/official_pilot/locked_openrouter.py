@@ -21,12 +21,15 @@ from typing import Any
 URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "deepseek/deepseek-v4.1-flash"
 PROVIDER = "deepseek"
-# The frozen manifest specifies 16,384 input *tokens*.  The prior adapter
-# accidentally treated that as UTF-8 bytes, rejecting an ordinary third agent
-# turn far below the registered token ceiling.  English AppWorld prompts are
-# bounded using a conservative 4-byte/token transport representation here.
-MAX_INPUT_BYTES = 65_536
-MAX_OUTPUT_TOKENS = 1024
+# These limits are frozen in the corrected fixed/dynamic manifest.  They must
+# be expressed in tokens, never in UTF-8 bytes divided by an assumed average.
+# ``o200k_base`` is a real BPE tokenizer available in the pinned ReMe service
+# environment.  It is used as a conservative, reproducible compatibility
+# counter for the OpenRouter Chat Completions payload; a missing tokenizer is
+# a fail-closed pre-dispatch error rather than a reason to guess.
+INPUT_TOKEN_CEILING = int(os.environ.get("OFFICIAL_PILOT_INPUT_TOKEN_CEILING", "32768"))
+MAX_OUTPUT_TOKENS = int(os.environ.get("OFFICIAL_PILOT_MAX_COMPLETION_TOKENS", "2048"))
+TOKENIZER_NAME = "o200k_base"
 # Frozen from the successful DeepSeek-only OpenRouter canary route snapshot.
 # These values are deliberately higher than the earlier draft-manifest tariff.
 INPUT_PRICE = 0.30 / 1_000_000
@@ -43,6 +46,35 @@ class ContextCeilingTermination(DispatchFailure):
         super().__init__("input token ceiling would be exceeded")
         self.estimated_prompt_tokens = estimated_prompt_tokens
         self.ceiling = ceiling
+
+
+class TruncationTermination(DispatchFailure):
+    """A returned length-limited response must never be executed as code."""
+    def __init__(self, prompt_tokens: int, completion_tokens: int) -> None:
+        super().__init__("completion token ceiling reached")
+        self.prompt_tokens = prompt_tokens
+        self.completion_tokens = completion_tokens
+
+
+def count_chat_tokens(messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None) -> int:
+    """Count the canonical chat payload with a real BPE tokenizer.
+
+    The provider does not expose a DeepSeek V4.1 tokenizer endpoint.  This
+    deliberately uses the pinned ``tiktoken`` BPE rather than a byte heuristic
+    and includes tool schemas in the counted canonical request.  The small
+    per-message framing allowance is intentionally conservative.
+    """
+    try:
+        import tiktoken
+        encoding = tiktoken.get_encoding(TOKENIZER_NAME)
+    except Exception as exc:  # no approximate fallback is scientifically safe
+        raise DispatchFailure("required tokenizer unavailable") from exc
+    payload: dict[str, Any] = {"messages": messages}
+    if tools:
+        payload["tools"] = tools
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                           separators=(",", ":"))
+    return len(encoding.encode(canonical)) + (4 * len(messages)) + 3
 
 
 @dataclass(frozen=True)
@@ -113,23 +145,46 @@ class LockedChatCompletions:
             handle.write(line); handle.flush(); os.fsync(handle.fileno())
 
     def create(self, *, model: str, messages: list[dict[str, Any]], stream: bool = False,
-               max_tokens: int | None = None, **_: Any) -> Any:
+               max_tokens: int | None = None, tools: list[dict[str, Any]] | None = None,
+               tool_choice: str | dict[str, Any] | None = None,
+               parallel_tool_calls: bool | None = None, temperature: float = 0.7,
+               top_p: float = 1.0, seed: int | None = None, **_: Any) -> Any:
         if model != MODEL:
             raise DispatchFailure("model substitution rejected")
-        encoded = json.dumps(messages, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-        estimated_input_tokens = (len(encoded) + 3) // 4
-        if len(encoded) > MAX_INPUT_BYTES or estimated_input_tokens > 16_384:
-            raise ContextCeilingTermination(estimated_input_tokens, 16_384)
+        if stream:
+            # The transport returns an SDK-compatible iterator after its single
+            # non-streaming request.  A true streaming network request is not
+            # permitted by the frozen route.
+            pass
+        if tool_choice not in (None, "auto"):
+            raise DispatchFailure("forced tool selection rejected")
+        if parallel_tool_calls not in (None, False):
+            raise DispatchFailure("parallel tool calls rejected")
+        if not 0.0 <= float(temperature) <= 2.0 or not 0.0 < float(top_p) <= 1.0:
+            raise DispatchFailure("generation controls rejected")
+        lifecycle_role = self.role.startswith(("reme_lifecycle", "copromem_decomposition"))
+        effective_temperature = 0.0 if lifecycle_role else float(temperature)
+        estimated_input_tokens = count_chat_tokens(messages, tools)
+        if estimated_input_tokens > INPUT_TOKEN_CEILING:
+            raise ContextCeilingTermination(estimated_input_tokens, INPUT_TOKEN_CEILING)
         output = MAX_OUTPUT_TOKENS if max_tokens is None else min(int(max_tokens), MAX_OUTPUT_TOKENS)
         bound = estimated_input_tokens * INPUT_PRICE + output * OUTPUT_PRICE
         call_id = f"{time.time_ns()}-{self.role}"
         meta = {"role": self.role, "model": MODEL, "provider_only": PROVIDER,
                 "stream": False, "max_completion_tokens": output,
-                "estimated_input_tokens": estimated_input_tokens}
+                "estimated_input_tokens": estimated_input_tokens,
+                "tokenizer": TOKENIZER_NAME, "temperature": effective_temperature,
+                "top_p": float(top_p), "seed": seed}
         self.ledger.reserve(call_id, bound, meta)
         body = {"model": MODEL, "messages": messages, "stream": False, "max_tokens": output,
+                "temperature": effective_temperature, "top_p": float(top_p),
                 "reasoning_effort": "none", "provider": {"only": [PROVIDER], "allow_fallbacks": False,
                 "require_parameters": True, "max_price": {"prompt": 0.30, "completion": 1.20}}}
+        if tools:
+            body["tools"] = tools
+            body["parallel_tool_calls"] = False
+            if tool_choice == "auto": body["tool_choice"] = "auto"
+        if seed is not None: body["seed"] = int(seed)
         started = time.perf_counter()
         try:
             request = urllib.request.Request(URL, data=json.dumps(body).encode(), method="POST",
@@ -160,6 +215,9 @@ class LockedChatCompletions:
                         "finish_reason": choice.get("finish_reason"), "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
                         "content_length":len(content), "tool_call_present":bool(message.get("tool_calls"))})
         self.last_accepted_prompt_tokens = int(usage.get("prompt_tokens") or 0)
+        if choice.get("finish_reason") == "length":
+            raise TruncationTermination(int(usage.get("prompt_tokens") or estimated_input_tokens),
+                                        int(usage.get("completion_tokens") or output))
         result = types.SimpleNamespace(
             choices=[types.SimpleNamespace(message=types.SimpleNamespace(content=content,
                 reasoning_content=None, tool_calls=message.get("tool_calls")), finish_reason=choice.get("finish_reason"))],

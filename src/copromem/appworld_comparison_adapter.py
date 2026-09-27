@@ -8,6 +8,8 @@ live harness retains AppWorld's native task and scoring implementation.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import hashlib
+import json
 from typing import Any, Callable, Mapping, Sequence
 
 from .checkpoints import RunStore
@@ -182,6 +184,8 @@ class CoProMemAppWorldAdapter:
 
     def prepare_trial(self, trial: TrialInput, trial_index: int) -> str:
         """Retrieve exactly once before a trial and append only registered guidance."""
+        if not trial.intent.strip():
+            raise ValueError("AppWorld evaluation intent must be non-empty")
         key = (trial.task_id, trial_index)
         if self.retrieval_count.get(key, 0):
             raise RuntimeError(f"memory already retrieved for {trial.task_id} trial {trial_index}")
@@ -218,5 +222,26 @@ class CoProMemAppWorldAdapter:
     def export_state(self) -> dict[str, Any]:
         return self.module.export_state()
 
+    def semantic_state_hash(self) -> str:
+        return hashlib.sha256(json.dumps(self.export_state(), sort_keys=True,
+            separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+
     def load_state(self, state: dict[str, Any]) -> None:
         self.module.load_state(state)
+
+    def clone_from_state(self, state: dict[str, Any]) -> None:
+        """Restore a hash-verified semantic bank into an independent stream."""
+        self.load_state(state)
+        if self.export_state() != state:
+            raise RuntimeError("CoProMem clone semantic state mismatch")
+
+    def record_scored_trial(self, trial: TrialInput, trial_index: int, *, success: bool,
+                            actions: Sequence[str], state_hash: str, seed: int = 0) -> int:
+        """Dynamic-only post-score update; fixed callers must never invoke it."""
+        self.ingest(RawAcquisitionTrajectory(
+            identity=AcquisitionIdentity(trial.task_id, seed, trial_index),
+            intent=trial.intent, domain=trial.domain, success=success, actions=tuple(actions),
+            task_state={"evaluation": True, "pre_update_state_hash": state_hash,
+                        "trial_index": trial_index, "seed": seed},
+        ))
+        return self.consolidate()

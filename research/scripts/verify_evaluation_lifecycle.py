@@ -15,11 +15,17 @@ class Agent:
 # Fixed has no evaluation update invocation path.
 fixed = Agent([{"memory_id":"m"}]); assert fixed.calls == []
 events=[]; empty=Agent([])
-assert dynamic_post_trial_update(empty, 1.0, events.append) == "skipped_empty_retrieval"
-assert empty.calls == [] and events[-1]["event"] == "dynamic_update_skipped_empty_retrieval"
+assert dynamic_post_trial_update(empty, 1.0, events.append) == "updated_without_retrieval"
+assert "record" not in str(empty.calls) and "summary" in empty.calls
 events=[]; dynamic=Agent([{"memory_id":"m"}])
 assert dynamic_post_trial_update(dynamic, 1.0, events.append) == "updated"
 assert any(isinstance(x, tuple) and x[0] == "record" for x in dynamic.calls)
+# The source-declared summary route may persist itself; this compatibility
+# boundary must not duplicate the newly summarized memory via add_task_memory.
+persisted=Agent([{"memory_id":"m"}]); persisted.summary_memory=lambda _: [{"memory_id":"new"}]
+events=[]; dynamic_post_trial_update(persisted, 1.0, events.append, summary_persists=True)
+assert "add" not in persisted.calls
+assert any(x.get("event") == "dynamic_summary_persisted_by_registered_flow" for x in events)
 # Model the runner ordering: completed/scored is committed before the optional
 # dynamic update, and a restart sees the completed key and does not replay it.
 durable=[]
