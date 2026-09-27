@@ -1,0 +1,993 @@
+diff --git a/WebArena/agents/legacy/__init__.py b/WebArena/agents/legacy/__init__.py
+index b13f5a3..ab9e86f 100644
+--- a/WebArena/agents/legacy/__init__.py
++++ b/WebArena/agents/legacy/__init__.py
+@@ -12,5 +12,8 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-from .agent import GenericAgentArgs
++try:
++    from .agent import GenericAgentArgs
++except ImportError:
++    GenericAgentArgs = None
+ from .dynamic_prompting import Flags
+diff --git a/WebArena/agents/legacy/dynamic_prompting.py b/WebArena/agents/legacy/dynamic_prompting.py
+index dc823da..c90b3e1 100644
+--- a/WebArena/agents/legacy/dynamic_prompting.py
++++ b/WebArena/agents/legacy/dynamic_prompting.py
+@@ -49,6 +49,7 @@ class Flags:
+     use_past_error_logs: bool = False
+     use_history: bool = False
+     use_action_history: bool = False
++    use_past_thought_history: bool = False
+     use_memory: bool = False
+     use_diff: bool = False
+     html_type: str = "pruned_html"
+@@ -375,7 +376,9 @@ class SystemPrompt(PromptElement):
+     _prompt = """\
+ You are an agent trying to solve a web task based on the content of the page and
+ a user instructions. You can interact with the page and explore. Each time you
+-submit an action it will be sent to the browser and you will receive a new page."""
++submit an action it will be sent to the browser and you will receive a new page.
++
++When answering a question or providing requested information with send_msg_to_user(), output ONLY the exact, concise value, entity name, or list of values requested (e.g. send_msg_to_user('hollister')). Do not include conversational filler words, pleasantries, or explanatory sentences."""
+     
+ 
+ class MainPrompt(Shrinkable):
+@@ -663,7 +666,8 @@ class HistoryStep(Shrinkable):
+     def _prompt(self) -> str:
+         prompt = ""
+         
+-        prompt += f"\n### Thought:\n{self.thought}\n"
++        if getattr(self.flags, "use_past_thought_history", False):
++            prompt += f"\n### Thought:\n{self.thought}\n"
+ 
+         if self.flags.use_action_history:
+             prompt += f"\n### Action:\n{self.action}\n"
+diff --git a/WebArena/agents/legacy/utils/chat_api.py b/WebArena/agents/legacy/utils/chat_api.py
+index 21e8157..741838c 100644
+--- a/WebArena/agents/legacy/utils/chat_api.py
++++ b/WebArena/agents/legacy/utils/chat_api.py
+@@ -14,6 +14,16 @@
+ 
+ from dataclasses import asdict, dataclass
+ import io
++import os
++from pathlib import Path
++from dotenv import load_dotenv
++
++# Ensure .env from repo root is loaded
++_REPO_ROOT = Path(__file__).resolve().parents[4]
++if (_REPO_ROOT / ".env").exists():
++    load_dotenv(_REPO_ROOT / ".env")
++else:
++    load_dotenv()
+ import json
+ from .prompt_templates import PromptTemplate, get_prompt_template
+ from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage, AIMessage
+@@ -90,7 +100,19 @@ class ChatModelArgs:
+             raise ValueError("model_url cannot be specified when hf_hosted is True")
+ 
+     def make_chat_model(self):
+-        if self.model_name.startswith("openai"):
++        use_openrouter = bool(os.environ.get("OPENROUTER_API_KEY"))
++        if use_openrouter or ("/" in self.model_name and not self.model_name.startswith("openai/")):
++            target_model = self.model_name
++            if target_model.startswith("gemini"):
++                target_model = f"google/{target_model}"
++            return ChatOpenAI(
++                model_name=target_model,
++                temperature=self.temperature,
++                max_tokens=self.max_new_tokens,
++                base_url=os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1") if use_openrouter else None,
++                api_key=os.environ.get("OPENROUTER_API_KEY"),
++            )
++        elif self.model_name.startswith("openai"):
+             _, model_name = self.model_name.split("/")
+             return ChatOpenAI(
+                 model_name=model_name,
+@@ -265,6 +287,8 @@ class ChatOpenAI(SimpleChatModel):
+         temperature: float,
+         max_tokens: int,
+         n_retry_server=4,
++        base_url: str = None,
++        api_key: str = None,
+     ):
+         """
+         Initializes the CustomLLMChatbot with the specified configurations.
+@@ -277,9 +301,23 @@ class ChatOpenAI(SimpleChatModel):
+             max_new_tokens (int, optional): Maximum length for the response. Defaults to 64.
+             model_url (str, optional): The url of the model to use. If None, then model_name or model_name will be used. Defaults to None.
+         """
+-        logging.info("Loading OpenAI")
++        logging.info(f"Loading OpenAI client for model: {model_name}")
++        api_key = api_key or os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY")
++        if base_url is None:
++            if os.environ.get("OPENROUTER_API_KEY"):
++                base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
++            elif os.environ.get("OPENAI_BASE_URL"):
++                base_url = os.environ.get("OPENAI_BASE_URL")
++
++        client_kwargs = {}
++        if api_key:
++            client_kwargs["api_key"] = api_key
++        if base_url:
++            client_kwargs["base_url"] = base_url
++
++        client = OpenAI(**client_kwargs)
+         llm_fn = partial(
+-            OpenAI().chat.completions.create,
++            client.chat.completions.create,
+             model=model_name,
+             temperature=temperature,
+             max_tokens=max_tokens,
+@@ -306,7 +344,7 @@ class ChatOpenAI(SimpleChatModel):
+         while True:
+             try:
+                 response = self._llm(messages=messages_formated).choices[0].message.content
+-                return response
++                return response or ""
+             except Exception as e:
+                 if itr == self.n_retry_server - 1:
+                     raise e
+diff --git a/WebArena/agents/legacy/utils/llm_utils.py b/WebArena/agents/legacy/utils/llm_utils.py
+index 3e18064..258d7e3 100644
+--- a/WebArena/agents/legacy/utils/llm_utils.py
++++ b/WebArena/agents/legacy/utils/llm_utils.py
+@@ -15,6 +15,7 @@
+ import collections
+ import json
+ from pathlib import Path
++import os
+ import re
+ import time
+ from warnings import warn
+@@ -189,42 +190,61 @@ def truncate_tokens(text, max_tokens=8000, start=0, model_name="gpt-4"):
+ @cache
+ def get_tokenizer(model_name="openai/gpt-4"):
+     if model_name.startswith("openai"):
+-        return tiktoken.encoding_for_model(model_name.split("/")[-1])
+-    else:
++        try:
++            return tiktoken.encoding_for_model(model_name.split("/")[-1])
++        except Exception:
++            return tiktoken.get_encoding("cl100k_base")
++    try:
+         return AutoTokenizer.from_pretrained(model_name)
++    except Exception:
++        return tiktoken.get_encoding("cl100k_base")
+ 
+ 
+ def count_tokens(text, model="openai/gpt-4"):
+-    if model.startswith('gemini'):
+-        from google import genai
+-        from google.genai.types import HttpOptions, GenerateContentConfig
+-        client = genai.Client(vertexai=True, http_options=HttpOptions(api_version="v1"))
+-        return client.models.count_tokens(model=model, contents=[text]).total_tokens
+-    elif model.startswith("claude"):
++    if "gemini" in model.lower():
++        if os.environ.get("GOOGLE_CLOUD_PROJECT"):
++            try:
++                from google import genai
++                from google.genai.types import HttpOptions, GenerateContentConfig
++                client = genai.Client(vertexai=True, http_options=HttpOptions(api_version="v1"))
++                gemini_model = model.split("/")[-1] if "/" in model else model
++                return client.models.count_tokens(model=gemini_model, contents=[text]).total_tokens
++            except Exception:
++                pass
++        enc = tiktoken.get_encoding("cl100k_base")
++        return len(enc.encode(text))
++    elif model.startswith("claude") and os.environ.get("GOOGLE_CLOUD_PROJECT"):
+         import requests
+         import subprocess
+-        import os
+-        url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ.get('GOOGLE_CLOUD_PROJECT')}/locations/{os.environ.get('GOOGLE_CLOUD_LOCATION')}/publishers/anthropic/models/{model}:rawPredict"
+-        token = subprocess.check_output(
+-            ["gcloud", "auth", "print-access-token"], text=True
+-        ).strip()
+-        headers = {
+-            "Authorization": f"Bearer {token}",
+-            "Content-Type": "application/json; charset=utf-8",
+-        }
+-        payload = {
+-            "model": model,
+-            "messages": {
+-                "content": text,
+-                "role": "user",
++        try:
++            url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ.get('GOOGLE_CLOUD_PROJECT')}/locations/{os.environ.get('GOOGLE_CLOUD_LOCATION')}/publishers/anthropic/models/{model}:rawPredict"
++            token = subprocess.check_output(
++                ["gcloud", "auth", "print-access-token"], text=True
++            ).strip()
++            headers = {
++                "Authorization": f"Bearer {token}",
++                "Content-Type": "application/json; charset=utf-8",
++            }
++            payload = {
++                "model": model,
++                "messages": {
++                    "content": text,
++                    "role": "user",
++                }
+             }
+-        }
+-        resp = requests.post(url, headers=headers, json=payload)
+-        resp.raise_for_status()
+-        return resp.json()["input_tokens"]
++            resp = requests.post(url, headers=headers, json=payload)
++            resp.raise_for_status()
++            return resp.json()["input_tokens"]
++        except Exception:
++            enc = tiktoken.get_encoding("cl100k_base")
++            return len(enc.encode(text))
+     else:
+-        enc = get_tokenizer(model)
+-        return len(enc.encode(text))
++        try:
++            enc = get_tokenizer(model)
++            return len(enc.encode(text))
++        except Exception:
++            enc = tiktoken.get_encoding("cl100k_base")
++            return len(enc.encode(text))
+ 
+ 
+ def count_messages_token(messages, model="openai/gpt-4"):
+diff --git a/WebArena/autoeval/clients.py b/WebArena/autoeval/clients.py
+index a1f10da..e2c22b2 100644
+--- a/WebArena/autoeval/clients.py
++++ b/WebArena/autoeval/clients.py
+@@ -162,11 +162,16 @@ class GEMINI_Client:
+         return self.chat(messages, json_mode=json_mode)
+ 
+ 
+-CLIENT_DICT = {
++class _ClientDict(dict):
++    def __getitem__(self, key):
++        return super().get(key, LM_Client)
++
++
++CLIENT_DICT = _ClientDict({
+     "gpt-3.5-turbo": LM_Client,
+     "gpt-4": LM_Client,
+     "gpt-4o": GPT4V_Client,
+     "gemini-2.5-flash": GEMINI_Client,
+     "gemini-2.5-pro": GEMINI_Client,
+     "claude-3-7-sonnet@20250219": CLAUDE_Client,
+-}
+\ No newline at end of file
++})
+\ No newline at end of file
+diff --git a/WebArena/induce_memory.py b/WebArena/induce_memory.py
+index 7dd8bc4..ef5f968 100644
+--- a/WebArena/induce_memory.py
++++ b/WebArena/induce_memory.py
+@@ -17,6 +17,7 @@ import re
+ import gzip
+ import pickle
+ import json
++from pathlib import Path
+ import random
+ import argparse
+ from functools import partial
+@@ -97,8 +98,8 @@ def get_info(f: str, status: str = None) -> dict:
+         
+     # get query -> task objective
+     task_id = f.split('/')[-1].split("_")[0].split(".")[1]
+-    config_path = os.path.join("config_files", f"{task_id}.json")
+-    config = json.load(open(config_path))
++    config_path = Path(__file__).resolve().parent / "config_files" / f"{task_id}.json"
++    config = json.loads(config_path.read_text(encoding="utf-8"))
+     query = config["intent"]
+ 
+     template_id = config["intent_template_id"]  # for deduplication
+@@ -142,19 +143,23 @@ def main():
+     trajectory = format_trajectory(ex["think_list"], ex["action_list"])
+     trajectory = f"**Query:** {ex['query']}\n\n**Trajectory:**\n{trajectory}"
+ 
+-    # Load autoeval thoughts if available, and append to trajectory so the
++    # Load autoeval/judge thoughts if available, and append to trajectory so the
+     # memory LLM knows why the task succeeded or failed.
+     autoeval_thoughts = ""
+-    if args.criteria == "autoeval":
+-        autoeval_path = os.path.join(cur_task, f"{args.model}_autoeval.json")
+-        try:
+-            autoeval_data = json.load(open(autoeval_path))
+-            if isinstance(autoeval_data, list) and autoeval_data:
+-                autoeval_thoughts = autoeval_data[0].get("thoughts", "")
+-            elif isinstance(autoeval_data, dict):
+-                autoeval_thoughts = autoeval_data.get("thoughts", "")
+-        except Exception:
+-            pass
++    candidate_names = [f"{args.model}_autoeval.json", "judge_eval.json", "autoeval.json"]
++    for cname in candidate_names:
++        cpath = os.path.join(cur_task, cname)
++        if os.path.exists(cpath):
++            try:
++                autoeval_data = json.load(open(cpath))
++                if isinstance(autoeval_data, list) and autoeval_data:
++                    autoeval_thoughts = autoeval_data[0].get("thoughts", "") or autoeval_data[0].get("reason", "")
++                elif isinstance(autoeval_data, dict):
++                    autoeval_thoughts = autoeval_data.get("thoughts", "") or autoeval_data.get("reason", "")
++                if autoeval_thoughts:
++                    break
++            except Exception:
++                pass
+ 
+     if args.memory_mode == "reasoningbank":
+         if autoeval_thoughts:
+@@ -165,6 +170,15 @@ def main():
+         else:
+             generated_memory_item, _ = llm_client.one_step_chat(trajectory, system_msg=FAILED_SI, temperature=1.0)
+ 
++    elif args.memory_mode == "copromem":
++        if autoeval_thoughts:
++            status_label = "succeeded" if ex['status'] == 'success' else "failed"
++            trajectory += f"\n\nThe task {status_label} because: {autoeval_thoughts}"
++        if ex['status'] == 'success':
++            generated_memory_item, _ = llm_client.one_step_chat(trajectory, system_msg=SUCCESSFUL_SI, temperature=0.7)
++        else:
++            generated_memory_item, _ = llm_client.one_step_chat(trajectory, system_msg=FAILED_SI, temperature=0.7)
++
+     elif args.memory_mode == "awm":
+         if ex['status'] == 'success':
+             generated_memory_item, _ = llm_client.one_step_chat(trajectory, system_msg=AWM_INSTRUCTION + AWM_EXAMPLE, temperature=0.7)
+@@ -174,6 +188,7 @@ def main():
+             generated_memory_item = trajectory
+ 
+     # write memory to jsonl file 
++    os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
+     with open(args.output_path, 'a') as f:
+         f.write(json.dumps({
+             "task_id": args.task.split(".")[-1],
+@@ -193,10 +208,11 @@ if __name__ == "__main__":
+     parser.add_argument("--output_path", type=str, default=None, required=True,
+                         help="Path to the output file.")
+     parser.add_argument("--criteria", type=str, default="autoeval", choices=["gt", "autoeval"])
+-    parser.add_argument("--model", type=str, default="gemini-2.5-flash",
+-                        choices=["gpt-3.5", "gpt-4", "gpt-4o", "gemini-2.5-flash"])
++    parser.add_argument("--model", type=str, default="google/gemini-2.5-flash",
++                        help="Model name for memory induction.")
+     parser.add_argument("--task", type=str, default="webarena.47")
+-    parser.add_argument("--memory_mode", type=str, default="reasoningbank")
++    parser.add_argument("--memory_mode", type=str, default="copromem",
++                        choices=["reasoningbank", "copromem", "awm", "synapse"])
+     args = parser.parse_args()
+ 
+     main()
+\ No newline at end of file
+diff --git a/WebArena/memory_management.py b/WebArena/memory_management.py
+index cb852c8..5970cd9 100644
+--- a/WebArena/memory_management.py
++++ b/WebArena/memory_management.py
+@@ -30,32 +30,59 @@ import logging
+ logger = logging.getLogger(__name__)
+ from google import genai
+ from google.genai.types import EmbedContentConfig
+-import vertexai
+-from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
+-# TextEmbeddingModel requires a regional endpoint; "global" doesn't work.
+-vertexai.init(project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
+-              location="us-central1")
+-client = genai.Client(vertexai=True)
++
++from dotenv import load_dotenv
++_REPO_ROOT = Path(__file__).resolve().parents[2]
++if (_REPO_ROOT / ".env").exists():
++    load_dotenv(_REPO_ROOT / ".env")
++else:
++    load_dotenv()
++
++from openai import OpenAI
++
++def _get_openai_client() -> OpenAI:
++    api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY")
++    if not api_key:
++        env_file = _REPO_ROOT / ".env"
++        if env_file.exists():
++            for line in env_file.read_text(encoding="utf-8").splitlines():
++                if line.startswith("OPENROUTER_API_KEY="):
++                    api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
++                    os.environ["OPENROUTER_API_KEY"] = api_key
++                    break
++
++    base_url = None
++    if os.environ.get("OPENROUTER_API_KEY"):
++        base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
++    elif os.environ.get("OPENAI_BASE_URL"):
++        base_url = os.environ.get("OPENAI_BASE_URL")
++
++    kwargs = {"api_key": api_key}
++    if base_url:
++        kwargs["base_url"] = base_url
++    return OpenAI(**kwargs)
+ 
+ 
+ def get_embeddings(texts: list) -> list:
+     """
+-    Get embeddings for a list of texts using Google GenAI.
++    Get embeddings for a list of texts using OpenRouter / OpenAI API.
+     """
+-    response = client.models.embed_content(
+-        model="gemini-embedding-001",
+-        contents=texts,
+-        config=EmbedContentConfig(
+-            task_type="RETRIEVAL_DOCUMENT",
+-            output_dimensionality=3072,
+-            title="Memory Embeddings",
+-        ),
++    client = _get_openai_client()
++    resp = client.embeddings.create(
++        model="text-embedding-3-small",
++        input=texts,
+     )
+-    return [item.embedding for item in response.embeddings]
++    return [item.embedding for item in resp.data]
+ 
+ def l2_normalize(x: torch.Tensor, dim: int = -1) -> torch.Tensor:
+     return F.normalize(x, p=2, dim=dim)
+ 
++def embed_query_with_openai(query: str) -> torch.Tensor:
++    """Returns (1, D) normalized torch tensor (on CPU)."""
++    embs = get_embeddings([query])
++    vec = torch.tensor(embs, dtype=torch.float32)  # (1, D)
++    return l2_normalize(vec, dim=1)
++
+ def embed_query_with_qwen(query: str) -> Tuple[torch.Tensor, str, int]:
+     """Returns (1, D) torch tensor (on CPU), model_name, dim."""
+     tokenizer = AutoTokenizer.from_pretrained('Qwen/Qwen3-Embedding-8B', padding_side='left')
+@@ -75,19 +102,21 @@ def embed_query_with_qwen(query: str) -> Tuple[torch.Tensor, str, int]:
+     return pooled
+ 
+ 
+-def embed_query_with_gemini(query: str, dimensionality: int = 3072) -> Tuple[torch.Tensor, str, int]:
+-    """Returns (1, D) torch tensor (on CPU), model_name, dim."""
+-
+-    model_name = "gemini-embedding-001"
+-    model = TextEmbeddingModel.from_pretrained(model_name)
+-    text_input = TextEmbeddingInput(query, "RETRIEVAL_DOCUMENT")
+-
+-    resp = model.get_embeddings([text_input], output_dimensionality=dimensionality)
+-
+-    # vertexai returns a list of TextEmbedding objects with .values
+-    vec = torch.tensor([resp[0].values], dtype=torch.float32)  # (1, D)
+-
+-    return vec
++def embed_query_with_gemini(query: str, dimensionality: int = 3072) -> torch.Tensor:
++    """Returns (1, D) torch tensor (on CPU). Falls back to OpenAI if VertexAI is unavailable."""
++    try:
++        import vertexai
++        from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
++        vertexai.init(project=os.environ.get("GOOGLE_CLOUD_PROJECT"), location="us-central1")
++        model_name = "gemini-embedding-001"
++        model = TextEmbeddingModel.from_pretrained(model_name)
++        text_input = TextEmbeddingInput(query, "RETRIEVAL_DOCUMENT")
++        resp = model.get_embeddings([text_input], output_dimensionality=dimensionality)
++        vec = torch.tensor([resp[0].values], dtype=torch.float32)
++        return l2_normalize(vec, dim=1)
++    except Exception as e:
++        logger.debug(f"VertexAI embedding unavailable ({e}), using OpenAI/OpenRouter embedding")
++        return embed_query_with_openai(query)
+ 
+ 
+ def load_cached_embeddings(path: str) -> Tuple[List[str], List[str], torch.Tensor]:
+@@ -164,7 +193,7 @@ def select_memory(n: int,
+     for sid in top_ids:
+         # find the corresponding reasoning bank entry, with reasoning_bank["task_id"] == sid
+         for i, item in enumerate(reasoning_bank):
+-            if item["task_id"] == sid:
++            if str(item.get("task_id")) == str(sid):
+                 out.append(reasoning_bank[i])
+                 break
+     return out
+@@ -183,18 +212,21 @@ def screening(cur_query: str,
+ 
+     if use_qwen:
+         q_vec = embed_query_with_qwen(cur_query)
+-    else:
++    elif "gemini" in prefer_model and os.environ.get("GOOGLE_GENAI_USE_VERTEXAI"):
+         q_vec = embed_query_with_gemini(cur_query, dimensionality=3072)
+-
+-    # write current query embeddings to cache
+-    record = {
+-        "id": task_id,
+-        "text": cur_query,
+-        "embedding": q_vec.squeeze(0).tolist(),
+-    }
+-    with open(cache_path, "a") as f:
+-        f.write(json.dumps(record) + "\n")
+-    logger.info(f"Appended new query embedding to cache: webarena.{task_id}")
++    else:
++        q_vec = embed_query_with_openai(cur_query)
++
++    # write current query embeddings to cache if not already present
++    if task_id is not None and str(task_id) not in [str(x) for x in cache_ids]:
++        record = {
++            "id": str(task_id),
++            "text": cur_query,
++            "embedding": q_vec.squeeze(0).tolist(),
++        }
++        with open(cache_path, "a") as f:
++            f.write(json.dumps(record) + "\n")
++        logger.info(f"Appended new query embedding to cache: webarena.{task_id}")
+ 
+     if len(cache_emb) == 0:
+         logger.warning(f"No cached embeddings found in {cache_path}.")
+@@ -204,7 +236,12 @@ def screening(cur_query: str,
+     task = "Given the prior web navigation queries, your task is to analyze a current query's intent and select relevant prior queries that could help resolve it."
+ 
+     instruction_query = get_detailed_instruct(task, cur_query)
+-    instruct_vec = embed_query_with_gemini(instruction_query, dimensionality=3072)
++    if use_qwen:
++        instruct_vec = embed_query_with_qwen(instruction_query)
++    elif "gemini" in prefer_model and os.environ.get("GOOGLE_GENAI_USE_VERTEXAI"):
++        instruct_vec = embed_query_with_gemini(instruction_query, dimensionality=3072)
++    else:
++        instruct_vec = embed_query_with_openai(instruction_query)
+     instruct_vec = l2_normalize(instruct_vec, dim=1)
+ 
+     # Calculate similarity scores for embeddings and current query
+@@ -212,4 +249,4 @@ def screening(cur_query: str,
+     id2score = list(zip(cache_ids, scores.tolist()))
+     id2score.sort(key=lambda x: x[1], reverse=True)
+ 
+-    return id2score, [str(i) for i, _ in id2score]
+\ No newline at end of file
++    return id2score, [str(i) for i, _ in id2score]
+diff --git a/WebArena/run.py b/WebArena/run.py
+index e893166..e35bdda 100644
+--- a/WebArena/run.py
++++ b/WebArena/run.py
+@@ -20,17 +20,46 @@ import json
+ from pathlib import Path
+ import sys
+ import multiprocessing
++from dotenv import load_dotenv
++
++_REPO_ROOT = Path(__file__).resolve().parents[2]
++if (_REPO_ROOT / ".env").exists():
++    load_dotenv(_REPO_ROOT / ".env")
++else:
++    load_dotenv()
+ 
+ try:
+     from utils import gemini_retry  # noqa: F401 — patches google.genai with backoff
+ except ImportError:
+     pass
+ 
++if "OPENROUTER_API_KEY" in os.environ and "OPENAI_API_KEY" not in os.environ:
++    os.environ["OPENAI_API_KEY"] = os.environ["OPENROUTER_API_KEY"]
++os.environ.setdefault("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
++os.environ.setdefault("OPENAI_JUDGE_MODEL", "openai/gpt-4o-mini")
++
++WA_DEFAULTS = {
++    "WA_SHOPPING_ADMIN": "http://localhost:7780/admin",
++    "WA_SHOPPING": "http://localhost:7780",
++    "WA_REDDIT": "http://localhost:9999",
++    "WA_GITLAB": "http://localhost:8023",
++    "WA_WIKIPEDIA": "http://localhost:8888/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing",
++    "WA_MAP": "http://localhost:3000",
++    "WA_HOMEPAGE": "http://localhost:4399",
++}
++for k, v in WA_DEFAULTS.items():
++    if k not in os.environ:
++        os.environ[k] = v
++
+ for _k in ("SHOPPING", "SHOPPING_ADMIN", "REDDIT", "GITLAB", "WIKIPEDIA", "MAP", "HOMEPAGE"):
+     if f"WA_{_k}" in os.environ:
+         os.environ[_k] = os.environ[f"WA_{_k}"]
+ 
+-from memory_management import select_memory
++try:
++    from memory_management import select_memory
++except Exception:
++    select_memory = None
++
+ import webarena_patch  # noqa: F401 — applies MemEvol llm_fuzzy_match prompt
+ 
+ from browsergym.experiments import ExpArgs, EnvArgs
+@@ -132,6 +161,12 @@ def parse_args():
+         default=True,
+         help="Use thinking in the agent (chain-of-thought prompting).",
+     )
++    parser.add_argument(
++        "--use_past_thought_history",
++        type=str2bool,
++        default=False,
++        help="Whether to include past reasoning thoughts in history (default: False).",
++    )
+     parser.add_argument(
+         "--max_steps",
+         type=int,
+@@ -144,6 +179,13 @@ def parse_args():
+         default=None,
+         help="Path to the memory file to load for the agent.",
+     )
++    parser.add_argument(
++        "--memory_mode",
++        type=str,
++        default="no_memory",
++        choices=["no_memory", "reasoningbank", "copromem", "awm", "synapse"],
++        help="Memory system to use (default: no_memory)",
++    )
+     parser.add_argument(
+         "--results_path",
+         type=str,
+@@ -158,39 +200,102 @@ def main():
+ 
+     args = parse_args()
+ 
+-    if args.memory_path:
++    # Memory selection routing
++    if args.memory_mode == "no_memory":
++        if args.memory_path:
++            ensure_file(args.memory_path)
++            with open(args.memory_path, "w", encoding="utf-8") as f:
++                f.write("")
++        args.memory_path = None
++
++    elif args.memory_mode == "copromem":
++        task_id = args.task_name.split(".")[-1]
++        site = "shopping_admin"
++        cur_query = ""
++        config_path = Path(f"./config_files/{task_id}.json")
++        if config_path.exists():
++            try:
++                cfg = json.loads(config_path.read_text(encoding="utf-8"))
++                cur_query = cfg.get("intent", "")
++                if cfg.get("sites"):
++                    site = cfg["sites"][0]
++            except Exception as e:
++                print(f"[COPROMEM] Warning loading config {config_path}: {e}")
++
++        if not args.memory_path:
++            args.memory_path = f"./memories_copromem/{site}.txt"
+         ensure_file(args.memory_path)
+ 
+-        # Agent with memory retrieval
++        mem_dir = Path(args.memory_path).parent
++        jsonl_path = mem_dir / f"{site}.jsonl"
+ 
+-        website = args.memory_path.split("/")[-1].split(".")[0]
+-        mem_partial_path = args.memory_path.split("/")[0]
++        from copromem_adapter import COPROMEMReasoningBankAdapter
++        from agents.legacy.dynamic_prompting import SystemPrompt
+ 
+-        if not os.path.exists(f"./{mem_partial_path}/{website}.jsonl"):
+-            open(f"./{mem_partial_path}/{website}.jsonl", "w").close()
++        adapter = COPROMEMReasoningBankAdapter(model=args.model_name)
++        sys_prompt = SystemPrompt().prompt
+ 
+-        with open(f"./{mem_partial_path}/{website}.jsonl", "r") as f:
+-            reasoning_bank = [json.loads(line) for line in f.readlines()]
++        injected_text = adapter.select_memory(
++            task_id=task_id,
++            query=cur_query,
++            memories_jsonl_path=jsonl_path,
++            agent_sys_prompt=sys_prompt,
++            domain=f"web_{site}",
++        )
+ 
+-        cur_query = json.load(open(f"./config_files/{args.task_name.split('.')[-1]}.json"))["intent"]
++        with open(args.memory_path, "w", encoding="utf-8") as f:
++            f.write(injected_text)
++        print(f"[COPROMEM] Injected {len(injected_text)} chars into {args.memory_path}")
+ 
+-        res = select_memory(n=1,
+-                            reasoning_bank=reasoning_bank,
+-                            cur_query=cur_query,
+-                            task_id=args.task_name.split('.')[-1],
+-                            cache_path=f"./{mem_partial_path}/{website}_embeddings.jsonl",
+-                            prefer_model="gemini")
++    elif args.memory_mode == "reasoningbank":
++        if not args.memory_path:
++            args.memory_path = "./memories_extracted_gemini-2.5-flash_1/shopping_admin.txt"
++        ensure_file(args.memory_path)
+ 
+-        if not res:
+-            with open(args.memory_path, "w") as f:
+-                f.write("")
++        website = Path(args.memory_path).stem
++        mem_partial_path = Path(args.memory_path).parent
++
++        jsonl_path = mem_partial_path / f"{website}.jsonl"
++        if not jsonl_path.exists():
++            open(jsonl_path, "w").close()
++
++        with open(jsonl_path, "r", encoding="utf-8") as f:
++            reasoning_bank = [json.loads(line) for line in f.readlines() if line.strip()]
++
++        task_id = args.task_name.split(".")[-1]
++        cur_query = json.load(open(f"./config_files/{task_id}.json", "r", encoding="utf-8"))["intent"]
++
++        if select_memory is not None:
++            res = select_memory(
++                n=1,
++                reasoning_bank=reasoning_bank,
++                cur_query=cur_query,
++                task_id=task_id,
++                cache_path=f"{mem_partial_path}/{website}_embeddings.jsonl",
++                prefer_model="gemini",
++            )
++
++            if not res:
++                with open(args.memory_path, "w", encoding="utf-8") as f:
++                    f.write("")
++                print(f"[ReasoningBank] No matching memory found. Wrote 0 chars to {args.memory_path}")
++            else:
++                mem_items = []
++                for item in res:
++                    for i in item.get("memory_items", []):
++                        mem_items.append(i)
++                injected_text = "\n\n".join(mem_items) + "\n"
++                with open(args.memory_path, "w", encoding="utf-8") as f:
++                    f.write(injected_text)
++                print(f"[ReasoningBank] Injected {len(injected_text)} chars into {args.memory_path}")
+         else:
+-            mem_items = []
+-            for item in res:
+-                for i in item["memory_items"]:
+-                    mem_items.append(i)
+-            with open(args.memory_path, "w") as f:
+-                f.write("\n\n".join(mem_items) + "\n")
++            with open(args.memory_path, "w", encoding="utf-8") as f:
++                f.write("")
++            print(f"[ReasoningBank] Warning: select_memory is None. Wrote 0 chars to {args.memory_path}")
++
++    elif args.memory_mode in ["awm", "synapse"]:
++        if args.memory_path:
++            ensure_file(args.memory_path)
+ 
+     env_args = EnvArgs(
+         task_name=args.task_name,
+@@ -225,6 +330,7 @@ def main():
+                 use_diff=False,  # "Prompt the agent with the difference between the current and past observation."
+                 use_past_error_logs=True,  # "Prompt the agent with the past error logs."
+                 use_action_history=True,  # "Prompt the agent with the action history."
++                use_past_thought_history=args.use_past_thought_history,
+                 multi_actions=args.multi_actions,
+                 use_abstract_example=True,  # "Prompt the agent with an abstract example."
+                 use_concrete_example=True,  # "Prompt the agent with a concrete example."
+@@ -240,9 +346,16 @@ def main():
+     exp_args.run()
+ 
+     dest = f"{args.results_path}/{args.task_name}"
+-    if os.path.exists(dest):
+-        shutil.rmtree(dest)
+-    os.rename(exp_args.exp_dir, dest)
++    if os.path.abspath(exp_args.exp_dir) != os.path.abspath(dest):
++        if os.path.exists(dest):
++            shutil.rmtree(dest)
++        os.rename(exp_args.exp_dir, dest)
++
++    if args.memory_path and os.path.exists(args.memory_path):
++        try:
++            shutil.copyfile(args.memory_path, os.path.join(dest, "injected_memory.txt"))
++        except Exception:
++            pass
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/WebArena/utils/clients.py b/WebArena/utils/clients.py
+index 4104684..561ae26 100644
+--- a/WebArena/utils/clients.py
++++ b/WebArena/utils/clients.py
+@@ -12,6 +12,16 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
++from pathlib import Path
++from dotenv import load_dotenv
++
++# Ensure .env from repo root is loaded
++_REPO_ROOT = Path(__file__).resolve().parents[3]
++if (_REPO_ROOT / ".env").exists():
++    load_dotenv(_REPO_ROOT / ".env")
++else:
++    load_dotenv()
++
+ import os
+ import base64
+ import openai
+@@ -29,6 +39,8 @@ from anthropic import AnthropicVertex
+ 
+ class GPT_Client:
+     def __init__(self, model_name: str = "gpt-3.5-turbo") -> None:
++        if os.environ.get("OPENROUTER_API_KEY") and model_name == "gemini-2.5-flash":
++            model_name = "google/gemini-2.5-flash"
+         self.model_name = model_name
+ 
+     def chat(self, messages, json_mode: bool = False, temperature: float = 0.0) -> tuple[str, ChatCompletion]:
+@@ -38,8 +50,20 @@ class GPT_Client:
+             {"role": "user", "content": "hi"},
+         ])
+         """
+-        self.client = OpenAI()
+-        openai.api_key = os.environ.get("OPENAI_API_KEY")  # Make sure to set your OpenAI API key in the environment variable
++        api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY")
++        base_url = None
++        if os.environ.get("OPENROUTER_API_KEY"):
++            base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
++        elif os.environ.get("OPENAI_BASE_URL"):
++            base_url = os.environ.get("OPENAI_BASE_URL")
++
++        client_kwargs = {}
++        if api_key:
++            client_kwargs["api_key"] = api_key
++        if base_url:
++            client_kwargs["base_url"] = base_url
++
++        self.client = OpenAI(**client_kwargs)
+         chat_completion = self.client.chat.completions.create(
+             model=self.model_name,
+             messages=messages,
+@@ -156,11 +180,18 @@ class GEMINI_Client:
+         return self.chat(messages, json_mode=json_mode, temperature=temperature)
+ 
+ 
+-CLIENT_DICT = {
++class _ClientDict(dict):
++    def __getitem__(self, key):
++        return super().get(key, GPT_Client)
++
++
++CLIENT_DICT = _ClientDict({
+     "gpt-3.5-turbo": GPT_Client,
+     "gpt-4": GPT_Client,
+     "gpt-4o": GPT4V_Client,
+-    "gemini-2.5-flash": GEMINI_Client,
+-    "gemini-2.5-pro": GEMINI_Client,
++    "gemini-2.5-flash": GPT_Client if os.environ.get("OPENROUTER_API_KEY") else GEMINI_Client,
++    "google/gemini-2.5-flash": GPT_Client,
++    "gemini-2.5-pro": GPT_Client if os.environ.get("OPENROUTER_API_KEY") else GEMINI_Client,
++    "google/gemini-2.5-pro": GPT_Client,
+     "claude-3-7-sonnet@20250219": CLAUDE_Client,
+-}
+\ No newline at end of file
++})
+\ No newline at end of file
+diff --git a/WebArena/webarena_patch.py b/WebArena/webarena_patch.py
+index 7089ab1..06cc3fd 100644
+--- a/WebArena/webarena_patch.py
++++ b/WebArena/webarena_patch.py
+@@ -13,13 +13,135 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-"""Legacy shim for MemEvol-lenient llm_fuzzy_match.
++"""Active shim for MemEvol-lenient llm_fuzzy_match.
+ 
+-This module used to monkey-patch webarena's helper_functions.llm_fuzzy_match
+-with a MemEvol-style lenient prompt. The vendored webarena tree at
+-third_party/webarena/ now carries that prompt inline, so the monkey-patch is
+-redundant; kept as a no-op only for import compatibility with run.py.
++Monkey-patches webarena's helper_functions.llm_fuzzy_match and evaluators.llm_fuzzy_match
++with the MemEvol containment-based prompt so that students providing additional correct context
++are not penalized with 'partially correct' (0.0).
+ 
+ Usage:
+     import webarena_patch  # noqa: F401
+ """
++
++import os
++import logging
++from pathlib import Path
++from dotenv import load_dotenv
++
++_REPO_ROOT = Path(__file__).resolve().parents[2]
++if (_REPO_ROOT / ".env").exists():
++    load_dotenv(_REPO_ROOT / ".env")
++else:
++    load_dotenv()
++
++WA_DEFAULTS = {
++    "WA_SHOPPING_ADMIN": "http://localhost:7780/admin",
++    "WA_SHOPPING": "http://localhost:7780",
++    "WA_REDDIT": "http://localhost:9999",
++    "WA_GITLAB": "http://localhost:8023",
++    "WA_WIKIPEDIA": "http://localhost:8888",
++    "WA_MAP": "http://localhost:3000",
++    "WA_HOMEPAGE": "http://localhost:4399",
++}
++for k, v in WA_DEFAULTS.items():
++    if k not in os.environ:
++        os.environ[k] = v
++for _k in ("SHOPPING", "SHOPPING_ADMIN", "REDDIT", "GITLAB", "WIKIPEDIA", "MAP", "HOMEPAGE"):
++    if f"WA_{_k}" in os.environ and _k not in os.environ:
++        os.environ[_k] = os.environ[f"WA_{_k}"]
++
++logger = logging.getLogger(__name__)
++
++
++def _memevol_llm_fuzzy_match(pred: str, reference: str, question: str) -> float:
++    """Evaluate open-ended answers with containment-based instruction without penalizing extra info."""
++    if "OPENROUTER_API_KEY" in os.environ and "OPENAI_API_KEY" not in os.environ:
++        os.environ["OPENAI_API_KEY"] = os.environ["OPENROUTER_API_KEY"]
++    os.environ.setdefault("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
++
++    from webarena.llms.providers.openai_utils import generate_from_openai_chat_completion
++
++    message = (
++        "Help a teacher to grade the answer of a student given a question. The reference answer below is ONE part of the full expected answer. "
++        "Your job is to check whether the student's answer CONTAINS this specific piece of information, even if the student also provides additional correct information.\n"
++        "If the student's answer contains the reference information (possibly with different phrasing or wording), judge it as correct. "
++        "Do NOT penalize the student for including extra information beyond the reference.\n"
++        f"question: {question}\n"
++        f"reference answer (one part): {reference}\n"
++        "Important: The string 'N/A' means the task has no meaningful result. Both 'N/A' and equivalent answers like '0', '$0.00', 'none', or 'no results' should be treated as correct if the reference is 'N/A'.\n"
++        f"student answer: {pred}\n"
++        "Conclude the judgement by correct/incorrect/partially correct."
++    )
++    messages = [
++        {"role": "system", "content": "You are a helpful assistant"},
++        {"role": "user", "content": message},
++    ]
++
++    response = generate_from_openai_chat_completion(
++        model=os.environ.get("OPENAI_JUDGE_MODEL", "openai/gpt-4o-mini"),
++        messages=messages,
++        temperature=0,
++        max_tokens=768,
++        top_p=1.0,
++        context_length=0,
++    ).lower()
++
++    if "partially correct" in response or "incorrect" in response:
++        return 0.0
++    else:
++        assert "correct" in response
++        return 1.0
++
++
++# Apply monkey-patch to whatever webarena package is imported
++try:
++    import webarena.evaluation_harness.helper_functions as _hf
++    _hf.llm_fuzzy_match = _memevol_llm_fuzzy_match
++except Exception as e:
++    logger.debug("Failed to patch helper_functions.llm_fuzzy_match: %s", e)
++
++try:
++    import webarena.evaluation_harness.evaluators as _ev
++    _ev.llm_fuzzy_match = _memevol_llm_fuzzy_match
++except Exception as e:
++    logger.debug("Failed to patch evaluators.llm_fuzzy_match: %s", e)
++
++
++# Apply monkey-patch to MainPrompt._parse_answer for action loop guard & deduplication
++try:
++    from agents.legacy.dynamic_prompting import MainPrompt, ParseError
++
++    _orig_main_parse = MainPrompt._parse_answer
++
++    def _loop_guarded_main_parse(self, text_answer):
++        ans_dict = _orig_main_parse(self, text_answer)
++        raw_action = ans_dict.get("action", "")
++        if raw_action and isinstance(raw_action, str):
++            lines = [l.strip() for l in raw_action.strip().splitlines() if l.strip()]
++            deduped = []
++            has_send = False
++            for line in lines:
++                if has_send:
++                    break
++                if not deduped or line != deduped[-1]:
++                    deduped.append(line)
++                if "send_msg_to_user(" in line:
++                    has_send = True
++            cleaned_action = "\n".join(deduped)
++            ans_dict["action"] = cleaned_action
++
++            # Detect stagnation loops (same action repeated 2+ steps in history)
++            history_steps = getattr(self.history, "history_steps", []) or []
++            past_acts = [str(s.action).strip() for s in history_steps if hasattr(s, "action") and s.action]
++            if len(past_acts) >= 2 and past_acts[-1] and past_acts[-2]:
++                if cleaned_action == past_acts[-1] == past_acts[-2]:
++                    raise ParseError(
++                        f"Action loop detected: You have repeated the exact same action block '{cleaned_action}' for multiple steps without progress. "
++                        "Please check the current page carefully, try a different element/BID, scroll, or re-plan."
++                    )
++        return ans_dict
++
++    MainPrompt._parse_answer = _loop_guarded_main_parse
++    logger.info("Successfully patched MainPrompt._parse_answer with ActionLoopGuard")
++except Exception as e:
++    logger.debug("Failed to patch MainPrompt._parse_answer: %s", e)
