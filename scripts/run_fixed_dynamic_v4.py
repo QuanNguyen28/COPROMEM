@@ -64,6 +64,11 @@ def status(state: str, **extra: Any) -> None:
                         "updated_ns": time.time_ns(), **extra})
 
 
+def progress_event_callback(path: pathlib.Path):
+    """Adapt unary lifecycle events to the durable JSONL progress sink."""
+    return lambda record: append(path, record)
+
+
 def acquire_lock() -> None:
     lock = RUN / "runner.lock"
     if lock.exists():
@@ -165,7 +170,8 @@ def main() -> None:
     names = ["reme-builder", "reme-fixed"] + [f"reme-dynamic-{x}" for x in value["evaluation"]["trial_ids"]]
     with services(RUN, LEDGER, PROGRESS, cap, names, lifecycle_input_ceiling=131072) as svc:
         snapshot, checkpoint = RUN / "reme/shared-bank.jsonl", RUN / "reme/construction.jsonl"
-        reme_hash, count = construct_once(official_post, svc["reme-builder"].base_url, reme_input(combined), checkpoint, snapshot, append)
+        reme_hash, count = construct_once(official_post, svc["reme-builder"].base_url, reme_input(combined), checkpoint, snapshot,
+                                          progress_event_callback(PROGRESS))
         if count != 32: raise RuntimeError("official ReMe construction did not consume 32 immutable inputs")
         if load_clone(official_post, svc["reme-fixed"].base_url, snapshot, reme_hash) != reme_hash: raise RuntimeError("ReMe fixed clone mismatch")
         for trial in value["evaluation"]["trial_ids"]:
