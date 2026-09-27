@@ -30,9 +30,9 @@ from research.official_pilot.reme_bank import construct_once, load_clone
 from research.scripts.freeze_corrected_fixed_dynamic_v2_manifest import verify_v1
 from src.copromem.appworld_comparison_adapter import CoProMemAppWorldAdapter, TrialInput
 
-RUN = ROOT / "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2"
-MANIFEST = RUN / "manifest-budget-160.json"
-MANIFEST_SHA = RUN / "manifest-budget-160.sha256"
+RUN = ROOT / "artifacts/research/official_reme_copromem_pilot" / os.environ.get("FIXED_DYNAMIC_RUN", "fixed_dynamic_v2")
+MANIFEST = RUN / os.environ.get("FIXED_DYNAMIC_MANIFEST", "manifest-budget-160.json")
+MANIFEST_SHA = RUN / os.environ.get("FIXED_DYNAMIC_MANIFEST_SHA", "manifest-budget-160.sha256")
 PROGRESS, LEDGER, STATUS, SUMMARY = (RUN / "progress.jsonl", RUN / "ledger.jsonl",
                                      RUN / "runner-status.json", RUN / "live-summary.json")
 
@@ -94,11 +94,11 @@ def acquire_lock() -> None:
 def bootstrap_ledger(spec: dict[str, Any]) -> AppendOnlyLedger:
     cap = float(spec["budget"]["ledger_dispatch_cap_usd"])
     ledger = AppendOnlyLedger(LEDGER, cap)
-    carried = "carry-forward-fixed-dynamic-v1-usd-0.048008"
+    carried_usd = float(spec["budget"].get("carried_prior_exposure_usd") or spec["budget"]["carried_v1_exposure_usd"])
+    carried = f"carry-forward-{RUN.name}-usd-{carried_usd:.9f}"
     known = LEDGER.read_text(encoding="utf-8") if LEDGER.exists() else ""
     if carried not in known:
-        ledger.reserve(carried, float(spec["budget"]["carried_v1_exposure_usd"]),
-                       {"role": "historical_carry_forward", "protocol": "fixed_dynamic_v1"})
+        ledger.reserve(carried, carried_usd, {"role": "historical_carry_forward", "protocol": "fixed_dynamic_v1_v2"})
     return ledger
 
 
@@ -126,8 +126,9 @@ def update_live_summary(spec: dict[str, Any], stage: str, last_error: str | None
             role = str(row.get("role", "")); arm = next((name for name in spec["arms"] if name in role), "acquisition_or_lifecycle")
             item = calls[arm]; item["calls"] += 1; item["prompt_tokens"] += int(row.get("prompt_tokens") or 0)
             item["completion_tokens"] += int(row.get("completion_tokens") or 0); item["cost_usd"] += float(row.get("cost") or 0); item["latency_seconds"] += float(row.get("latency") or 0)
+    acquisition_expected = int(spec["acquisition"].get("frozen_combined_count", len(spec["acquisition"].get("new_task_ids", []))))
     write_json(SUMMARY, {"stage": stage, "status": "running", "acquisition_completed": len(acq),
-        "acquisition_expected": 8, "evaluation_completed": len(eval_rows), "evaluation_expected": 320,
+        "acquisition_expected": acquisition_expected, "evaluation_completed": len(eval_rows), "evaluation_expected": 320,
         "per_arm_completed": {name: len(by_arm[name]) for name in spec["arms"]},
         "per_arm_avg_score": {name: (sum(float(x["after_score"]) for x in by_arm[name]) / len(by_arm[name]) if by_arm[name] else None) for name in spec["arms"]},
         "calls_tokens_latency_cost": dict(calls), "c_free_gb": c_free_gb(), "last_recoverable_error": last_error})
@@ -144,6 +145,26 @@ def load_or_run(*, spec: dict[str, Any], ledger: AppendOnlyLedger, api_key: str,
 def reme_input(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{"trajectory_id": row["acquisition_identity"], "task_id": row["task_id"],
              "task_history": row["history"], "after_score": row["after_score"]} for row in rows]
+
+
+def frozen_v3_acquisition_pool() -> list[dict[str, Any]]:
+    """Load the immutable 32-trajectory source pool; never reuse v2's bank."""
+    from research.scripts.freeze_corrected_fixed_dynamic_v2_manifest import verify_v1
+    prior = ROOT / "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v2"
+    v2 = json.loads((prior / "manifest-budget-160.json").read_text(encoding="utf-8"))
+    rows = verify_v1()
+    for task_id in v2["acquisition"]["new_task_ids"]:
+        matches = list((prior / "acquisition").glob(f"{task_id}--*.json"))
+        if len(matches) != 1: raise RuntimeError(f"v3 source acquisition is not immutable for {task_id}")
+        path = matches[0]; item = json.loads(path.read_text(encoding="utf-8"))
+        instruction = next((str(message.get("content") or "") for message in item["history"] if message.get("role") == "user"), "")
+        if not instruction: raise RuntimeError(f"v3 source acquisition lacks public instruction for {task_id}")
+        item.update({"instruction": instruction, "source_artifact": str(path),
+                     "source_artifact_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                     "acquisition_identity": f"{item['task_id']}::seed={item['seed']}::trajectory={item['trial_id']}"})
+        rows.append(item)
+    if len(rows) != 32: raise RuntimeError("v3 requires the complete immutable 32-trajectory pool")
+    return rows
 
 
 def make_copro(state: dict[str, Any]) -> CoProMemAppWorldAdapter:
@@ -191,25 +212,29 @@ def main() -> None:
         with services(RUN, LEDGER, PROGRESS, float(spec["budget"]["ledger_dispatch_cap_usd"]), ["preflight"]): pass
         status("preflight_passed", c_free_gb=c_free_gb()); update_live_summary(spec, "preflight_passed"); return
 
-    carry = verify_v1()
-    new_rows: list[dict[str, Any]] = []
-    for task_id in spec["acquisition"]["new_task_ids"]:
-        new_rows.extend(acquisition_pool(run=RUN, progress=PROGRESS, ledger=ledger, api_key=api_key,
-            acquisition_ids=[task_id], evaluation_ids=spec["evaluation"]["task_ids"], seeds=spec["acquisition"]["new_seeds"],
-            max_actions=spec["limits"]["actions"], temperature=spec["limits"]["temperature"]))
-        update_live_summary(spec, "acquisition")
-    combined = carry + new_rows
+    if spec["protocol"] == "corrected_fixed_dynamic_appworld_v3":
+        combined = frozen_v3_acquisition_pool()
+        append(PROGRESS, {"event": "v3_acquisition_pool_loaded", "count": len(combined), "replayed": False})
+    else:
+        carry = verify_v1(); new_rows: list[dict[str, Any]] = []
+        for task_id in spec["acquisition"]["new_task_ids"]:
+            new_rows.extend(acquisition_pool(run=RUN, progress=PROGRESS, ledger=ledger, api_key=api_key,
+                acquisition_ids=[task_id], evaluation_ids=spec["evaluation"]["task_ids"], seeds=spec["acquisition"]["new_seeds"],
+                max_actions=spec["limits"]["actions"], temperature=spec["limits"]["temperature"]))
+            update_live_summary(spec, "acquisition")
+        combined = carry + new_rows
     gate = acquisition_gate(combined, expected_records=32, fail_closed=False)
     write_json(RUN / "acquisition" / "combined-gate.json", gate); append(PROGRESS, {"event": "acquisition_gate", **gate})
     update_live_summary(spec, "acquisition_gate")
     if not gate["passed"]:
         status("no_go_acquisition", **gate); raise RuntimeError("preregistered combined acquisition gate failed")
 
-    all_ids = spec["acquisition"]["new_task_ids"] + spec["evaluation"]["task_ids"]
+    all_ids = spec["acquisition"].get("new_task_ids", []) + spec["evaluation"]["task_ids"]
     snapshot, checkpoint = RUN / "reme/shared-bank.jsonl", RUN / "reme/construction.jsonl"
     cap = float(spec["budget"]["ledger_dispatch_cap_usd"])
     names = ["reme-builder", "reme-fixed", "reme-dynamic-1", "reme-dynamic-2", "reme-dynamic-3", "reme-dynamic-4"]
-    with services(RUN, LEDGER, PROGRESS, cap, names) as svc:
+    with services(RUN, LEDGER, PROGRESS, cap, names,
+                  lifecycle_input_ceiling=int(spec["limits"].get("lifecycle_input_tokens", spec["limits"].get("input_tokens", 32768)))) as svc:
         bank_hash, count = construct_once(official_post, svc["reme-builder"].base_url, reme_input(combined), checkpoint, snapshot, lambda event: append(PROGRESS, event))
         if count != 32: raise RuntimeError("ReMe initial bank did not consume all 32 frozen trajectories")
         copro_state, copro_hash = construct_copromem(run=RUN, progress=PROGRESS, ledger=ledger, api_key=api_key, raw=raw_acquisition_trajectories(combined))

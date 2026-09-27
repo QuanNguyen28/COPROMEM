@@ -165,8 +165,13 @@ class LockedChatCompletions:
         lifecycle_role = self.role.startswith(("reme_lifecycle", "copromem_decomposition"))
         effective_temperature = 0.0 if lifecycle_role else float(temperature)
         estimated_input_tokens = count_chat_tokens(messages, tools)
-        if estimated_input_tokens > INPUT_TOKEN_CEILING:
-            raise ContextCeilingTermination(estimated_input_tokens, INPUT_TOKEN_CEILING)
+        # A versioned protocol may authorize a larger ceiling only for offline
+        # lifecycle/decomposition prompts.  Executor conversations retain the
+        # frozen universal executor ceiling regardless of this setting.
+        ceiling = (int(os.environ.get("OFFICIAL_PILOT_LIFECYCLE_INPUT_TOKEN_CEILING", INPUT_TOKEN_CEILING))
+                   if lifecycle_role else INPUT_TOKEN_CEILING)
+        if estimated_input_tokens > ceiling:
+            raise ContextCeilingTermination(estimated_input_tokens, ceiling)
         output = MAX_OUTPUT_TOKENS if max_tokens is None else min(int(max_tokens), MAX_OUTPUT_TOKENS)
         bound = estimated_input_tokens * INPUT_PRICE + output * OUTPUT_PRICE
         call_id = f"{time.time_ns()}-{self.role}"

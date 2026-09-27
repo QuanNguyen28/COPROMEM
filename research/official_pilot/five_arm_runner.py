@@ -62,14 +62,15 @@ def official_post(base_url: str, endpoint: str, payload: dict[str, Any]) -> dict
 class ReMeService:
     """One isolated official source service and its own durable log."""
     def __init__(self, *, port: int, name: str, run: pathlib.Path, ledger: pathlib.Path,
-                 progress: pathlib.Path, cap_usd: float) -> None:
+                 progress: pathlib.Path, cap_usd: float, lifecycle_input_ceiling: int = 32768) -> None:
         self.port, self.name = port, name
         runtime = run / "services" / name
         self.log_path = run / "services" / f"{name}.log"
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         env = {**os.environ, "PYTHONPATH": str(ROOT), "OFFICIAL_REME_PORT": str(port),
                "OFFICIAL_REME_RUN_DIR": str(runtime), "OFFICIAL_REME_PROGRESS": str(progress),
-               "OFFICIAL_REME_LEDGER": str(ledger), "OFFICIAL_PILOT_HARD_CAP": str(cap_usd)}
+               "OFFICIAL_REME_LEDGER": str(ledger), "OFFICIAL_PILOT_HARD_CAP": str(cap_usd),
+               "OFFICIAL_PILOT_LIFECYCLE_INPUT_TOKEN_CEILING": str(lifecycle_input_ceiling)}
         self._log = self.log_path.open("a", encoding="utf-8")
         self.proc = subprocess.Popen([REME_PYTHON, "-m", "research.official_pilot.corrected_reme_service"],
                                      cwd=ROOT, env=env, stdout=self._log, stderr=subprocess.STDOUT)
@@ -101,9 +102,10 @@ class ReMeService:
 
 @contextlib.contextmanager
 def services(run: pathlib.Path, ledger: pathlib.Path, progress: pathlib.Path, cap_usd: float,
-             names: list[str]) -> Iterator[dict[str, ReMeService]]:
+             names: list[str], lifecycle_input_ceiling: int = 32768) -> Iterator[dict[str, ReMeService]]:
     instances = {name: ReMeService(port=18200 + index, name=name, run=run, ledger=ledger,
-                                    progress=progress, cap_usd=cap_usd)
+                                    progress=progress, cap_usd=cap_usd,
+                                    lifecycle_input_ceiling=lifecycle_input_ceiling)
                  for index, name in enumerate(names)}
     try:
         for service in instances.values(): service.wait_healthy()
