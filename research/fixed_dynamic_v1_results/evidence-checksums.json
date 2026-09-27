@@ -1,0 +1,139 @@
+{
+  "evidence": [
+    {
+      "kind": "manifest",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/manifest.json",
+      "sha256": "b022fd91bd33e792c1071d136329f1639667bc54e3b526e039fc2c4cc14cf288"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/22cc237_1--seed_7201--trajectory_0.json",
+      "sha256": "51e011ece517176911cd628ecd2c48382906d394a21b0548085cd1165beb499b"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/22cc237_1--seed_7202--trajectory_1.json",
+      "sha256": "651045ba93f0cb2c46453119859dadaafc98e5f4902e3e6d17ee54df3f41f06f"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/22cc237_2--seed_7201--trajectory_0.json",
+      "sha256": "41437145466bbce70a394c1ab6b66bf86a1b55e8d0690ad7cf01d1bb1e0fc08f"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/22cc237_2--seed_7202--trajectory_1.json",
+      "sha256": "d0ddee75daf701de2a5046366492e803fb295b4dea7dd0251f228cbd1e02068f"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/27e1026_1--seed_7201--trajectory_0.json",
+      "sha256": "28d024ca14ac55b63c68739218fffa1ba53e8172a6b95619ad21cabf65c3b9ff"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/27e1026_1--seed_7202--trajectory_1.json",
+      "sha256": "96f9d4b4e1a88f0f953a9729f6bbc366cd9f506f609d9514721efab4ee7c99a5"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/27e1026_2--seed_7201--trajectory_0.json",
+      "sha256": "b56464d2fc7f47903f69e4f27c8893280fabc0be0baed4f3a500fb146cc0becc"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/27e1026_2--seed_7202--trajectory_1.json",
+      "sha256": "5c66590d00db3afd056d1511bbdf84b456ede36875394310f68b5dc49bf502b6"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/287e338_1--seed_7201--trajectory_0.json",
+      "sha256": "6fd23cf729e6429857e0005e728ab0e9bf7c46c3f1a3f5f9b1ca2c5e947a8b64"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/287e338_1--seed_7202--trajectory_1.json",
+      "sha256": "4cc6ea58381e82e9c86f32d6bbaa80d41fb176e8d15f6b223054120b56af39ae"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/287e338_2--seed_7201--trajectory_0.json",
+      "sha256": "adaf45a62578306ad51727f3856709b3965db5761ffa30082852025dabef6565"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/287e338_2--seed_7202--trajectory_1.json",
+      "sha256": "87c593c36558a633f89839e7fed388cf5c1d0dfd48810ca94f0dde39156e620a"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/29caf6f_1--seed_7201--trajectory_0.json",
+      "sha256": "b55944ccc8ca868b404f9cb832f621ce189ff65e645a80d4925f05040f80d3f8"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/29caf6f_1--seed_7202--trajectory_1.json",
+      "sha256": "66cf53358b3e6e8162805185bc58053a1917877263ee34113bc3e1e64045d6e3"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/29caf6f_2--seed_7201--trajectory_0.json",
+      "sha256": "92ad9a610cbcd6fc5be4bdff9cf0f0aae3d324b75cf1ff5223708e93bed1abb6"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/29caf6f_2--seed_7202--trajectory_1.json",
+      "sha256": "c99c08af6751a8ab00b0e55c1f20960dfe7a644b4a29db2f7ece6669f28842d1"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/2a163ab_1--seed_7201--trajectory_0.json",
+      "sha256": "9eb3d2ae5416b4f9e697f39e29ea1d9cb22f7eb3135125e4a09208471a5a5bd4"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/2a163ab_1--seed_7202--trajectory_1.json",
+      "sha256": "894a098373da6f2e9753093dbc2a7e8fbb50dd92f601335f5829d6e3e9628e38"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/2a163ab_2--seed_7201--trajectory_0.json",
+      "sha256": "f341f421b04817804b18fd5e90250714c2415f41903781e7280b5d89af7fa091"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/2a163ab_2--seed_7202--trajectory_1.json",
+      "sha256": "8fd82cda473fb113061137190bdd50dee8a5cbd83b19805ad89b60df5d529e7d"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/302c169_1--seed_7201--trajectory_0.json",
+      "sha256": "e688ae0850242e80801bb3a706dc5b2d434cc867342a3e6499c29bca3fb3ca00"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/302c169_1--seed_7202--trajectory_1.json",
+      "sha256": "2008af4fbf0fea1ce20e3c4dde69ee3f21ae622f53684bf5759ae1038afa1208"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/302c169_2--seed_7201--trajectory_0.json",
+      "sha256": "7d8dce22085146139373e43fb94032c820c0dbd06b5deca69438b19058d1fe1b"
+    },
+    {
+      "kind": "acquisition_artifact",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/acquisition/302c169_2--seed_7202--trajectory_1.json",
+      "sha256": "805d0de31a24475ae2eb28028220fc86018caa5061b261470149aec59c39bed3"
+    },
+    {
+      "kind": "progress",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/progress.jsonl",
+      "sha256": "efa034cb7597b8283a3b19ae2b727d6680f03358bff67ac9319964772e228a46"
+    },
+    {
+      "kind": "ledger",
+      "path": "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v1/ledger.jsonl",
+      "sha256": "389df5d1ff9abd3e128962176b6b899793be979a2c53ba88a8e2c0a64f3f006b"
+    }
+  ]
+}

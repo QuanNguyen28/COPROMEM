@@ -1,0 +1,234 @@
+{
+  "acquisition": {
+    "complete": true,
+    "completed_trajectories": 24,
+    "expected_trajectories": 24,
+    "rows": [
+      {
+        "actions": 30,
+        "after_score": 0.25,
+        "seed": 7201,
+        "task_id": "22cc237_1",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 5,
+        "after_score": 0.25,
+        "seed": 7202,
+        "task_id": "22cc237_1",
+        "termination": "truncation_termination",
+        "trial": 1
+      },
+      {
+        "actions": 22,
+        "after_score": 1.0,
+        "seed": 7201,
+        "task_id": "22cc237_2",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 17,
+        "after_score": 1.0,
+        "seed": 7202,
+        "task_id": "22cc237_2",
+        "termination": "completed",
+        "trial": 1
+      },
+      {
+        "actions": 9,
+        "after_score": 1.0,
+        "seed": 7201,
+        "task_id": "27e1026_1",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 9,
+        "after_score": 1.0,
+        "seed": 7202,
+        "task_id": "27e1026_1",
+        "termination": "completed",
+        "trial": 1
+      },
+      {
+        "actions": 0,
+        "after_score": 0.5,
+        "seed": 7201,
+        "task_id": "27e1026_2",
+        "termination": "truncation_termination",
+        "trial": 0
+      },
+      {
+        "actions": 12,
+        "after_score": 1.0,
+        "seed": 7202,
+        "task_id": "27e1026_2",
+        "termination": "completed",
+        "trial": 1
+      },
+      {
+        "actions": 7,
+        "after_score": 1.0,
+        "seed": 7201,
+        "task_id": "287e338_1",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 6,
+        "after_score": 1.0,
+        "seed": 7202,
+        "task_id": "287e338_1",
+        "termination": "completed",
+        "trial": 1
+      },
+      {
+        "actions": 8,
+        "after_score": 1.0,
+        "seed": 7201,
+        "task_id": "287e338_2",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 7,
+        "after_score": 1.0,
+        "seed": 7202,
+        "task_id": "287e338_2",
+        "termination": "completed",
+        "trial": 1
+      },
+      {
+        "actions": 27,
+        "after_score": 1.0,
+        "seed": 7201,
+        "task_id": "29caf6f_1",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 22,
+        "after_score": 0.875,
+        "seed": 7202,
+        "task_id": "29caf6f_1",
+        "termination": "completed",
+        "trial": 1
+      },
+      {
+        "actions": 15,
+        "after_score": 1.0,
+        "seed": 7201,
+        "task_id": "29caf6f_2",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 2,
+        "after_score": 0.125,
+        "seed": 7202,
+        "task_id": "29caf6f_2",
+        "termination": "truncation_termination",
+        "trial": 1
+      },
+      {
+        "actions": 30,
+        "after_score": 0.16666666666666666,
+        "seed": 7201,
+        "task_id": "2a163ab_1",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 22,
+        "after_score": 0.16666666666666666,
+        "seed": 7202,
+        "task_id": "2a163ab_1",
+        "termination": "context_ceiling_termination",
+        "trial": 1
+      },
+      {
+        "actions": 24,
+        "after_score": 1.0,
+        "seed": 7201,
+        "task_id": "2a163ab_2",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 30,
+        "after_score": 0.8333333333333334,
+        "seed": 7202,
+        "task_id": "2a163ab_2",
+        "termination": "completed",
+        "trial": 1
+      },
+      {
+        "actions": 16,
+        "after_score": 0.625,
+        "seed": 7201,
+        "task_id": "302c169_1",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 17,
+        "after_score": 0.625,
+        "seed": 7202,
+        "task_id": "302c169_1",
+        "termination": "completed",
+        "trial": 1
+      },
+      {
+        "actions": 10,
+        "after_score": 0.625,
+        "seed": 7201,
+        "task_id": "302c169_2",
+        "termination": "completed",
+        "trial": 0
+      },
+      {
+        "actions": 10,
+        "after_score": 0.625,
+        "seed": 7202,
+        "task_id": "302c169_2",
+        "termination": "completed",
+        "trial": 1
+      }
+    ]
+  },
+  "decision": "NO-GO",
+  "evidence_index_sha256": "7cd3c88f1aa52742bd7c657e57150bd7f4de2e1b8b2b2cf02085556b980454f6",
+  "execution_boundary": {
+    "evaluation_trajectories": 0,
+    "lifecycle_calls": 0,
+    "no_go_before_evaluation": true
+  },
+  "gate": {
+    "full_successes_by_family": {
+      "22cc237": 2,
+      "27e1026": 3,
+      "287e338": 4,
+      "29caf6f": 2,
+      "2a163ab": 1
+    },
+    "observed_distinct_success_families": 5,
+    "observed_full_successes": 12,
+    "passed": false,
+    "required_distinct_success_families": 6,
+    "required_full_successes": 8
+  },
+  "manifest_sha256": "b022fd91bd33e792c1071d136329f1639667bc54e3b526e039fc2c4cc14cf288",
+  "protocol": "corrected_fixed_dynamic_appworld_v1",
+  "provider_usage": {
+    "completion_tokens": 28905,
+    "hard_cap_usd": 140.0,
+    "latency_seconds": 517.7522291450005,
+    "prompt_tokens": 2173208,
+    "reasoning_tokens": 0,
+    "settled_calls": 360,
+    "settled_or_retained_usd": 0.048007521
+  },
+  "reason": "Preregistered acquisition gate failed; evaluation and lifecycle construction were not started."
+}
