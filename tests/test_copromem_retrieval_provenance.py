@@ -5,6 +5,7 @@ import pathlib
 import tempfile
 from src.copromem.appworld_comparison_adapter import CoProMemAppWorldAdapter, TrialInput
 import scripts.run_fixed_dynamic_v4 as v4
+from research.official_pilot.five_arm_runner import digest
 
 class ProvenanceTest(unittest.TestCase):
     def test_exact_offline_reproduction_and_tamper_rejection(self) -> None:
@@ -46,5 +47,19 @@ class ProvenanceTest(unittest.TestCase):
                     v4.copro_retrieval("copromem_fixed", dynamic, "task-x", 1)("Inspect a record.", "appworld", {})
             finally:
                 v4.RUN = previous
+
+    def test_v4_artifact_reconciliation_uses_runner_canonical_unicode_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "trial-1.json"
+            history = [{"role": "user", "content": "Hà Nội — café"}, {"role": "assistant", "content": "print('✓')"}]
+            row = {"arm": "no_memory", "task_id": "task-x", "trial_id": 1, "history": history,
+                   "history_sha256": digest(history), "after_score": 1.0}
+            # Deliberately indented and ASCII-escaped on disk: reload must
+            # canonicalize the object rather than hash file formatting.
+            path.write_text(json.dumps(row, ensure_ascii=True, indent=7), encoding="utf-8")
+            self.assertEqual(v4.verify_existing_artifact(path, "no_memory", "task-x", 1)["history_sha256"], digest(history))
+            row["history"][0]["content"] = "tampered"
+            path.write_text(json.dumps(row, ensure_ascii=False, indent=1), encoding="utf-8")
+            with self.assertRaises(RuntimeError): v4.verify_existing_artifact(path, "no_memory", "task-x", 1)
 
 if __name__ == "__main__": unittest.main()

@@ -101,6 +101,23 @@ def artifact(arm: str, task_id: str, trial: int) -> pathlib.Path:
     return RUN / "evaluation" / arm / task_id / f"trial-{trial}.json"
 
 
+def verify_existing_artifact(path: pathlib.Path, arm: str, task_id: str, trial: int) -> dict[str, Any]:
+    """Validate a completed trajectory using the executor's single digest.
+
+    This intentionally imports ``five_arm_runner.digest`` rather than
+    restating JSON options at a recovery call site.
+    """
+    row = json.loads(path.read_text(encoding="utf-8"))
+    if (row.get("arm"), row.get("task_id"), row.get("trial_id")) != (arm, task_id, trial):
+        raise RuntimeError("completed trajectory artifact identity mismatch")
+    history = row.get("history")
+    if not isinstance(history, list) or digest(history) != row.get("history_sha256"):
+        raise RuntimeError("completed trajectory canonical history hash mismatch")
+    if not isinstance(row.get("after_score"), (int, float)):
+        raise RuntimeError("completed trajectory lacks official scorer result")
+    return row
+
+
 def marker(arm: str, task_id: str, trial: int) -> pathlib.Path:
     return RUN / "evaluation_updates" / arm / task_id / f"trial-{trial}.json"
 
@@ -202,6 +219,7 @@ def main() -> None:
                 for arm, kwargs in jobs:
                     out = artifact(arm, task_id, trial)
                     if out.exists():
+                        verify_existing_artifact(out, arm, task_id, trial)
                         if arm in {"official_upstream_reme_dynamic", "copromem_dynamic"} and not marker(arm, task_id, trial).exists():
                             raise RuntimeError("completed dynamic trajectory lacks durable update marker; replay is forbidden")
                         continue
