@@ -181,4 +181,15 @@ def main() -> None:
     status("completed", c_free_gb=c_free_gb(), final_report=str(final), final_report_sha256=hashlib.sha256(final.read_bytes()).hexdigest())
 
 
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    try:
+        main()
+    except BaseException as exc:
+        # This is intentionally sanitized: credentials, prompts and native
+        # outputs never enter the durable failure record.
+        RUN.mkdir(parents=True, exist_ok=True)
+        append(PROGRESS, {"event": "runner_failed", "error_type": type(exc).__name__,
+                          "error": str(exc)[:240]})
+        if MANIFEST.exists():
+            status("failed", error_type=type(exc).__name__, error=str(exc)[:240])
+        raise

@@ -134,7 +134,10 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
     try:
         Agent = load_official_agent(allowed_tasks=all_task_ids, api_key=api_key, ledger=ledger,
                                     progress=progress, journal_path=journal, trajectory_id=key)
-        use_memory = arm != "no_memory"
+        # Shared acquisition is deliberately generated once without either
+        # method's memory.  It is the common raw evidence source, not a sixth
+        # memory arm.
+        use_memory = arm not in {"no_memory", "shared_acquisition"}
         agent = Agent(index=seed, task_ids=[task_id], experiment_name="corrected_fixed_dynamic_v1",
                       model_name="deepseek/deepseek-v4.1-flash", temperature=temperature,
                       max_interactions=max_actions, num_trials=1, use_memory=use_memory,
