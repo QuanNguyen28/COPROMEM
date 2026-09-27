@@ -14,9 +14,14 @@ import time
 import types
 import urllib.error
 import urllib.request
-import fcntl
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
+
+try:  # ``fcntl`` is present in the supported Linux runner environment.
+    import fcntl
+except ImportError:  # Allow Windows-side static imports and fixture tests.
+    fcntl = None  # type: ignore[assignment]
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "deepseek/deepseek-v4.1-flash"
@@ -104,6 +109,25 @@ class AppendOnlyLedger:
             handle.flush()
             os.fsync(handle.fileno())
 
+    @contextmanager
+    def _locked_file(self):
+        """Use an advisory file lock in production; fixture imports need none.
+
+        Detached pilot dispatch is supported only from Linux, where ``fcntl``
+        is mandatory.  Windows intentionally gets no false claim of a
+        multiprocess-safe production lock; it is used here only for offline
+        inspection and deterministic tests.
+        """
+        lock = self.path.with_suffix(".lock")
+        with lock.open("a+") as handle:
+            if fcntl is not None:
+                fcntl.flock(handle, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                if fcntl is not None:
+                    fcntl.flock(handle, fcntl.LOCK_UN)
+
     def _exposure(self) -> float:
         latest: dict[str, float] = {}
         if not self.path.exists():
@@ -117,22 +141,16 @@ class AppendOnlyLedger:
         return sum(latest.values())
 
     def reserve(self, call_id: str, upper_usd: float, metadata: dict[str, Any]) -> None:
-        lock = self.path.with_suffix(".lock")
-        with lock.open("a+") as handle:
-            fcntl.flock(handle, fcntl.LOCK_EX)
+        with self._locked_file():
             if upper_usd < 0 or self._exposure() + upper_usd > self.cap_usd:
                 raise DispatchFailure("USD cap would be exceeded")
             self._append({"event": "reserve", "id": call_id, "usd": upper_usd, **metadata})
-            fcntl.flock(handle, fcntl.LOCK_UN)
 
     def settle(self, call_id: str, actual_usd: float, metadata: dict[str, Any]) -> None:
-        lock = self.path.with_suffix(".lock")
-        with lock.open("a+") as handle:
-            fcntl.flock(handle, fcntl.LOCK_EX)
+        with self._locked_file():
             self._append({"event": "settle", "id": call_id, "usd": actual_usd, **metadata})
             if self._exposure() > self.cap_usd:
                 raise DispatchFailure("provider cost exceeded USD cap")
-            fcntl.flock(handle, fcntl.LOCK_UN)
 
 
 class LockedChatCompletions:

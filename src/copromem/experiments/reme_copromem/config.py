@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Restart-safe v4 five-arm executor; v3 evaluation evidence is never read."""
+"""Restart-safe five-arm AppWorld runner configured entirely by frozen inputs.
+
+The runner deliberately contains no historical acquisition, task, result, or
+report path.  A user supplies a run directory and a frozen acquisition export
+through environment variables; those local evidence files stay out of Git.
+"""
 from __future__ import annotations
 
 import argparse
@@ -22,7 +27,9 @@ from ...integrations.reme.transport import AppendOnlyLedger
 from ...integrations.reme.bank import construct_once, load_clone
 from ...benchmarks.appworld.adapter import CoProMemAppWorldAdapter, TrialInput
 
-RUN = ROOT / "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v4"
+RUN = pathlib.Path(os.environ.get(
+    "COPROMEM_RUN_DIR", ROOT / "artifacts/research/official_reme_copromem_pilot/fixed_dynamic"
+))
 MANIFEST, MANIFEST_SHA = RUN / "manifest.json", RUN / "manifest.sha256"
 PROGRESS, LEDGER, STATUS, SUMMARY = (RUN / "progress.jsonl", RUN / "ledger.jsonl",
                                      RUN / "runner-status.json", RUN / "live-summary.json")
@@ -46,15 +53,41 @@ def env_value(name: str) -> str:
     raise RuntimeError(f"required credential {name} is absent")
 
 
+def frozen_acquisition_pool() -> list[dict[str, Any]]:
+    """Load an explicitly supplied, already-frozen acquisition export.
+
+    This keeps raw trajectories outside source control and prevents the
+    maintained runner from reaching into any previous experiment directory.
+    """
+    source = os.environ.get("COPROMEM_ACQUISITION_POOL")
+    if not source:
+        raise RuntimeError("COPROMEM_ACQUISITION_POOL must name a frozen acquisition export")
+    raw = json.loads(pathlib.Path(source).read_text(encoding="utf-8"))
+    rows = raw.get("trajectories") if isinstance(raw, dict) else raw
+    if not isinstance(rows, list) or not rows:
+        raise RuntimeError("frozen acquisition export must contain a non-empty trajectory list")
+    required = {"acquisition_identity", "task_id", "history", "after_score"}
+    if any(not isinstance(row, dict) or not required.issubset(row) for row in rows):
+        raise RuntimeError("frozen acquisition export lacks required provenance fields")
+    return rows
+
+
+def reme_input(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Map frozen public trajectories into the pinned upstream ReMe contract."""
+    return [{"trajectory_id": row["acquisition_identity"], "task_id": row["task_id"],
+             "task_history": row["history"], "after_score": row["after_score"]} for row in rows]
+
+
 def spec() -> dict[str, Any]:
     value = json.loads(MANIFEST.read_text(encoding="utf-8"))
     raw = json.dumps(value, sort_keys=True, indent=2).encode("utf-8") + b"\n"
     if file_sha(MANIFEST) != MANIFEST_SHA.read_text().strip() or hashlib.sha256(raw).hexdigest() != file_sha(MANIFEST):
         raise RuntimeError("v4 frozen manifest hash mismatch")
-    if (value.get("protocol") != "corrected_fixed_dynamic_v4" or value.get("status") != "frozen_pre_payload"
-            or len(value["evaluation"]["task_ids"]) != 16 or len(value["arms"]) != 5
-            or not value["budget"].get("fits_hard_cap") or value["budget"].get("hard_cap_usd") != 160.0):
-        raise RuntimeError("v4 frozen protocol invariant failed")
+    if (not value.get("protocol") or value.get("status") != "frozen_pre_payload"
+            or not value.get("evaluation", {}).get("task_ids") or len(value.get("arms", [])) != 5
+            or not value.get("budget", {}).get("fits_hard_cap")
+            or float(value["budget"].get("hard_cap_usd", 0)) <= 0):
+        raise RuntimeError("frozen protocol invariant failed")
     return value
 
 
@@ -89,10 +122,10 @@ def acquire_lock() -> None:
 def bootstrap_ledger(value: dict[str, Any]) -> AppendOnlyLedger:
     ledger = AppendOnlyLedger(LEDGER, float(value["budget"]["ledger_dispatch_cap_usd"]))
     carry = float(value["budget"]["historical_charged_or_reserved_usd"])
-    identifier = f"carry-forward-fixed-dynamic-v4-usd-{carry:.12f}"
+    identifier = f"historical-carry-forward-usd-{carry:.12f}"
     known = LEDGER.read_text(encoding="utf-8") if LEDGER.exists() else ""
     if identifier not in known:
-        ledger.reserve(identifier, carry, {"role": "historical_carry_forward", "source": "fixed_dynamic_v3_ledger"})
+        ledger.reserve(identifier, carry, {"role": "historical_carry_forward", "source": "prior_append_only_ledger"})
     return ledger
 
 
@@ -184,8 +217,10 @@ def main() -> None:
     preflight(value); status("preflight_passed", c_free_gb=c_free_gb(), budget=value["budget"]); summary(value, "preflight_passed")
     if args.preflight: return
     key = env_value("OPENROUTER_API_KEY")
-    combined = frozen_v3_acquisition_pool()
-    if len(combined) != 32: raise RuntimeError("immutable v4 acquisition source is incomplete")
+    combined = frozen_acquisition_pool()
+    expected_acquisition = int(value.get("acquisition", {}).get("expected_trajectories", len(combined)))
+    if len(combined) != expected_acquisition:
+        raise RuntimeError("frozen acquisition source count does not match manifest")
     state = json.loads((RUN / "copromem/initial-state.json").read_text())
     bank_hash = digest(state)
     cap = float(value["budget"]["ledger_dispatch_cap_usd"])
@@ -194,7 +229,7 @@ def main() -> None:
         snapshot, checkpoint = RUN / "reme/shared-bank.jsonl", RUN / "reme/construction.jsonl"
         reme_hash, count = construct_once(official_post, svc["reme-builder"].base_url, reme_input(combined), checkpoint, snapshot,
                                           progress_event_callback(PROGRESS))
-        if count != 32: raise RuntimeError("official ReMe construction did not consume 32 immutable inputs")
+        if count != len(combined): raise RuntimeError("official ReMe construction did not consume every frozen input")
         if load_clone(official_post, svc["reme-fixed"].base_url, snapshot, reme_hash) != reme_hash: raise RuntimeError("ReMe fixed clone mismatch")
         for trial in value["evaluation"]["trial_ids"]:
             service = svc[f"reme-dynamic-{trial}"]
@@ -246,9 +281,8 @@ def main() -> None:
                         write_json(marker(arm, task_id, trial), {"trajectory_id": result["trajectory_id"], "before_state_sha256": before,
                             "after_state_sha256": dynamic[trial].semantic_state_hash()})
                     summary(value, "evaluation")
-    report = ROOT / "research/scripts/build_fixed_dynamic_v4_report.py"
-    subprocess.run([sys.executable, str(report)], cwd=ROOT, check=True)
-    final = RUN / "final-report.json"
+    from .reporting import build_report
+    final = build_report(RUN)
     if not final.is_file(): raise RuntimeError("final report was not durably created")
     status("completed", c_free_gb=c_free_gb(), final_report_sha256=file_sha(final)); summary(value, "completed")
 

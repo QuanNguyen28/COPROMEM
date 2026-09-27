@@ -133,7 +133,7 @@ class COPROMEMReasoningBankAdapter:
         consolidate: bool = False,
     ) -> None:
         """Persist observed episode evidence and replay after a paired batch."""
-        from copromem.webarena_browsergym_benchmark import induce_from_trajectory
+        from copromem.benchmarks.webarena.benchmark import induce_from_trajectory
 
         state_path = Path(memories_jsonl_path).with_name("copromem_state.json")
         state = json.loads(state_path.read_text(encoding="utf-8"))

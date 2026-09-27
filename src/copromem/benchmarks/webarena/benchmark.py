@@ -51,12 +51,26 @@ _rb_path = Path(__file__).resolve().parent.parent.parent / "external" / "reasoni
 if str(_rb_path) not in sys.path:
     sys.path.insert(0, str(_rb_path))
 
-import gymnasium as gym
-import browsergym.webarena
-from browsergym.utils.obs import flatten_axtree_to_str
+try:
+    import gymnasium as gym
+    import browsergym.webarena
+    from browsergym.utils.obs import flatten_axtree_to_str
+    from agents.legacy.dynamic_prompting import Flags, MainPrompt, SystemPrompt
+    from agents.legacy.utils.llm_utils import parse_html_tags_raise, ParseError
+    _WEB_ARENA_IMPORT_ERROR: Exception | None = None
+except ImportError as exc:  # Offline source inspection must not start WebArena.
+    gym = None
+    flatten_axtree_to_str = None
+    Flags = MainPrompt = SystemPrompt = parse_html_tags_raise = ParseError = None
+    _WEB_ARENA_IMPORT_ERROR = exc
 
-from agents.legacy.dynamic_prompting import Flags, MainPrompt, SystemPrompt
-from agents.legacy.utils.llm_utils import parse_html_tags_raise, ParseError
+
+def _require_webarena_runtime() -> None:
+    if _WEB_ARENA_IMPORT_ERROR is not None:
+        raise RuntimeError(
+            "WebArena runtime dependencies are unavailable; install the pinned "
+            "benchmark extra and configured ReasoningBank checkout"
+        ) from _WEB_ARENA_IMPORT_ERROR
 
 
 def webarena_llm_fuzzy_match(
@@ -396,6 +410,7 @@ def run_live_task(
     headless: bool = True,
 ) -> TaskExecutionResult:
     """Execute a single WebArena task in a live browser using official ReasoningBank dynamic prompting."""
+    _require_webarena_runtime()
     gym_id = f"browsergym/webarena.{task_id}"
     started_time = time.perf_counter()
     task_gt = get_task_ground_truth(task_id)

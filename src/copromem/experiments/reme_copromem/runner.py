@@ -143,7 +143,7 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
         # method's memory.  It is the common raw evidence source, not a sixth
         # memory arm.
         use_memory = arm not in {"no_memory", "shared_acquisition"}
-        agent = Agent(index=seed, task_ids=[task_id], experiment_name="corrected_fixed_dynamic_v1",
+        agent = Agent(index=seed, task_ids=[task_id], experiment_name="copromem_fixed_dynamic",
                       model_name="deepseek/deepseek-v4.1-flash", temperature=temperature,
                       max_interactions=max_actions, num_trials=1, use_memory=use_memory,
                       memory_base_url=(memory_base_url or "http://127.0.0.1:9/"),

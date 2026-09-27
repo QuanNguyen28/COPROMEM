@@ -15,11 +15,11 @@ from typing import Any
 
 from .transport import AppendOnlyLedger, LockedOpenAI
 
-ROOT = pathlib.Path("/mnt/e/Project/AAMAS/COPROMEM")
-SOURCE = pathlib.Path("/home/xiqhq/copromem-reme")
-NATIVE_PYTHON = "/home/xiqhq/copromem-appworld/venv/bin/python"
-NATIVE_ROOT = "/home/xiqhq/copromem-appworld"
-WORKER = ROOT / "research/containers/appworld/official_reme_worker.py"
+ROOT = pathlib.Path(os.environ.get("COPROMEM_ROOT", pathlib.Path(__file__).resolve().parents[4]))
+SOURCE = pathlib.Path(os.environ.get("COPROMEM_REME_SOURCE", "/home/xiqhq/copromem-reme"))
+NATIVE_PYTHON = os.environ.get("COPROMEM_APPWORLD_PYTHON", "/home/xiqhq/copromem-appworld/venv/bin/python")
+NATIVE_ROOT = pathlib.Path(os.environ.get("COPROMEM_APPWORLD_ROOT", "/home/xiqhq/copromem-appworld"))
+WORKER = ROOT / "src/copromem/benchmarks/appworld/worker.py"
 CALL_ROLE: contextvars.ContextVar[str] = contextvars.ContextVar("call_role", default="executor")
 
 
