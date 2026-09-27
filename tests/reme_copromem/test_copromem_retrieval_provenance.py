@@ -23,7 +23,7 @@ class ProvenanceTest(unittest.TestCase):
         adapter.retrieve_with_provenance(trial, 1)
         with self.assertRaises(RuntimeError): adapter.retrieve_with_provenance(trial, 1)
 
-    def test_v4_retrieval_restart_uses_persisted_pre_state_and_rejects_mismatch(self) -> None:
+    def test_retrieval_restart_uses_persisted_pre_state_and_rejects_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             previous, v4.RUN = v4.RUN, pathlib.Path(directory)
             try:
@@ -48,7 +48,7 @@ class ProvenanceTest(unittest.TestCase):
             finally:
                 v4.RUN = previous
 
-    def test_v4_artifact_reconciliation_uses_runner_canonical_unicode_digest(self) -> None:
+    def test_artifact_reconciliation_uses_runner_canonical_unicode_digest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "trial-1.json"
             history = [{"role": "user", "content": "Hà Nội — café"}, {"role": "assistant", "content": "print('✓')"}]

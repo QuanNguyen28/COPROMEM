@@ -36,7 +36,7 @@ def test_reme_initial_bank_uses_pinned_legacy_summary_add_dump_load_contract(tmp
     assert load_clone(post, "dynamic", dump, snapshot) == snapshot
 
 
-def test_v4_progress_callback_is_unary_and_persisted_restart_skips_provider_work(tmp_path: pathlib.Path) -> None:
+def test_progress_callback_is_unary_and_persisted_restart_skips_provider_work(tmp_path: pathlib.Path) -> None:
     progress = tmp_path / "progress.jsonl"
     callback = progress_event_callback(progress)
     callback({"event": "reme_initial_bank_item", "trajectory_id": "a"})
