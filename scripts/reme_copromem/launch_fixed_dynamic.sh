@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-run="$root/artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v4"
+run="${COPROMEM_RUN_DIR:-$root/artifacts/research/official_reme_copromem_pilot/fixed_dynamic}"
 cd "$root"
 mkdir -p "$run/logs"
 if [[ -f "$run/runner.lock" ]]; then
@@ -12,7 +12,7 @@ if [[ -f "$run/runner.lock" ]]; then
   fi
   rm -f "$run/runner.lock"
 fi
-nohup env COPROMEM_ROOT="$root" PYTHONPATH="$root/src:$root" "${COPROMEM_REME_PYTHON:-/mnt/e/Project/AAMAS/reme-upstream-fixed-dynamic/bin/python}" \
+nohup env COPROMEM_ROOT="$root" COPROMEM_RUN_DIR="$run" PYTHONPATH="$root/src:$root" "${COPROMEM_REME_PYTHON:-/mnt/e/Project/AAMAS/reme-upstream-fixed-dynamic/bin/python}" \
   scripts/reme_copromem/run_fixed_dynamic.py >"$run/logs/runner.stdout.log" 2>&1 < /dev/null &
 pid=$!
 printf '%s\n' "$pid" >"$run/runner.pid"

@@ -23,6 +23,8 @@ manifest and `COPROMEM_ACQUISITION_POOL`; it never reaches into a historical
 experiment directory. External runtime locations are explicitly configured
 with `COPROMEM_REME_SOURCE`, `COPROMEM_APPWORLD_PYTHON`,
 `COPROMEM_APPWORLD_ROOT`, and `COPROMEM_REME_PYTHON`.
+Install the pinned upstream checkout in its own environment together with the
+`reme` optional dependency group; do not merge it into the AppWorld runtime.
 
 ## Compatibility shims retained
 

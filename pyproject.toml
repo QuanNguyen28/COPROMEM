@@ -29,6 +29,12 @@ benchmark = [
   "requests>=2.30",
   "tiktoken>=0.7",
 ]
+reme = [
+  "agentscope==1.0.20",
+  "flowllm[reme]==0.2.0.10",
+  "ray==2.58.0",
+  "tiktoken>=0.12.0",
+]
 
 [project.scripts]
 copromem-demo = "copromem.experiment:main"
