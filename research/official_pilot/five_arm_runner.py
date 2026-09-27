@@ -77,7 +77,10 @@ class ReMeService:
 
     @property
     def base_url(self) -> str:
-        return f"http://127.0.0.1:{self.port}"
+        # The pinned upstream AppWorld agent concatenates endpoint names rather
+        # than using URL joining, while the local boundary strips trailing
+        # slashes itself.  Preserve both contracts at this one boundary.
+        return f"http://127.0.0.1:{self.port}/"
 
     def wait_healthy(self, timeout: float = 120.0) -> None:
         deadline = time.monotonic() + timeout

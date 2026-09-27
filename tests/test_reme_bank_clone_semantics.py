@@ -6,9 +6,14 @@ import tempfile
 import unittest
 
 from research.official_pilot.reme_bank import _assert_clone_equivalent, semantic_bank_hash
+from research.official_pilot.five_arm_runner import ReMeService
 
 
 class ReMeCloneSemanticTest(unittest.TestCase):
+    def test_upstream_reme_base_url_is_endpoint_concatenation_safe(self) -> None:
+        service = object.__new__(ReMeService); service.port = 18201
+        self.assertEqual(service.base_url, "http://127.0.0.1:18201/")
+
     def test_float32_round_trip_preserves_semantic_bank(self) -> None:
         source = [{"memory_id": "m1", "content": "stable", "metadata": {"a": 1}, "vector": [0.1, 0.2]}]
         clone = [{"memory_id": "m1", "content": "stable", "metadata": {"a": 1}, "vector": [0.10000000149, 0.2]}]
