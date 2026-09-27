@@ -29,6 +29,46 @@ def file_hash(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+VECTOR_FLOAT32_TOLERANCE = 2.0e-8
+
+
+def _bank_rows(path: pathlib.Path) -> list[dict[str, Any]]:
+    if not path.is_file():
+        raise RuntimeError(f"official ReMe bank dump is absent: {path}")
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+
+
+def semantic_bank_hash(path: pathlib.Path) -> str:
+    """Hash memory identity/content, excluding numerical vector serialization.
+
+    The pinned in-memory store restores embeddings through float32 and its
+    JSON dump changes at most one float32 ULP.  Vectors are verified separately
+    in ``_assert_clone_equivalent``; this hash covers all decision-bearing
+    records exactly without treating JSON float formatting as new memory.
+    """
+    rows = []
+    for row in _bank_rows(path):
+        rows.append({key: value for key, value in row.items() if key != "vector"})
+    return canonical_hash(sorted(rows, key=lambda row: str(row.get("memory_id", ""))))
+
+
+def _assert_clone_equivalent(source: pathlib.Path, clone: pathlib.Path) -> None:
+    source_rows = {str(row.get("memory_id")): row for row in _bank_rows(source)}
+    clone_rows = {str(row.get("memory_id")): row for row in _bank_rows(clone)}
+    if set(source_rows) != set(clone_rows):
+        raise RuntimeError("loaded ReMe clone changes the memory-id set")
+    for memory_id, source_row in source_rows.items():
+        clone_row = clone_rows[memory_id]
+        if ({key: value for key, value in source_row.items() if key != "vector"} !=
+                {key: value for key, value in clone_row.items() if key != "vector"}):
+            raise RuntimeError("loaded ReMe clone changes memory content or metadata")
+        left, right = source_row.get("vector"), clone_row.get("vector")
+        if (left is None) != (right is None) or (isinstance(left, list) and len(left) != len(right)):
+            raise RuntimeError("loaded ReMe clone changes vector shape")
+        if isinstance(left, list) and any(abs(float(a) - float(b)) > VECTOR_FLOAT32_TOLERANCE for a, b in zip(left, right)):
+            raise RuntimeError("loaded ReMe clone changes vectors beyond float32 round-trip tolerance")
+
+
 def _append(path: pathlib.Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
@@ -53,6 +93,15 @@ def construct_once(post: Post, base_url: str, trajectories: list[dict[str, Any]]
     if checkpoint.exists():
         prior = [json.loads(line) for line in checkpoint.read_text(encoding="utf-8").splitlines() if line]
         states = {str(row["trajectory_id"]): str(row["state"]) for row in prior}
+
+    # Services are intentionally short-lived.  A restart after every durable
+    # construction checkpoint must reuse the already-frozen source snapshot,
+    # not silently create an empty in-memory builder bank.
+    if dump_file.exists() and all(states.get(str(item["trajectory_id"])) == "persisted" for item in trajectories):
+        snapshot_hash = semantic_bank_hash(dump_file)
+        event({"event": "reme_initial_bank_reused", "snapshot_sha256": snapshot_hash,
+               "construction_count": len(trajectories), "snapshot_file_sha256": file_hash(dump_file)})
+        return snapshot_hash, len(trajectories)
 
     for item in trajectories:
         trajectory_id = str(item["trajectory_id"])
@@ -89,21 +138,24 @@ def construct_once(post: Post, base_url: str, trajectories: list[dict[str, Any]]
         raise RuntimeError("ReMe bank cannot be frozen before every input is persisted")
     dump_file.parent.mkdir(parents=True, exist_ok=True)
     dumped = post(base_url, "dump_memory", {"dump_file_path": str(dump_file)})
-    snapshot_hash = file_hash(dump_file)
+    snapshot_file_hash = file_hash(dump_file)
+    snapshot_hash = semantic_bank_hash(dump_file)
     event({"event": "reme_initial_bank_frozen", "snapshot_sha256": snapshot_hash,
-           "construction_count": len(trajectories), "dump_response_sha256": canonical_hash(dumped)})
+           "snapshot_file_sha256": snapshot_file_hash, "construction_count": len(trajectories),
+           "dump_response_sha256": canonical_hash(dumped)})
     return snapshot_hash, len(trajectories)
 
 
 def load_clone(post: Post, base_url: str, dump_file: pathlib.Path,
                expected_snapshot_hash: str) -> str:
     """Load an exact snapshot into an isolated legacy service."""
-    if file_hash(dump_file) != expected_snapshot_hash:
+    if semantic_bank_hash(dump_file) != expected_snapshot_hash:
         raise RuntimeError("ReMe initial-bank snapshot hash changed before clone")
     post(base_url, "load_memory", {"load_file_path": str(dump_file), "clear_existing": True})
     clone_dump = dump_file.with_name(f"{dump_file.stem}.clone-check.jsonl")
     post(base_url, "dump_memory", {"dump_file_path": str(clone_dump)})
-    clone_hash = file_hash(clone_dump)
+    _assert_clone_equivalent(dump_file, clone_dump)
+    clone_hash = semantic_bank_hash(clone_dump)
     if clone_hash != expected_snapshot_hash:
         raise RuntimeError("loaded ReMe clone differs from shared initial bank")
     return clone_hash
