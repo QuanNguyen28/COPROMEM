@@ -310,6 +310,27 @@
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
     {
+      "consumer_operation": "apis.amazon.download_order_receipt",
+      "group_id": "input:apis.amazon.download_order_receipt:order_id",
+      "input_slot": "order_id",
+      "producer_operations": [
+        "apis.amazon.show_order",
+        "apis.amazon.show_orders",
+        "apis.amazon.show_return",
+        "apis.amazon.show_returns"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.amazon.download_prime_subscription_receipt",
+      "group_id": "input:apis.amazon.download_prime_subscription_receipt:prime_subscription_id",
+      "input_slot": "prime_subscription_id",
+      "producer_operations": [
+        "apis.amazon.show_prime_subscriptions"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
       "consumer_operation": "apis.amazon.initiate_return",
       "group_id": "input:apis.amazon.initiate_return:deliverer_id",
       "input_slot": "deliverer_id",
@@ -529,6 +550,103 @@
         "apis.venmo.search_users",
         "apis.venmo.show_account",
         "apis.venmo.show_profile"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.amazon.show_order",
+      "group_id": "input:apis.amazon.show_order:order_id",
+      "input_slot": "order_id",
+      "producer_operations": [
+        "apis.amazon.show_orders",
+        "apis.amazon.show_return",
+        "apis.amazon.show_returns"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.amazon.show_payment_card",
+      "group_id": "input:apis.amazon.show_payment_card:payment_card_id",
+      "input_slot": "payment_card_id",
+      "producer_operations": [
+        "apis.amazon.show_order",
+        "apis.amazon.show_orders",
+        "apis.amazon.show_payment_cards",
+        "apis.spotify.show_payment_card",
+        "apis.spotify.show_payment_cards",
+        "apis.venmo.show_payment_card",
+        "apis.venmo.show_payment_cards"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.amazon.show_product",
+      "group_id": "input:apis.amazon.show_product:product_id",
+      "input_slot": "product_id",
+      "producer_operations": [
+        "apis.amazon.search_products",
+        "apis.amazon.show_product_questions",
+        "apis.amazon.show_product_reviews",
+        "apis.amazon.show_return",
+        "apis.amazon.show_returns",
+        "apis.amazon.show_wish_list"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.amazon.show_product_question_answers",
+      "group_id": "input:apis.amazon.show_product_question_answers:question_id",
+      "input_slot": "question_id",
+      "producer_operations": [
+        "apis.amazon.show_product_questions"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.amazon.show_product_questions",
+      "group_id": "input:apis.amazon.show_product_questions:product_id",
+      "input_slot": "product_id",
+      "producer_operations": [
+        "apis.amazon.search_products",
+        "apis.amazon.show_product",
+        "apis.amazon.show_product_reviews",
+        "apis.amazon.show_return",
+        "apis.amazon.show_returns",
+        "apis.amazon.show_wish_list"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.amazon.show_product_reviews",
+      "group_id": "input:apis.amazon.show_product_reviews:product_id",
+      "input_slot": "product_id",
+      "producer_operations": [
+        "apis.amazon.search_products",
+        "apis.amazon.show_product",
+        "apis.amazon.show_product_questions",
+        "apis.amazon.show_return",
+        "apis.amazon.show_returns",
+        "apis.amazon.show_wish_list"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.amazon.show_return",
+      "group_id": "input:apis.amazon.show_return:return_id",
+      "input_slot": "return_id",
+      "producer_operations": [
+        "apis.amazon.show_returns"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.amazon.show_seller",
+      "group_id": "input:apis.amazon.show_seller:seller_id",
+      "input_slot": "seller_id",
+      "producer_operations": [
+        "apis.amazon.search_products",
+        "apis.amazon.search_sellers",
+        "apis.amazon.show_product"
       ],
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
@@ -911,6 +1029,34 @@
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
     {
+      "consumer_operation": "apis.api_docs.show_api_descriptions",
+      "group_id": "input:apis.api_docs.show_api_descriptions:app_name",
+      "input_slot": "app_name",
+      "producer_operations": [
+        "apis.api_docs.search_api_docs",
+        "apis.api_docs.show_api_doc"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.api_docs.show_api_doc",
+      "group_id": "input:apis.api_docs.show_api_doc:api_name",
+      "input_slot": "api_name",
+      "producer_operations": [
+        "apis.api_docs.search_api_docs"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.api_docs.show_api_doc",
+      "group_id": "input:apis.api_docs.show_api_doc:app_name",
+      "input_slot": "app_name",
+      "producer_operations": [
+        "apis.api_docs.search_api_docs"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
       "consumer_operation": "apis.file_system.create_file",
       "group_id": "input:apis.file_system.create_file:file_path",
       "input_slot": "file_path",
@@ -930,6 +1076,23 @@
     {
       "consumer_operation": "apis.file_system.delete_file",
       "group_id": "input:apis.file_system.delete_file:file_path",
+      "input_slot": "file_path",
+      "producer_operations": [
+        "apis.amazon.download_order_receipt",
+        "apis.amazon.download_prime_subscription_receipt",
+        "apis.gmail.download_attachment",
+        "apis.splitwise.download_expense_receipt_file",
+        "apis.splitwise.download_payment_receipt_file",
+        "apis.spotify.download_premium_subscription_receipt",
+        "apis.todoist.download_attachment",
+        "apis.venmo.download_bank_transfer_receipt",
+        "apis.venmo.download_transaction_receipt"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.file_system.file_exists",
+      "group_id": "input:apis.file_system.file_exists:file_path",
       "input_slot": "file_path",
       "producer_operations": [
         "apis.amazon.download_order_receipt",
@@ -1043,6 +1206,23 @@
         "apis.venmo.search_users",
         "apis.venmo.show_account",
         "apis.venmo.show_profile"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.file_system.show_file",
+      "group_id": "input:apis.file_system.show_file:file_path",
+      "input_slot": "file_path",
+      "producer_operations": [
+        "apis.amazon.download_order_receipt",
+        "apis.amazon.download_prime_subscription_receipt",
+        "apis.gmail.download_attachment",
+        "apis.splitwise.download_expense_receipt_file",
+        "apis.splitwise.download_payment_receipt_file",
+        "apis.spotify.download_premium_subscription_receipt",
+        "apis.todoist.download_attachment",
+        "apis.venmo.download_bank_transfer_receipt",
+        "apis.venmo.download_transaction_receipt"
       ],
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
@@ -1584,6 +1764,27 @@
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
     {
+      "consumer_operation": "apis.gmail.show_draft",
+      "group_id": "input:apis.gmail.show_draft:draft_id",
+      "input_slot": "draft_id",
+      "producer_operations": [
+        "apis.gmail.show_drafts"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.gmail.show_thread",
+      "group_id": "input:apis.gmail.show_thread:email_thread_id",
+      "input_slot": "email_thread_id",
+      "producer_operations": [
+        "apis.gmail.show_archived_threads",
+        "apis.gmail.show_inbox_threads",
+        "apis.gmail.show_outbox_threads",
+        "apis.gmail.show_spam_threads"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
       "consumer_operation": "apis.gmail.signup",
       "group_id": "input:apis.gmail.signup:email",
       "input_slot": "email",
@@ -1958,6 +2159,59 @@
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
     {
+      "consumer_operation": "apis.phone.show_alarm",
+      "group_id": "input:apis.phone.show_alarm:alarm_id",
+      "input_slot": "alarm_id",
+      "producer_operations": [
+        "apis.phone.show_alarms"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.phone.show_text_message",
+      "group_id": "input:apis.phone.show_text_message:text_message_id",
+      "input_slot": "text_message_id",
+      "producer_operations": [
+        "apis.phone.search_text_messages",
+        "apis.phone.show_text_message_window"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.phone.show_text_message_window",
+      "group_id": "input:apis.phone.show_text_message_window:phone_number",
+      "input_slot": "phone_number",
+      "producer_operations": [
+        "apis.phone.search_contacts",
+        "apis.phone.show_account",
+        "apis.phone.show_profile",
+        "apis.supervisor.show_profile"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.phone.show_voice_message",
+      "group_id": "input:apis.phone.show_voice_message:voice_message_id",
+      "input_slot": "voice_message_id",
+      "producer_operations": [
+        "apis.phone.search_voice_messages",
+        "apis.phone.show_voice_message_window"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.phone.show_voice_message_window",
+      "group_id": "input:apis.phone.show_voice_message_window:phone_number",
+      "input_slot": "phone_number",
+      "producer_operations": [
+        "apis.phone.search_contacts",
+        "apis.phone.show_account",
+        "apis.phone.show_profile",
+        "apis.supervisor.show_profile"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
       "consumer_operation": "apis.phone.signup",
       "group_id": "input:apis.phone.signup:first_name",
       "input_slot": "first_name",
@@ -2230,6 +2484,15 @@
         "apis.venmo.search_users",
         "apis.venmo.show_account",
         "apis.venmo.show_profile"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.simple_note.show_note",
+      "group_id": "input:apis.simple_note.show_note:note_id",
+      "input_slot": "note_id",
+      "producer_operations": [
+        "apis.simple_note.search_notes"
       ],
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
@@ -2551,6 +2814,32 @@
     {
       "consumer_operation": "apis.splitwise.delete_payment_receipt_file",
       "group_id": "input:apis.splitwise.delete_payment_receipt_file:payment_id",
+      "input_slot": "payment_id",
+      "producer_operations": [
+        "apis.splitwise.show_group_payments",
+        "apis.splitwise.show_no_group_payments",
+        "apis.splitwise.show_payment",
+        "apis.splitwise.show_payment_comment",
+        "apis.splitwise.show_payment_comments"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.download_expense_receipt_file",
+      "group_id": "input:apis.splitwise.download_expense_receipt_file:expense_id",
+      "input_slot": "expense_id",
+      "producer_operations": [
+        "apis.splitwise.show_expense",
+        "apis.splitwise.show_expense_comment",
+        "apis.splitwise.show_expense_comments",
+        "apis.splitwise.show_group_expenses",
+        "apis.splitwise.show_no_group_expenses"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.download_payment_receipt_file",
+      "group_id": "input:apis.splitwise.download_payment_receipt_file:payment_id",
       "input_slot": "payment_id",
       "producer_operations": [
         "apis.splitwise.show_group_payments",
@@ -2905,6 +3194,122 @@
         "apis.venmo.search_users",
         "apis.venmo.show_account",
         "apis.venmo.show_profile"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.show_expense",
+      "group_id": "input:apis.splitwise.show_expense:expense_id",
+      "input_slot": "expense_id",
+      "producer_operations": [
+        "apis.splitwise.show_expense_comment",
+        "apis.splitwise.show_expense_comments",
+        "apis.splitwise.show_group_expenses",
+        "apis.splitwise.show_no_group_expenses"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.show_expense_comment",
+      "group_id": "input:apis.splitwise.show_expense_comment:comment_id",
+      "input_slot": "comment_id",
+      "producer_operations": [
+        "apis.venmo.show_transaction_comment",
+        "apis.venmo.show_transaction_comments"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.show_expense_comments",
+      "group_id": "input:apis.splitwise.show_expense_comments:expense_id",
+      "input_slot": "expense_id",
+      "producer_operations": [
+        "apis.splitwise.show_expense",
+        "apis.splitwise.show_expense_comment",
+        "apis.splitwise.show_group_expenses",
+        "apis.splitwise.show_no_group_expenses"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.show_group",
+      "group_id": "input:apis.splitwise.show_group:group_id",
+      "input_slot": "group_id",
+      "producer_operations": [
+        "apis.splitwise.show_activity",
+        "apis.splitwise.show_expense",
+        "apis.splitwise.show_group_expenses",
+        "apis.splitwise.show_group_payments",
+        "apis.splitwise.show_groups",
+        "apis.splitwise.show_no_group_expenses",
+        "apis.splitwise.show_no_group_payments",
+        "apis.splitwise.show_payment"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.show_group_expenses",
+      "group_id": "input:apis.splitwise.show_group_expenses:group_id",
+      "input_slot": "group_id",
+      "producer_operations": [
+        "apis.splitwise.show_activity",
+        "apis.splitwise.show_expense",
+        "apis.splitwise.show_group",
+        "apis.splitwise.show_group_payments",
+        "apis.splitwise.show_groups",
+        "apis.splitwise.show_no_group_expenses",
+        "apis.splitwise.show_no_group_payments",
+        "apis.splitwise.show_payment"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.show_group_payments",
+      "group_id": "input:apis.splitwise.show_group_payments:group_id",
+      "input_slot": "group_id",
+      "producer_operations": [
+        "apis.splitwise.show_activity",
+        "apis.splitwise.show_expense",
+        "apis.splitwise.show_group",
+        "apis.splitwise.show_group_expenses",
+        "apis.splitwise.show_groups",
+        "apis.splitwise.show_no_group_expenses",
+        "apis.splitwise.show_no_group_payments",
+        "apis.splitwise.show_payment"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.show_payment",
+      "group_id": "input:apis.splitwise.show_payment:payment_id",
+      "input_slot": "payment_id",
+      "producer_operations": [
+        "apis.splitwise.show_group_payments",
+        "apis.splitwise.show_no_group_payments",
+        "apis.splitwise.show_payment_comment",
+        "apis.splitwise.show_payment_comments"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.show_payment_comment",
+      "group_id": "input:apis.splitwise.show_payment_comment:comment_id",
+      "input_slot": "comment_id",
+      "producer_operations": [
+        "apis.venmo.show_transaction_comment",
+        "apis.venmo.show_transaction_comments"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.splitwise.show_payment_comments",
+      "group_id": "input:apis.splitwise.show_payment_comments:payment_id",
+      "input_slot": "payment_id",
+      "producer_operations": [
+        "apis.splitwise.show_group_payments",
+        "apis.splitwise.show_no_group_payments",
+        "apis.splitwise.show_payment",
+        "apis.splitwise.show_payment_comment"
       ],
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
@@ -3466,6 +3871,15 @@
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
     {
+      "consumer_operation": "apis.spotify.download_premium_subscription_receipt",
+      "group_id": "input:apis.spotify.download_premium_subscription_receipt:premium_subscription_id",
+      "input_slot": "premium_subscription_id",
+      "producer_operations": [
+        "apis.spotify.show_premium_subscriptions"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
       "consumer_operation": "apis.spotify.download_song",
       "group_id": "input:apis.spotify.download_song:song_id",
       "input_slot": "song_id",
@@ -3893,6 +4307,225 @@
       "input_slot": "volume",
       "producer_operations": [
         "apis.spotify.show_volume"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_album",
+      "group_id": "input:apis.spotify.show_album:album_id",
+      "input_slot": "album_id",
+      "producer_operations": [
+        "apis.spotify.search_albums",
+        "apis.spotify.search_songs",
+        "apis.spotify.show_album_library",
+        "apis.spotify.show_album_review",
+        "apis.spotify.show_album_reviews",
+        "apis.spotify.show_current_song",
+        "apis.spotify.show_downloaded_songs",
+        "apis.spotify.show_liked_albums",
+        "apis.spotify.show_liked_songs",
+        "apis.spotify.show_recommendations",
+        "apis.spotify.show_song",
+        "apis.spotify.show_song_library",
+        "apis.spotify.show_song_queue"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_album_privates",
+      "group_id": "input:apis.spotify.show_album_privates:album_id",
+      "input_slot": "album_id",
+      "producer_operations": [
+        "apis.spotify.search_albums",
+        "apis.spotify.search_songs",
+        "apis.spotify.show_album",
+        "apis.spotify.show_album_library",
+        "apis.spotify.show_album_review",
+        "apis.spotify.show_album_reviews",
+        "apis.spotify.show_current_song",
+        "apis.spotify.show_downloaded_songs",
+        "apis.spotify.show_liked_albums",
+        "apis.spotify.show_liked_songs",
+        "apis.spotify.show_recommendations",
+        "apis.spotify.show_song",
+        "apis.spotify.show_song_library",
+        "apis.spotify.show_song_queue"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_album_review",
+      "group_id": "input:apis.spotify.show_album_review:review_id",
+      "input_slot": "review_id",
+      "producer_operations": [
+        "apis.amazon.show_product_reviews"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_album_reviews",
+      "group_id": "input:apis.spotify.show_album_reviews:album_id",
+      "input_slot": "album_id",
+      "producer_operations": [
+        "apis.spotify.search_albums",
+        "apis.spotify.search_songs",
+        "apis.spotify.show_album",
+        "apis.spotify.show_album_library",
+        "apis.spotify.show_album_review",
+        "apis.spotify.show_current_song",
+        "apis.spotify.show_downloaded_songs",
+        "apis.spotify.show_liked_albums",
+        "apis.spotify.show_liked_songs",
+        "apis.spotify.show_recommendations",
+        "apis.spotify.show_song",
+        "apis.spotify.show_song_library",
+        "apis.spotify.show_song_queue"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_artist",
+      "group_id": "input:apis.spotify.show_artist:artist_id",
+      "input_slot": "artist_id",
+      "producer_operations": [
+        "apis.spotify.search_artists",
+        "apis.spotify.show_following_artists"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_artist_following",
+      "group_id": "input:apis.spotify.show_artist_following:artist_id",
+      "input_slot": "artist_id",
+      "producer_operations": [
+        "apis.spotify.search_artists",
+        "apis.spotify.show_artist",
+        "apis.spotify.show_following_artists"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_payment_card",
+      "group_id": "input:apis.spotify.show_payment_card:payment_card_id",
+      "input_slot": "payment_card_id",
+      "producer_operations": [
+        "apis.amazon.show_order",
+        "apis.amazon.show_orders",
+        "apis.amazon.show_payment_card",
+        "apis.amazon.show_payment_cards",
+        "apis.spotify.show_payment_cards",
+        "apis.venmo.show_payment_card",
+        "apis.venmo.show_payment_cards"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_playlist",
+      "group_id": "input:apis.spotify.show_playlist:playlist_id",
+      "input_slot": "playlist_id",
+      "producer_operations": [
+        "apis.spotify.search_playlists",
+        "apis.spotify.show_liked_playlists",
+        "apis.spotify.show_playlist_library",
+        "apis.spotify.show_playlist_review",
+        "apis.spotify.show_playlist_reviews"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_playlist_privates",
+      "group_id": "input:apis.spotify.show_playlist_privates:playlist_id",
+      "input_slot": "playlist_id",
+      "producer_operations": [
+        "apis.spotify.search_playlists",
+        "apis.spotify.show_liked_playlists",
+        "apis.spotify.show_playlist",
+        "apis.spotify.show_playlist_library",
+        "apis.spotify.show_playlist_review",
+        "apis.spotify.show_playlist_reviews"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_playlist_review",
+      "group_id": "input:apis.spotify.show_playlist_review:review_id",
+      "input_slot": "review_id",
+      "producer_operations": [
+        "apis.amazon.show_product_reviews"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_playlist_reviews",
+      "group_id": "input:apis.spotify.show_playlist_reviews:playlist_id",
+      "input_slot": "playlist_id",
+      "producer_operations": [
+        "apis.spotify.search_playlists",
+        "apis.spotify.show_liked_playlists",
+        "apis.spotify.show_playlist",
+        "apis.spotify.show_playlist_library",
+        "apis.spotify.show_playlist_review"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_song",
+      "group_id": "input:apis.spotify.show_song:song_id",
+      "input_slot": "song_id",
+      "producer_operations": [
+        "apis.spotify.search_songs",
+        "apis.spotify.show_current_song",
+        "apis.spotify.show_downloaded_songs",
+        "apis.spotify.show_liked_songs",
+        "apis.spotify.show_recommendations",
+        "apis.spotify.show_song_library",
+        "apis.spotify.show_song_queue",
+        "apis.spotify.show_song_review",
+        "apis.spotify.show_song_reviews"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_song_privates",
+      "group_id": "input:apis.spotify.show_song_privates:song_id",
+      "input_slot": "song_id",
+      "producer_operations": [
+        "apis.spotify.search_songs",
+        "apis.spotify.show_current_song",
+        "apis.spotify.show_downloaded_songs",
+        "apis.spotify.show_liked_songs",
+        "apis.spotify.show_recommendations",
+        "apis.spotify.show_song",
+        "apis.spotify.show_song_library",
+        "apis.spotify.show_song_queue",
+        "apis.spotify.show_song_review",
+        "apis.spotify.show_song_reviews"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_song_review",
+      "group_id": "input:apis.spotify.show_song_review:review_id",
+      "input_slot": "review_id",
+      "producer_operations": [
+        "apis.amazon.show_product_reviews"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.spotify.show_song_reviews",
+      "group_id": "input:apis.spotify.show_song_reviews:song_id",
+      "input_slot": "song_id",
+      "producer_operations": [
+        "apis.spotify.search_songs",
+        "apis.spotify.show_current_song",
+        "apis.spotify.show_downloaded_songs",
+        "apis.spotify.show_liked_songs",
+        "apis.spotify.show_recommendations",
+        "apis.spotify.show_song",
+        "apis.spotify.show_song_library",
+        "apis.spotify.show_song_queue",
+        "apis.spotify.show_song_review"
       ],
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
@@ -4526,6 +5159,16 @@
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
     {
+      "consumer_operation": "apis.todoist.download_attachment",
+      "group_id": "input:apis.todoist.download_attachment:task_comment_id",
+      "input_slot": "task_comment_id",
+      "producer_operations": [
+        "apis.todoist.show_task_comment",
+        "apis.todoist.show_task_comments"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
       "consumer_operation": "apis.todoist.login",
       "group_id": "input:apis.todoist.login:password",
       "input_slot": "password",
@@ -4801,6 +5444,93 @@
         "apis.venmo.search_users",
         "apis.venmo.show_account",
         "apis.venmo.show_profile"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.todoist.show_label",
+      "group_id": "input:apis.todoist.show_label:label_id",
+      "input_slot": "label_id",
+      "producer_operations": [
+        "apis.todoist.search_labels"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.todoist.show_project",
+      "group_id": "input:apis.todoist.show_project:project_id",
+      "input_slot": "project_id",
+      "producer_operations": [
+        "apis.todoist.show_projects",
+        "apis.todoist.show_sections",
+        "apis.todoist.show_task",
+        "apis.todoist.show_tasks"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.todoist.show_sections",
+      "group_id": "input:apis.todoist.show_sections:project_id",
+      "input_slot": "project_id",
+      "producer_operations": [
+        "apis.todoist.show_project",
+        "apis.todoist.show_projects",
+        "apis.todoist.show_task",
+        "apis.todoist.show_tasks"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.todoist.show_sub_tasks",
+      "group_id": "input:apis.todoist.show_sub_tasks:task_id",
+      "input_slot": "task_id",
+      "producer_operations": [
+        "apis.todoist.show_task",
+        "apis.todoist.show_task_comment",
+        "apis.todoist.show_task_comments"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.todoist.show_task",
+      "group_id": "input:apis.todoist.show_task:task_id",
+      "input_slot": "task_id",
+      "producer_operations": [
+        "apis.todoist.show_sub_tasks",
+        "apis.todoist.show_task_comment",
+        "apis.todoist.show_task_comments"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.todoist.show_task_comment",
+      "group_id": "input:apis.todoist.show_task_comment:task_comment_id",
+      "input_slot": "task_comment_id",
+      "producer_operations": [
+        "apis.todoist.show_task_comments"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.todoist.show_task_comments",
+      "group_id": "input:apis.todoist.show_task_comments:task_id",
+      "input_slot": "task_id",
+      "producer_operations": [
+        "apis.todoist.show_sub_tasks",
+        "apis.todoist.show_task",
+        "apis.todoist.show_task_comment"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.todoist.show_tasks",
+      "group_id": "input:apis.todoist.show_tasks:project_id",
+      "input_slot": "project_id",
+      "producer_operations": [
+        "apis.todoist.show_project",
+        "apis.todoist.show_projects",
+        "apis.todoist.show_sections",
+        "apis.todoist.show_task"
       ],
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
@@ -5262,6 +5992,28 @@
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
     {
+      "consumer_operation": "apis.venmo.download_bank_transfer_receipt",
+      "group_id": "input:apis.venmo.download_bank_transfer_receipt:bank_transfer_id",
+      "input_slot": "bank_transfer_id",
+      "producer_operations": [
+        "apis.venmo.show_bank_transfer_history"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.venmo.download_transaction_receipt",
+      "group_id": "input:apis.venmo.download_transaction_receipt:transaction_id",
+      "input_slot": "transaction_id",
+      "producer_operations": [
+        "apis.venmo.show_social_feed",
+        "apis.venmo.show_transaction",
+        "apis.venmo.show_transaction_comment",
+        "apis.venmo.show_transaction_comments",
+        "apis.venmo.show_transactions"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
       "consumer_operation": "apis.venmo.like_transaction",
       "group_id": "input:apis.venmo.like_transaction:transaction_id",
       "input_slot": "transaction_id",
@@ -5436,6 +6188,54 @@
         "apis.venmo.search_users",
         "apis.venmo.show_account",
         "apis.venmo.show_profile"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.venmo.show_payment_card",
+      "group_id": "input:apis.venmo.show_payment_card:payment_card_id",
+      "input_slot": "payment_card_id",
+      "producer_operations": [
+        "apis.amazon.show_order",
+        "apis.amazon.show_orders",
+        "apis.amazon.show_payment_card",
+        "apis.amazon.show_payment_cards",
+        "apis.spotify.show_payment_card",
+        "apis.spotify.show_payment_cards",
+        "apis.venmo.show_payment_cards"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.venmo.show_transaction",
+      "group_id": "input:apis.venmo.show_transaction:transaction_id",
+      "input_slot": "transaction_id",
+      "producer_operations": [
+        "apis.venmo.show_social_feed",
+        "apis.venmo.show_transaction_comment",
+        "apis.venmo.show_transaction_comments",
+        "apis.venmo.show_transactions"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.venmo.show_transaction_comment",
+      "group_id": "input:apis.venmo.show_transaction_comment:comment_id",
+      "input_slot": "comment_id",
+      "producer_operations": [
+        "apis.venmo.show_transaction_comments"
+      ],
+      "semantic_status": "schema_compatible_not_semantically_equivalent"
+    },
+    {
+      "consumer_operation": "apis.venmo.show_transaction_comments",
+      "group_id": "input:apis.venmo.show_transaction_comments:transaction_id",
+      "input_slot": "transaction_id",
+      "producer_operations": [
+        "apis.venmo.show_social_feed",
+        "apis.venmo.show_transaction",
+        "apis.venmo.show_transaction_comment",
+        "apis.venmo.show_transactions"
       ],
       "semantic_status": "schema_compatible_not_semantically_equivalent"
     },
@@ -5756,6 +6556,18 @@
     {
       "from_operation": "apis.amazon.download_order_receipt",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.file_exists",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.amazon.download_order_receipt",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.show_file",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.amazon.download_order_receipt",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.file_system.update_file",
       "via_slot": "file_path"
     },
@@ -5781,6 +6593,18 @@
       "from_operation": "apis.amazon.download_prime_subscription_receipt",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.file_system.delete_file",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.amazon.download_prime_subscription_receipt",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.file_exists",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.amazon.download_prime_subscription_receipt",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.show_file",
       "via_slot": "file_path"
     },
     {
@@ -5860,6 +6684,30 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.remove_gift_wrapping_from_product",
       "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.search_products",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.search_products",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_questions",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.search_products",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_reviews",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.search_products",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_seller",
+      "via_slot": "seller_id"
     },
     {
       "from_operation": "apis.amazon.search_products",
@@ -5950,6 +6798,12 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.add_address",
       "via_slot": "name"
+    },
+    {
+      "from_operation": "apis.amazon.search_sellers",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_seller",
+      "via_slot": "seller_id"
     },
     {
       "from_operation": "apis.amazon.search_sellers",
@@ -6452,6 +7306,12 @@
     {
       "from_operation": "apis.amazon.show_order",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.download_order_receipt",
+      "via_slot": "order_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_order",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.initiate_return",
       "via_slot": "order_id"
     },
@@ -6465,6 +7325,12 @@
       "from_operation": "apis.amazon.show_order",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.place_order",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_order",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -6501,6 +7367,12 @@
       "from_operation": "apis.amazon.show_order",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.delete_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_order",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -6543,6 +7415,12 @@
       "from_operation": "apis.amazon.show_order",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.delete_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_order",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -6578,6 +7456,12 @@
     {
       "from_operation": "apis.amazon.show_orders",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.download_order_receipt",
+      "via_slot": "order_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_orders",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.initiate_return",
       "via_slot": "order_id"
     },
@@ -6591,6 +7475,18 @@
       "from_operation": "apis.amazon.show_orders",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.place_order",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_orders",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_order",
+      "via_slot": "order_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_orders",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -6627,6 +7523,12 @@
       "from_operation": "apis.amazon.show_orders",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.delete_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_orders",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -6674,6 +7576,12 @@
     {
       "from_operation": "apis.amazon.show_orders",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_orders",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.update_payment_card",
       "via_slot": "payment_card_id"
     },
@@ -6794,6 +7702,12 @@
     {
       "from_operation": "apis.amazon.show_payment_card",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_payment_card",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.subscribe_premium",
       "via_slot": "payment_card_id"
     },
@@ -6855,6 +7769,12 @@
       "from_operation": "apis.amazon.show_payment_card",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.delete_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_payment_card",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -6926,6 +7846,12 @@
     {
       "from_operation": "apis.amazon.show_payment_cards",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_payment_cards",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.subscribe_prime",
       "via_slot": "payment_card_id"
     },
@@ -6981,6 +7907,12 @@
       "from_operation": "apis.amazon.show_payment_cards",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.delete_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_payment_cards",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -7052,6 +7984,12 @@
     {
       "from_operation": "apis.amazon.show_payment_cards",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_payment_cards",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.update_payment_card",
       "via_slot": "card_name"
     },
@@ -7066,6 +8004,12 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.withdraw_from_venmo_balance",
       "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_prime_subscriptions",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.download_prime_subscription_receipt",
+      "via_slot": "prime_subscription_id"
     },
     {
       "from_operation": "apis.amazon.show_prime_subscriptions",
@@ -7132,6 +8076,24 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.remove_gift_wrapping_from_product",
       "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_product",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_questions",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_product",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_reviews",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_product",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_seller",
+      "via_slot": "seller_id"
     },
     {
       "from_operation": "apis.amazon.show_product",
@@ -7316,6 +8278,24 @@
     {
       "from_operation": "apis.amazon.show_product_questions",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_product_questions",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_question_answers",
+      "via_slot": "question_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_product_questions",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_reviews",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_product_questions",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.update_product_quantity_in_cart",
       "via_slot": "product_id"
     },
@@ -7418,6 +8398,18 @@
     {
       "from_operation": "apis.amazon.show_product_reviews",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_product_reviews",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_questions",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_product_reviews",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.update_product_quantity_in_cart",
       "via_slot": "product_id"
     },
@@ -7498,6 +8490,24 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.review_song",
       "via_slot": "rating"
+    },
+    {
+      "from_operation": "apis.amazon.show_product_reviews",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_review",
+      "via_slot": "review_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_product_reviews",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_review",
+      "via_slot": "review_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_product_reviews",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_review",
+      "via_slot": "review_id"
     },
     {
       "from_operation": "apis.amazon.show_product_reviews",
@@ -7934,6 +8944,12 @@
     {
       "from_operation": "apis.amazon.show_return",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.download_order_receipt",
+      "via_slot": "order_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_return",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.initiate_return",
       "via_slot": "deliverer_id"
     },
@@ -7971,6 +8987,30 @@
       "from_operation": "apis.amazon.show_return",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.remove_gift_wrapping_from_product",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_return",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_order",
+      "via_slot": "order_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_return",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_return",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_questions",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_return",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_reviews",
       "via_slot": "product_id"
     },
     {
@@ -8078,6 +9118,12 @@
     {
       "from_operation": "apis.amazon.show_returns",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.download_order_receipt",
+      "via_slot": "order_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_returns",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.initiate_return",
       "via_slot": "deliverer_id"
     },
@@ -8116,6 +9162,36 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.remove_gift_wrapping_from_product",
       "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_returns",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_order",
+      "via_slot": "order_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_returns",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_returns",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_questions",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_returns",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_reviews",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_returns",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_return",
+      "via_slot": "return_id"
     },
     {
       "from_operation": "apis.amazon.show_returns",
@@ -8270,6 +9346,24 @@
     {
       "from_operation": "apis.amazon.show_wish_list",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_wish_list",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_questions",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_wish_list",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_product_reviews",
+      "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.amazon.show_wish_list",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.update_product_quantity_in_cart",
       "via_slot": "product_id"
     },
@@ -8302,6 +9396,24 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.write_product_review",
       "via_slot": "product_id"
+    },
+    {
+      "from_operation": "apis.api_docs.search_api_docs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.api_docs.show_api_descriptions",
+      "via_slot": "app_name"
+    },
+    {
+      "from_operation": "apis.api_docs.search_api_docs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.api_docs.show_api_doc",
+      "via_slot": "api_name"
+    },
+    {
+      "from_operation": "apis.api_docs.search_api_docs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.api_docs.show_api_doc",
+      "via_slot": "app_name"
     },
     {
       "from_operation": "apis.api_docs.search_api_docs",
@@ -8356,6 +9468,12 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.update_transaction",
       "via_slot": "description"
+    },
+    {
+      "from_operation": "apis.api_docs.show_api_doc",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.api_docs.show_api_descriptions",
+      "via_slot": "app_name"
     },
     {
       "from_operation": "apis.api_docs.show_api_doc",
@@ -9183,6 +10301,18 @@
       "from_operation": "apis.gmail.download_attachment",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.file_system.delete_file",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.gmail.download_attachment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.file_exists",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.gmail.download_attachment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.show_file",
       "via_slot": "file_path"
     },
     {
@@ -10046,6 +11176,12 @@
     {
       "from_operation": "apis.gmail.show_archived_threads",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.gmail.show_thread",
+      "via_slot": "email_thread_id"
+    },
+    {
+      "from_operation": "apis.gmail.show_archived_threads",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.gmail.unlabel_thread",
       "via_slot": "email_thread_id"
     },
@@ -10179,6 +11315,12 @@
       "from_operation": "apis.gmail.show_drafts",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.gmail.send_email_from_draft",
+      "via_slot": "draft_id"
+    },
+    {
+      "from_operation": "apis.gmail.show_drafts",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.gmail.show_draft",
       "via_slot": "draft_id"
     },
     {
@@ -10334,6 +11476,12 @@
     {
       "from_operation": "apis.gmail.show_inbox_threads",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.gmail.show_thread",
+      "via_slot": "email_thread_id"
+    },
+    {
+      "from_operation": "apis.gmail.show_inbox_threads",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.gmail.unlabel_thread",
       "via_slot": "email_thread_id"
     },
@@ -10468,6 +11616,12 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.gmail.send_email",
       "via_slot": "subject"
+    },
+    {
+      "from_operation": "apis.gmail.show_outbox_threads",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.gmail.show_thread",
+      "via_slot": "email_thread_id"
     },
     {
       "from_operation": "apis.gmail.show_outbox_threads",
@@ -10978,6 +12132,12 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.gmail.send_email",
       "via_slot": "subject"
+    },
+    {
+      "from_operation": "apis.gmail.show_spam_threads",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.gmail.show_thread",
+      "via_slot": "email_thread_id"
     },
     {
       "from_operation": "apis.gmail.show_spam_threads",
@@ -11324,6 +12484,18 @@
     {
       "from_operation": "apis.phone.search_contacts",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_text_message_window",
+      "via_slot": "phone_number"
+    },
+    {
+      "from_operation": "apis.phone.search_contacts",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_voice_message_window",
+      "via_slot": "phone_number"
+    },
+    {
+      "from_operation": "apis.phone.search_contacts",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.phone.signup",
       "via_slot": "first_name"
     },
@@ -11598,6 +12770,12 @@
       "via_slot": "message"
     },
     {
+      "from_operation": "apis.phone.search_text_messages",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_text_message",
+      "via_slot": "text_message_id"
+    },
+    {
       "from_operation": "apis.phone.search_voice_messages",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.phone.delete_voice_message",
@@ -11614,6 +12792,12 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.phone.send_voice_message",
       "via_slot": "message"
+    },
+    {
+      "from_operation": "apis.phone.search_voice_messages",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_voice_message",
+      "via_slot": "voice_message_id"
     },
     {
       "from_operation": "apis.phone.show_account",
@@ -11691,6 +12875,18 @@
       "from_operation": "apis.phone.show_account",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.phone.send_voice_message",
+      "via_slot": "phone_number"
+    },
+    {
+      "from_operation": "apis.phone.show_account",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_text_message_window",
+      "via_slot": "phone_number"
+    },
+    {
+      "from_operation": "apis.phone.show_account",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_voice_message_window",
       "via_slot": "phone_number"
     },
     {
@@ -11816,6 +13012,12 @@
     {
       "from_operation": "apis.phone.show_alarms",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_alarm",
+      "via_slot": "alarm_id"
+    },
+    {
+      "from_operation": "apis.phone.show_alarms",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.phone.update_alarm",
       "via_slot": "alarm_id"
     },
@@ -11900,6 +13102,18 @@
     {
       "from_operation": "apis.phone.show_profile",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_text_message_window",
+      "via_slot": "phone_number"
+    },
+    {
+      "from_operation": "apis.phone.show_profile",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_voice_message_window",
+      "via_slot": "phone_number"
+    },
+    {
+      "from_operation": "apis.phone.show_profile",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.phone.signup",
       "via_slot": "first_name"
     },
@@ -12012,6 +13226,12 @@
       "via_slot": "message"
     },
     {
+      "from_operation": "apis.phone.show_text_message_window",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_text_message",
+      "via_slot": "text_message_id"
+    },
+    {
       "from_operation": "apis.phone.show_voice_message",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.phone.delete_voice_message",
@@ -12046,6 +13266,12 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.phone.send_voice_message",
       "via_slot": "message"
+    },
+    {
+      "from_operation": "apis.phone.show_voice_message_window",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_voice_message",
+      "via_slot": "voice_message_id"
     },
     {
       "from_operation": "apis.simple_note.search_notes",
@@ -12063,6 +13289,12 @@
       "from_operation": "apis.simple_note.search_notes",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.simple_note.delete_note",
+      "via_slot": "note_id"
+    },
+    {
+      "from_operation": "apis.simple_note.search_notes",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.simple_note.show_note",
       "via_slot": "note_id"
     },
     {
@@ -12908,6 +14140,18 @@
     {
       "from_operation": "apis.splitwise.download_expense_receipt_file",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.file_exists",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.splitwise.download_expense_receipt_file",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.show_file",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.splitwise.download_expense_receipt_file",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.file_system.update_file",
       "via_slot": "file_path"
     },
@@ -12933,6 +14177,18 @@
       "from_operation": "apis.splitwise.download_payment_receipt_file",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.file_system.delete_file",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.splitwise.download_payment_receipt_file",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.file_exists",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.splitwise.download_payment_receipt_file",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.show_file",
       "via_slot": "file_path"
     },
     {
@@ -13682,6 +14938,24 @@
     {
       "from_operation": "apis.splitwise.show_activity",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_activity",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_expenses",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_activity",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_payments",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_activity",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.undelete_group",
       "via_slot": "group_id"
     },
@@ -13754,6 +15028,12 @@
     {
       "from_operation": "apis.splitwise.show_expense",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.download_expense_receipt_file",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_expense",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.exit_group",
       "via_slot": "group_id"
     },
@@ -13785,6 +15065,30 @@
       "from_operation": "apis.splitwise.show_expense",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.remove_member_from_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_expense",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_expense_comments",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_expense",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_expense",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_expenses",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_expense",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_payments",
       "via_slot": "group_id"
     },
     {
@@ -13838,6 +15142,12 @@
     {
       "from_operation": "apis.splitwise.show_expense_comment",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.download_expense_receipt_file",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_expense_comment",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.post_expense_comment",
       "via_slot": "comment"
     },
@@ -13852,6 +15162,18 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.post_payment_comment",
       "via_slot": "comment"
+    },
+    {
+      "from_operation": "apis.splitwise.show_expense_comment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_expense",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_expense_comment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_expense_comments",
+      "via_slot": "expense_id"
     },
     {
       "from_operation": "apis.splitwise.show_expense_comment",
@@ -13910,6 +15232,12 @@
     {
       "from_operation": "apis.splitwise.show_expense_comments",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.download_expense_receipt_file",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_expense_comments",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.post_expense_comment",
       "via_slot": "comment"
     },
@@ -13924,6 +15252,12 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.post_payment_comment",
       "via_slot": "comment"
+    },
+    {
+      "from_operation": "apis.splitwise.show_expense_comments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_expense",
+      "via_slot": "expense_id"
     },
     {
       "from_operation": "apis.splitwise.show_expense_comments",
@@ -14018,6 +15352,18 @@
     {
       "from_operation": "apis.splitwise.show_group",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_expenses",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_payments",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.undelete_group",
       "via_slot": "group_id"
     },
@@ -14084,6 +15430,12 @@
     {
       "from_operation": "apis.splitwise.show_group_expenses",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.download_expense_receipt_file",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group_expenses",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.exit_group",
       "via_slot": "group_id"
     },
@@ -14115,6 +15467,30 @@
       "from_operation": "apis.splitwise.show_group_expenses",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.remove_member_from_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group_expenses",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_expense",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group_expenses",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_expense_comments",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group_expenses",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group_expenses",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_payments",
       "via_slot": "group_id"
     },
     {
@@ -14180,6 +15556,12 @@
     {
       "from_operation": "apis.splitwise.show_group_payments",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.download_payment_receipt_file",
+      "via_slot": "payment_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group_payments",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.exit_group",
       "via_slot": "group_id"
     },
@@ -14212,6 +15594,30 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.remove_member_from_group",
       "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group_payments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group_payments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_expenses",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group_payments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_payment",
+      "via_slot": "payment_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_group_payments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_payment_comments",
+      "via_slot": "payment_id"
     },
     {
       "from_operation": "apis.splitwise.show_group_payments",
@@ -14300,6 +15706,24 @@
     {
       "from_operation": "apis.splitwise.show_groups",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_groups",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_expenses",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_groups",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_payments",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_groups",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.undelete_group",
       "via_slot": "group_id"
     },
@@ -14366,6 +15790,12 @@
     {
       "from_operation": "apis.splitwise.show_no_group_expenses",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.download_expense_receipt_file",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_expenses",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.exit_group",
       "via_slot": "group_id"
     },
@@ -14397,6 +15827,36 @@
       "from_operation": "apis.splitwise.show_no_group_expenses",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.remove_member_from_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_expenses",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_expense",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_expenses",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_expense_comments",
+      "via_slot": "expense_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_expenses",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_expenses",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_expenses",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_expenses",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_payments",
       "via_slot": "group_id"
     },
     {
@@ -14462,6 +15922,12 @@
     {
       "from_operation": "apis.splitwise.show_no_group_payments",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.download_payment_receipt_file",
+      "via_slot": "payment_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_payments",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.exit_group",
       "via_slot": "group_id"
     },
@@ -14494,6 +15960,36 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.remove_member_from_group",
       "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_payments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_payments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_expenses",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_payments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_payments",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_payments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_payment",
+      "via_slot": "payment_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_no_group_payments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_payment_comments",
+      "via_slot": "payment_id"
     },
     {
       "from_operation": "apis.splitwise.show_no_group_payments",
@@ -14666,6 +16162,12 @@
     {
       "from_operation": "apis.splitwise.show_payment",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.download_payment_receipt_file",
+      "via_slot": "payment_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_payment",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.exit_group",
       "via_slot": "group_id"
     },
@@ -14698,6 +16200,30 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.remove_member_from_group",
       "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_payment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_payment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_expenses",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_payment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_group_payments",
+      "via_slot": "group_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_payment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_payment_comments",
+      "via_slot": "payment_id"
     },
     {
       "from_operation": "apis.splitwise.show_payment",
@@ -14750,6 +16276,12 @@
     {
       "from_operation": "apis.splitwise.show_payment_comment",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.download_payment_receipt_file",
+      "via_slot": "payment_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_payment_comment",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.post_expense_comment",
       "via_slot": "comment"
     },
@@ -14763,6 +16295,18 @@
       "from_operation": "apis.splitwise.show_payment_comment",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.post_payment_comment",
+      "via_slot": "payment_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_payment_comment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_payment",
+      "via_slot": "payment_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_payment_comment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_payment_comments",
       "via_slot": "payment_id"
     },
     {
@@ -14822,6 +16366,12 @@
     {
       "from_operation": "apis.splitwise.show_payment_comments",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.download_payment_receipt_file",
+      "via_slot": "payment_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_payment_comments",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.post_expense_comment",
       "via_slot": "comment"
     },
@@ -14835,6 +16385,12 @@
       "from_operation": "apis.splitwise.show_payment_comments",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.post_payment_comment",
+      "via_slot": "payment_id"
+    },
+    {
+      "from_operation": "apis.splitwise.show_payment_comments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_payment",
       "via_slot": "payment_id"
     },
     {
@@ -15260,6 +16816,18 @@
     {
       "from_operation": "apis.spotify.download_premium_subscription_receipt",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.file_exists",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.spotify.download_premium_subscription_receipt",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.show_file",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.spotify.download_premium_subscription_receipt",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.file_system.update_file",
       "via_slot": "file_path"
     },
@@ -15338,6 +16906,24 @@
     {
       "from_operation": "apis.spotify.search_albums",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_albums",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_albums",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_albums",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.unlike_album",
       "via_slot": "album_id"
     },
@@ -15369,6 +16955,18 @@
       "from_operation": "apis.spotify.search_artists",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.follow_artist",
+      "via_slot": "artist_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_artists",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_artist",
+      "via_slot": "artist_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_artists",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_artist_following",
       "via_slot": "artist_id"
     },
     {
@@ -15460,6 +17058,24 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.review_song",
       "via_slot": "rating"
+    },
+    {
+      "from_operation": "apis.spotify.search_playlists",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_playlists",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_privates",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_playlists",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_reviews",
+      "via_slot": "playlist_id"
     },
     {
       "from_operation": "apis.spotify.search_playlists",
@@ -15597,6 +17213,42 @@
       "from_operation": "apis.spotify.search_songs",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.review_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_privates",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.search_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_reviews",
       "via_slot": "song_id"
     },
     {
@@ -16064,6 +17716,18 @@
     {
       "from_operation": "apis.spotify.show_album",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_album",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_album",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.unlike_album",
       "via_slot": "album_id"
     },
@@ -16142,6 +17806,24 @@
     {
       "from_operation": "apis.spotify.show_album_library",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_album_library",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_album_library",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_album_library",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.unlike_album",
       "via_slot": "album_id"
     },
@@ -16220,6 +17902,24 @@
     {
       "from_operation": "apis.spotify.show_album_review",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_album_review",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_album_review",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_album_review",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.unlike_album",
       "via_slot": "album_id"
     },
@@ -16294,6 +17994,18 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.review_song",
       "via_slot": "rating"
+    },
+    {
+      "from_operation": "apis.spotify.show_album_reviews",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_album_reviews",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
     },
     {
       "from_operation": "apis.spotify.show_album_reviews",
@@ -16329,6 +18041,12 @@
       "from_operation": "apis.spotify.show_artist",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.follow_artist",
+      "via_slot": "artist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_artist",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_artist_following",
       "via_slot": "artist_id"
     },
     {
@@ -16443,6 +18161,42 @@
       "from_operation": "apis.spotify.show_current_song",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.review_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_current_song",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_current_song",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_current_song",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_current_song",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_current_song",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_privates",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_current_song",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_reviews",
       "via_slot": "song_id"
     },
     {
@@ -16568,6 +18322,42 @@
     {
       "from_operation": "apis.spotify.show_downloaded_songs",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_downloaded_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_downloaded_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_downloaded_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_downloaded_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_privates",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_downloaded_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_reviews",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_downloaded_songs",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.subscribe_premium",
       "via_slot": "duration"
     },
@@ -16611,6 +18401,18 @@
       "from_operation": "apis.spotify.show_following_artists",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.follow_artist",
+      "via_slot": "artist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_following_artists",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_artist",
+      "via_slot": "artist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_following_artists",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_artist_following",
       "via_slot": "artist_id"
     },
     {
@@ -16696,6 +18498,24 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.review_song",
       "via_slot": "rating"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_albums",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_albums",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_albums",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
     },
     {
       "from_operation": "apis.spotify.show_liked_albums",
@@ -16780,6 +18600,24 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.review_song",
       "via_slot": "rating"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_playlists",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_playlists",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_privates",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_playlists",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_reviews",
+      "via_slot": "playlist_id"
     },
     {
       "from_operation": "apis.spotify.show_liked_playlists",
@@ -16898,6 +18736,42 @@
     {
       "from_operation": "apis.spotify.show_liked_songs",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_privates",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_songs",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_reviews",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_liked_songs",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.subscribe_premium",
       "via_slot": "duration"
     },
@@ -16971,6 +18845,12 @@
       "from_operation": "apis.spotify.show_payment_card",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.place_order",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_payment_card",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -17102,6 +18982,12 @@
     {
       "from_operation": "apis.spotify.show_payment_card",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_payment_card",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.update_payment_card",
       "via_slot": "card_name"
     },
@@ -17168,6 +19054,12 @@
     {
       "from_operation": "apis.spotify.show_payment_cards",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_payment_cards",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.subscribe_prime",
       "via_slot": "payment_card_id"
     },
@@ -17223,6 +19115,12 @@
       "from_operation": "apis.spotify.show_payment_cards",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.delete_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_payment_cards",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -17294,6 +19192,12 @@
     {
       "from_operation": "apis.spotify.show_payment_cards",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_payment_cards",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.update_payment_card",
       "via_slot": "card_name"
     },
@@ -17378,6 +19282,18 @@
     {
       "from_operation": "apis.spotify.show_playlist",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_privates",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_playlist",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_reviews",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_playlist",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.unlike_playlist",
       "via_slot": "playlist_id"
     },
@@ -17468,6 +19384,24 @@
     {
       "from_operation": "apis.spotify.show_playlist_library",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_playlist_library",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_privates",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_playlist_library",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_reviews",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_playlist_library",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.unlike_playlist",
       "via_slot": "playlist_id"
     },
@@ -17558,6 +19492,24 @@
     {
       "from_operation": "apis.spotify.show_playlist_review",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_playlist_review",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_privates",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_playlist_review",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_reviews",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_playlist_review",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.unlike_playlist",
       "via_slot": "playlist_id"
     },
@@ -17644,6 +19596,18 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.review_song",
       "via_slot": "rating"
+    },
+    {
+      "from_operation": "apis.spotify.show_playlist_reviews",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist",
+      "via_slot": "playlist_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_playlist_reviews",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_playlist_privates",
+      "via_slot": "playlist_id"
     },
     {
       "from_operation": "apis.spotify.show_playlist_reviews",
@@ -17676,6 +19640,12 @@
       "via_slot": "paid_amount"
     },
     {
+      "from_operation": "apis.spotify.show_premium_subscriptions",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.download_premium_subscription_receipt",
+      "via_slot": "premium_subscription_id"
+    },
+    {
       "from_operation": "apis.spotify.show_profile",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.reset_password",
@@ -18140,6 +20110,42 @@
     {
       "from_operation": "apis.spotify.show_recommendations",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_recommendations",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_recommendations",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_recommendations",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_recommendations",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_privates",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_recommendations",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_reviews",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_recommendations",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.subscribe_premium",
       "via_slot": "duration"
     },
@@ -18284,6 +20290,36 @@
     {
       "from_operation": "apis.spotify.show_song",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_privates",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_reviews",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.subscribe_premium",
       "via_slot": "duration"
     },
@@ -18399,6 +20435,42 @@
       "from_operation": "apis.spotify.show_song_library",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.review_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_library",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_library",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_library",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_library",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_library",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_privates",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_library",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_reviews",
       "via_slot": "song_id"
     },
     {
@@ -18530,6 +20602,42 @@
     {
       "from_operation": "apis.spotify.show_song_queue",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_queue",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_privates",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_queue",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_album_reviews",
+      "via_slot": "album_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_queue",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_queue",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_privates",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_queue",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_reviews",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_queue",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.subscribe_premium",
       "via_slot": "duration"
     },
@@ -18644,6 +20752,24 @@
     {
       "from_operation": "apis.spotify.show_song_review",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_review",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_privates",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_review",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_reviews",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_review",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.unlike_song",
       "via_slot": "song_id"
     },
@@ -18741,6 +20867,18 @@
       "from_operation": "apis.spotify.show_song_reviews",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.review_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_reviews",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song",
+      "via_slot": "song_id"
+    },
+    {
+      "from_operation": "apis.spotify.show_song_reviews",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_song_privates",
       "via_slot": "song_id"
     },
     {
@@ -19226,6 +21364,18 @@
     {
       "from_operation": "apis.supervisor.show_profile",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_text_message_window",
+      "via_slot": "phone_number"
+    },
+    {
+      "from_operation": "apis.supervisor.show_profile",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.phone.show_voice_message_window",
+      "via_slot": "phone_number"
+    },
+    {
+      "from_operation": "apis.supervisor.show_profile",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.phone.signup",
       "via_slot": "first_name"
     },
@@ -19490,6 +21640,18 @@
     {
       "from_operation": "apis.todoist.download_attachment",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.file_exists",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.todoist.download_attachment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.show_file",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.todoist.download_attachment",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.file_system.update_file",
       "via_slot": "file_path"
     },
@@ -19551,6 +21713,12 @@
       "from_operation": "apis.todoist.search_labels",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.remove_label_from_task",
+      "via_slot": "label_id"
+    },
+    {
+      "from_operation": "apis.todoist.search_labels",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_label",
       "via_slot": "label_id"
     },
     {
@@ -20906,6 +23074,18 @@
     {
       "from_operation": "apis.todoist.show_project",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_sections",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_project",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_tasks",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_project",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.update_project",
       "via_slot": "project_id"
     },
@@ -20984,6 +23164,24 @@
     {
       "from_operation": "apis.todoist.show_projects",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_project",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_projects",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_sections",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_projects",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_tasks",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_projects",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.update_project",
       "via_slot": "project_id"
     },
@@ -21057,6 +23255,18 @@
       "from_operation": "apis.todoist.show_sections",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.send_project_invite",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_sections",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_project",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_sections",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_tasks",
       "via_slot": "project_id"
     },
     {
@@ -21153,6 +23363,18 @@
       "from_operation": "apis.todoist.show_sub_tasks",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.remove_label_from_task",
+      "via_slot": "task_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_sub_tasks",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_task",
+      "via_slot": "task_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_sub_tasks",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_task_comments",
       "via_slot": "task_id"
     },
     {
@@ -21290,6 +23512,36 @@
     {
       "from_operation": "apis.todoist.show_task",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_project",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_sections",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_sub_tasks",
+      "via_slot": "task_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_task_comments",
+      "via_slot": "task_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_tasks",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.update_project",
       "via_slot": "project_id"
     },
@@ -21362,6 +23614,12 @@
     {
       "from_operation": "apis.todoist.show_task_comment",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.download_attachment",
+      "via_slot": "task_comment_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task_comment",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.post_task_comment",
       "via_slot": "content"
     },
@@ -21375,6 +23633,24 @@
       "from_operation": "apis.todoist.show_task_comment",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.remove_label_from_task",
+      "via_slot": "task_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task_comment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_sub_tasks",
+      "via_slot": "task_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task_comment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_task",
+      "via_slot": "task_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task_comment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_task_comments",
       "via_slot": "task_id"
     },
     {
@@ -21446,6 +23722,12 @@
     {
       "from_operation": "apis.todoist.show_task_comments",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.download_attachment",
+      "via_slot": "task_comment_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task_comments",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.post_task_comment",
       "via_slot": "content"
     },
@@ -21460,6 +23742,24 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.remove_label_from_task",
       "via_slot": "task_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task_comments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_sub_tasks",
+      "via_slot": "task_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task_comments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_task",
+      "via_slot": "task_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_task_comments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_task_comment",
+      "via_slot": "task_comment_id"
     },
     {
       "from_operation": "apis.todoist.show_task_comments",
@@ -21512,6 +23812,18 @@
     {
       "from_operation": "apis.todoist.show_tasks",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_project",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_tasks",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.todoist.show_sections",
+      "via_slot": "project_id"
+    },
+    {
+      "from_operation": "apis.todoist.show_tasks",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.todoist.update_project",
       "via_slot": "project_id"
     },
@@ -21525,6 +23837,18 @@
       "from_operation": "apis.venmo.download_bank_transfer_receipt",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.file_system.delete_file",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.venmo.download_bank_transfer_receipt",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.file_exists",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.venmo.download_bank_transfer_receipt",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.show_file",
       "via_slot": "file_path"
     },
     {
@@ -21555,6 +23879,18 @@
       "from_operation": "apis.venmo.download_transaction_receipt",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.file_system.delete_file",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.venmo.download_transaction_receipt",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.file_exists",
+      "via_slot": "file_path"
+    },
+    {
+      "from_operation": "apis.venmo.download_transaction_receipt",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.file_system.show_file",
       "via_slot": "file_path"
     },
     {
@@ -22714,6 +25050,12 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.create_transaction",
       "via_slot": "amount"
+    },
+    {
+      "from_operation": "apis.venmo.show_bank_transfer_history",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.download_bank_transfer_receipt",
+      "via_slot": "bank_transfer_id"
     },
     {
       "from_operation": "apis.venmo.show_bank_transfer_history",
@@ -22880,6 +25222,12 @@
     {
       "from_operation": "apis.venmo.show_payment_card",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_payment_card",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.subscribe_prime",
       "via_slot": "payment_card_id"
     },
@@ -22935,6 +25283,12 @@
       "from_operation": "apis.venmo.show_payment_card",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.delete_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_payment_card",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -23072,6 +25426,12 @@
     {
       "from_operation": "apis.venmo.show_payment_cards",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.amazon.show_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_payment_cards",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.amazon.subscribe_prime",
       "via_slot": "payment_card_id"
     },
@@ -23127,6 +25487,12 @@
       "from_operation": "apis.venmo.show_payment_cards",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.spotify.delete_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_payment_cards",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.spotify.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -23193,6 +25559,12 @@
       "from_operation": "apis.venmo.show_payment_cards",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.delete_payment_card",
+      "via_slot": "payment_card_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_payment_cards",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_payment_card",
       "via_slot": "payment_card_id"
     },
     {
@@ -23768,7 +26140,25 @@
     {
       "from_operation": "apis.venmo.show_social_feed",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.download_transaction_receipt",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_social_feed",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.like_transaction",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_social_feed",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_transaction",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_social_feed",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_transaction_comments",
       "via_slot": "transaction_id"
     },
     {
@@ -23834,7 +26224,19 @@
     {
       "from_operation": "apis.venmo.show_transaction",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.download_transaction_receipt",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.like_transaction",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_transaction_comments",
       "via_slot": "transaction_id"
     },
     {
@@ -23888,6 +26290,18 @@
     {
       "from_operation": "apis.venmo.show_transaction_comment",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_expense_comment",
+      "via_slot": "comment_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction_comment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_payment_comment",
+      "via_slot": "comment_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction_comment",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.update_expense_comment",
       "via_slot": "comment"
     },
@@ -23930,6 +26344,12 @@
     {
       "from_operation": "apis.venmo.show_transaction_comment",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.download_transaction_receipt",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction_comment",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.like_transaction",
       "via_slot": "transaction_id"
     },
@@ -23938,6 +26358,18 @@
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.like_transaction_comment",
       "via_slot": "comment_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction_comment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_transaction",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction_comment",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_transaction_comments",
+      "via_slot": "transaction_id"
     },
     {
       "from_operation": "apis.venmo.show_transaction_comment",
@@ -23996,6 +26428,18 @@
     {
       "from_operation": "apis.venmo.show_transaction_comments",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_expense_comment",
+      "via_slot": "comment_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction_comments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.splitwise.show_payment_comment",
+      "via_slot": "comment_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction_comments",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.splitwise.update_expense_comment",
       "via_slot": "comment"
     },
@@ -24038,6 +26482,12 @@
     {
       "from_operation": "apis.venmo.show_transaction_comments",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.download_transaction_receipt",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction_comments",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.like_transaction",
       "via_slot": "transaction_id"
     },
@@ -24045,6 +26495,18 @@
       "from_operation": "apis.venmo.show_transaction_comments",
       "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.like_transaction_comment",
+      "via_slot": "comment_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction_comments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_transaction",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transaction_comments",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_transaction_comment",
       "via_slot": "comment_id"
     },
     {
@@ -24116,7 +26578,25 @@
     {
       "from_operation": "apis.venmo.show_transactions",
       "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.download_transaction_receipt",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transactions",
+      "kind": "public_callable_schema_flow",
       "to_operation": "apis.venmo.like_transaction",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transactions",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_transaction",
+      "via_slot": "transaction_id"
+    },
+    {
+      "from_operation": "apis.venmo.show_transactions",
+      "kind": "public_callable_schema_flow",
+      "to_operation": "apis.venmo.show_transaction_comments",
       "via_slot": "transaction_id"
     },
     {
@@ -43676,7 +46156,7 @@
     "required_fields": "all callable public_required fields",
     "unknown_fields": "fail_closed"
   },
-  "registry_sha256": "68afaec3f57a802f321c2f1a1176e44b19cfa91b88cc86aa3f5e16e12fe3be61",
+  "registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423",
   "registry_version": "appworld-public-tool-schema-registry-v5_3",
   "source_metadata": {
     "function_calling": [

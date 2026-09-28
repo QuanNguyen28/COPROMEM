@@ -8,7 +8,7 @@ import sys
 import pytest
 
 from copromem.experiments.reme_copromem.public_tool_schema_registry import (
-    build_public_tool_schema_registry, canonical_operation_signature, invocation_evidence,
+    build_public_tool_schema_registry, canonical_operation_signature, invocation_evidence, public_tool_path_audit,
     verify_public_tool_schema_registry,
 )
 
@@ -81,12 +81,9 @@ def test_runtime_public_schema_hash_mismatch_fails_closed(tmp_path, monkeypatch)
         verify_runtime_tool_schema(registry, runtime)
 
 
-def test_cyclic_public_dependency_is_rejected(tmp_path):
+def test_cyclic_public_path_is_rejected(tmp_path):
     registry, _, _ = _registry(tmp_path)
-    bad = copy.deepcopy(registry)
-    bad["dependency_edges"].append({"from_operation": "apis.task.complete_item", "to_operation": "apis.todo.show_items",
-                                    "via_slot": "item_id", "kind": "public_callable_schema_flow"})
-    bad["registry_sha256"] = __import__("copromem.experiments.reme_copromem.public_tool_schema_registry", fromlist=["canonical_digest"]).canonical_digest(
-        {key: value for key, value in bad.items() if key != "registry_sha256"})
-    with pytest.raises(ValueError, match="cyclic"):
-        verify_public_tool_schema_registry(bad)
+    show = canonical_operation_signature(registry, "todo__show_items", ["access_token"])
+    complete = canonical_operation_signature(registry, "task__complete_item", ["item_id"])
+    result = public_tool_path_audit(registry, [show, complete, show])
+    assert not result["passed"] and result["first_rejection"]["reason"] == "cyclic_or_repeated_operation"

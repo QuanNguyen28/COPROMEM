@@ -85,16 +85,23 @@ def historical_settled_usd() -> float:
 
 
 def _tokens(text: str) -> set[str]:
-    return set(re.findall(r"[a-z0-9]+", text.lower()))
+    result = set()
+    for token in re.findall(r"[a-z0-9]+", text.lower()):
+        # Deterministic morphology is a public-instruction *selection* aid,
+        # not an operation alias and never enters the frozen registry.
+        if token.endswith("ies") and len(token) > 3: token = token[:-3] + "y"
+        elif token.endswith("s") and len(token) > 3: token = token[:-1]
+        result.add(token)
+    return result
 
 
 def _operation_words(meta: dict[str, Any]) -> set[str]:
     # Callable names are public metadata.  The app prefix avoids treating a
     # generic verb alone as task compatibility.
-    return {part for part in re.split(r"[^a-z0-9]+", meta["function_name"].lower()) if part and part not in {"apis", meta["app"]}}
+    return _tokens(meta["function_name"]) - {"api", meta["app"], "show", "get", "list", "search"}
 
 
-def _descriptor(index: dict[str, dict[str, Any]], operations: tuple[str, str]) -> list[dict[str, Any]]:
+def _descriptor(index: dict[str, dict[str, Any]], operations: tuple[str, ...]) -> list[dict[str, Any]]:
     rows = []
     for operation in operations:
         meta = index[operation]
@@ -102,45 +109,48 @@ def _descriptor(index: dict[str, dict[str, Any]], operations: tuple[str, str]) -
     return rows
 
 
-def _candidate_paths(registry: dict[str, Any], instruction: str) -> list[tuple[str, str]]:
+def _candidate_paths(registry: dict[str, Any], instruction: str) -> list[tuple[str, ...]]:
     index, tokens = tool_operation_index(registry), _tokens(instruction)
-    candidates = []
-    for edge in registry["dependency_edges"]:
-        left, right = edge["from_operation"], edge["to_operation"]
-        # Selection uses a public lexical match to the action callable only;
-        # no task result, expected state, or concrete input participates.
-        if not _operation_words(index[right]).issubset(tokens):
-            continue
-        left_sig = {"application": index[left]["app"], "callable_name": index[left]["function_name"], "operation": left,
-                    "public_required": index[left]["required_parameters"], "public_optional_present": [],
-                    "runtime_context_present": [], "output_slots": index[left]["output_slots"]}
-        right_sig = {"application": index[right]["app"], "callable_name": index[right]["function_name"], "operation": right,
-                     "public_required": index[right]["required_parameters"], "public_optional_present": [],
-                     "runtime_context_present": [], "output_slots": index[right]["output_slots"]}
-        if public_tool_path_audit(registry, [left_sig, right_sig])["passed"]:
-            candidates.append((left, right))
+    eligible = {operation for operation, meta in index.items() if _operation_words(meta).issubset(tokens)}
+    adjacency: dict[str, set[str]] = {operation: set() for operation in index}
+    for edge in registry["dependency_edges"]: adjacency[edge["from_operation"]].add(edge["to_operation"])
+    def signature(operation: str) -> dict[str, Any]:
+        meta = index[operation]
+        return {"application": meta["app"], "callable_name": meta["function_name"], "operation": operation,
+                "public_required": meta["required_parameters"], "public_optional_present": [],
+                "runtime_context_present": [], "output_slots": meta["output_slots"]}
+    candidates: list[tuple[str, ...]] = []
+    def visit(path: tuple[str, ...]) -> None:
+        current = path[-1]
+        if (index[current]["access_mode"] == "write" and len(path) >= 2 and
+                public_tool_path_audit(registry, [signature(operation) for operation in path])["passed"]):
+            candidates.append(path)
+        if len(path) == 4: return
+        for child in sorted(adjacency[current]):
+            if child in eligible and child not in path: visit(path + (child,))
+    for operation in sorted(index):
+        if operation not in eligible or index[operation]["access_mode"] != "read": continue
+        visit((operation,))
     return sorted(set(candidates))
 
 
 def select_pair(registry: dict[str, Any], inventory: dict[str, Any], excluded: set[str]) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
-    grouped: dict[str, list[dict[str, Any]]] = {}
-    for row in inventory["tasks"]:
-        task_id = str(row["task_id"])
-        if task_id not in excluded:
-            grouped.setdefault(task_id.rsplit("_", 1)[0], []).append(row)
+    fresh = [row for row in inventory["tasks"] if str(row["task_id"]) not in excluded]
+    by_id = {str(row["task_id"]): row for row in fresh}
+    per_task = {task_id: _candidate_paths(registry, str(row["instruction"])) for task_id, row in by_id.items()}
     candidates = []
-    for family, rows in grouped.items():
-        per_task = {str(row["task_id"]): _candidate_paths(registry, str(row["instruction"])) for row in rows}
-        for left, right in itertools.combinations(sorted(per_task), 2):
-            for path in sorted(set(per_task[left]) & set(per_task[right])):
-                descriptor = _descriptor(tool_operation_index(registry), path)
-                candidates.append({"family": family, "a": left, "b": right, "operations": list(path),
-                                   "descriptor": descriptor, "descriptor_sha256": canonical_digest(descriptor),
-                                   "a_instruction_sha256": hashlib.sha256(next(str(row["instruction"]).encode("utf-8") for row in rows if row["task_id"] == left)).hexdigest(),
-                                   "b_instruction_sha256": hashlib.sha256(next(str(row["instruction"]).encode("utf-8") for row in rows if row["task_id"] == right)).hexdigest()})
-    candidates.sort(key=lambda row: (row["descriptor_sha256"], row["a"], row["b"]))
+    for left, right in itertools.combinations(sorted(per_task), 2):
+        for path in sorted(set(per_task[left]) & set(per_task[right])):
+            descriptor = _descriptor(tool_operation_index(registry), path)
+            candidates.append({"a_family": left.rsplit("_", 1)[0], "b_family": right.rsplit("_", 1)[0],
+                               "a": left, "b": right, "operations": list(path), "descriptor": descriptor,
+                               "descriptor_sha256": canonical_digest(descriptor),
+                               "a_instruction_sha256": hashlib.sha256(str(by_id[left]["instruction"]).encode("utf-8")).hexdigest(),
+                               "b_instruction_sha256": hashlib.sha256(str(by_id[right]["instruction"]).encode("utf-8")).hexdigest()})
+    candidates.sort(key=lambda row: (row["a_instruction_sha256"] != row["b_instruction_sha256"],
+                                     row["descriptor_sha256"], row["a"], row["b"]))
     if not candidates: raise RuntimeError("no fresh public-registry-compatible development pair")
-    return candidates[0], {str(row["task_id"]): row for row in inventory["tasks"]}, candidates
+    return candidates[0], by_id, candidates
 
 
 def main() -> int:

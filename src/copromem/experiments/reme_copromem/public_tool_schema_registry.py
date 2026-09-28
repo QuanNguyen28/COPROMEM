@@ -148,12 +148,6 @@ def build_public_tool_schema_registry(openapi_root: str | Path, function_root: s
         for slot in consumer["required_parameters"]:
             producers = sorted(row["operation"] for row in operations if row["access_mode"] == "read" and
                                row["operation"] != consumer["operation"] and slot in row["output_slots"])
-            # A learned procedure is restricted to public lookup -> action
-            # flow.  This preserves an acyclic, directly observable path and
-            # avoids inferring generic CRUD cycles from shared identifier
-            # names.
-            if consumer["access_mode"] != "write":
-                continue
             if producers:
                 groups.append({"group_id": f"input:{consumer['operation']}:{slot}", "consumer_operation": consumer["operation"],
                                "input_slot": slot, "producer_operations": producers,
@@ -186,20 +180,10 @@ def verify_public_tool_schema_registry(registry: dict[str, Any]) -> None:
         if set(row.get("required_parameters", ())) & set(row.get("context_parameters", ())): raise ValueError("context field cannot be required procedure field")
         if any(item.get("kind") not in {"public_required", "public_optional", "runtime_context"} for item in params.values()):
             raise ValueError("unknown callable parameter classification")
-    graph: dict[str, set[str]] = {str(name): set() for name in names}
     for edge in registry.get("dependency_edges", ()):
         left, right = edge.get("from_operation"), edge.get("to_operation")
-        if left not in graph or right not in graph or left == right:
+        if left not in names or right not in names or left == right:
             raise ValueError("tool schema dependency edge integrity failure")
-        graph[left].add(right)
-    visiting: set[str] = set(); visited: set[str] = set()
-    def visit(node: str) -> None:
-        if node in visiting: raise ValueError("tool schema cyclic dependency")
-        if node in visited: return
-        visiting.add(node)
-        for child in graph[node]: visit(child)
-        visiting.remove(node); visited.add(node)
-    for node in graph: visit(node)
 
 
 def tool_operation_index(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -243,17 +227,20 @@ def invocation_evidence(signature: dict[str, Any], *, raw_event_digest: str, con
 def public_tool_path_audit(registry: dict[str, Any], signatures: Iterable[dict[str, Any]]) -> dict[str, Any]:
     """Validate an ordered, value-free public callable path offline."""
     verify_public_tool_schema_registry(registry)
-    rows = list(signatures); index = tool_operation_index(registry); produced: set[str] = set(); rejected = []
+    rows = list(signatures); index = tool_operation_index(registry); produced: set[str] = set(); rejected = []; seen: set[str] = set()
     for position, signature in enumerate(rows):
         operation = signature.get("operation")
         meta = index.get(operation)
         if meta is None:
             rejected.append({"index": position, "reason": "operation_not_in_registry"}); continue
+        if operation in seen:
+            rejected.append({"index": position, "reason": "cyclic_or_repeated_operation"}); continue
         if signature.get("public_required") != meta["required_parameters"]:
             rejected.append({"index": position, "reason": "signature_required_fields_mismatch"}); continue
         missing = [field for field in meta["required_parameters"] if field not in produced]
         if missing:
             rejected.append({"index": position, "reason": "unsatisfied_public_dependency", "fields": missing}); continue
+        seen.add(operation)
         produced.update(meta["output_slots"])
     passed = bool(rows) and any(index[row["operation"]]["access_mode"] == "write" for row in rows) and not rejected
     result = {"registry_sha256": registry["registry_sha256"], "path": rows,

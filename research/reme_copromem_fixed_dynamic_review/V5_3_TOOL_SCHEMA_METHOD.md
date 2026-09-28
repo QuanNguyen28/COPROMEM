@@ -40,7 +40,9 @@ learned schema/procedure text.
 The task boundary remains `plan -> validate -> commit`.
 
 - Planning uses an isolated clone and stores a sanitized, direct-observation
-  projection plus hash-only invocation evidence.
+  projection plus hash-only invocation evidence. A path can contain up to four
+  acyclic public operations, allowing a documented lookup chain followed by
+  an action; repeated operations fail closed.
 - Validation requires one complete ordered registry-supported path, official
   success, observable procedures, and a deterministic eligible winner.
 - Commit reconstructs from the frozen pre-state and plan. A rejected plan
