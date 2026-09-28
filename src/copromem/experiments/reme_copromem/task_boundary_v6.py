@@ -61,7 +61,7 @@ def _load() -> dict[str, Any]:
     if sha(MANIFEST) != MANIFEST_SHA.read_text(encoding="utf-8").strip():
         raise RuntimeError("006 manifest checksum mismatch")
     value = json.loads(raw)
-    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary"}:
+    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary", "v5_engineering_008_task_boundary"}:
         raise RuntimeError("wrong protocol")
     if value.get("arms") != ["no_memory", "copromem_dynamic"]:
         raise RuntimeError("task-boundary run must have exactly the two registered arms")
