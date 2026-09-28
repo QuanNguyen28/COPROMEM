@@ -1,0 +1,698 @@
+{
+  "audit_version": 1,
+  "c_retrieval_audit": {
+    "interpretation": "A partial official score is associated with its recorded termination only; this audit makes no causal attribution to guidance.",
+    "records": [
+      {
+        "actions": 7,
+        "fallback_category": "learned",
+        "guidance_bytes": 4032,
+        "guidance_sha256": "0f37cb812732bceb7b1d76f4874465ed5ce23b0f132f7e792093e7a5279a328b",
+        "guidance_tokens_o200k_base": 972,
+        "official_score": 0.125,
+        "offline_reproduction_matches": true,
+        "pre_state_sha256": "5cf520cb4b6934e4fcf5d8e4aa76d34a21c8d7dbd34bbdb207276266437e95b0",
+        "procedure_count": 16,
+        "procedure_ids_sha256": "a2c129dea4dea7350055051dc203c5a5c936805d99cc43bf5dea54c3abae7804",
+        "procedure_order_matches_schema": true,
+        "retrieval_artifact_sha256": "7a46fa74b7816273a6e6630126de674e2e3089a2b352bd76f390a09ecf8a4ca5",
+        "same_pre_state_as_first_trial": true,
+        "schema_has_no_concrete_parameters": true,
+        "selected_schema_id": "schema_076a6db76eda945b",
+        "termination": "truncation_termination",
+        "trial_id": 0
+      },
+      {
+        "actions": 19,
+        "fallback_category": "learned",
+        "guidance_bytes": 4032,
+        "guidance_sha256": "0f37cb812732bceb7b1d76f4874465ed5ce23b0f132f7e792093e7a5279a328b",
+        "guidance_tokens_o200k_base": 972,
+        "official_score": 1.0,
+        "offline_reproduction_matches": true,
+        "pre_state_sha256": "5cf520cb4b6934e4fcf5d8e4aa76d34a21c8d7dbd34bbdb207276266437e95b0",
+        "procedure_count": 16,
+        "procedure_ids_sha256": "a2c129dea4dea7350055051dc203c5a5c936805d99cc43bf5dea54c3abae7804",
+        "procedure_order_matches_schema": true,
+        "retrieval_artifact_sha256": "b114767221b9a92b0509677e4a16008a7dcceb19885c25cfbf51f2fb46b8f1a2",
+        "same_pre_state_as_first_trial": true,
+        "schema_has_no_concrete_parameters": true,
+        "selected_schema_id": "schema_076a6db76eda945b",
+        "termination": "completed",
+        "trial_id": 1
+      }
+    ],
+    "same_guidance_sha256": true,
+    "task_id": "29caf6f_3"
+  },
+  "descriptor_operations": [
+    {
+      "has_check": false,
+      "input_slots": [
+        "app_name"
+      ],
+      "observed": true,
+      "operation": "apis.api_docs.show_api_descriptions",
+      "output_slots": [
+        "observation"
+      ]
+    },
+    {
+      "has_check": false,
+      "input_slots": [
+        "api_name",
+        "app_name"
+      ],
+      "observed": true,
+      "operation": "apis.api_docs.show_api_doc",
+      "output_slots": [
+        "observation"
+      ]
+    },
+    {
+      "has_check": false,
+      "input_slots": [],
+      "observed": true,
+      "operation": "apis.supervisor.show_account_passwords",
+      "output_slots": [
+        "credentials"
+      ]
+    },
+    {
+      "has_check": false,
+      "input_slots": [
+        "password",
+        "username"
+      ],
+      "observed": true,
+      "operation": "apis.spotify.login",
+      "output_slots": [
+        "access_token"
+      ]
+    },
+    {
+      "has_check": false,
+      "input_slots": [
+        "access_token",
+        "page_index"
+      ],
+      "observed": true,
+      "operation": "apis.spotify.show_song_library",
+      "output_slots": [
+        "song_page"
+      ]
+    },
+    {
+      "has_check": false,
+      "input_slots": [
+        "access_token",
+        "page_index"
+      ],
+      "observed": true,
+      "operation": "apis.spotify.show_album_library",
+      "output_slots": [
+        "album_page"
+      ]
+    },
+    {
+      "has_check": false,
+      "input_slots": [
+        "access_token",
+        "page_index"
+      ],
+      "observed": true,
+      "operation": "apis.spotify.show_playlist_library",
+      "output_slots": [
+        "playlist_page"
+      ]
+    },
+    {
+      "has_check": false,
+      "input_slots": [
+        "access_token",
+        "playlist_id"
+      ],
+      "observed": true,
+      "operation": "apis.spotify.show_playlist",
+      "output_slots": [
+        "playlist"
+      ]
+    },
+    {
+      "has_check": false,
+      "input_slots": [
+        "answer"
+      ],
+      "observed": true,
+      "operation": "apis.supervisor.complete_task",
+      "output_slots": [
+        "completion"
+      ]
+    }
+  ],
+  "descriptor_sha256": "bb66c0b7fd512fe3640ad4f4d5ec268338aed3c5d5939c5aa1c27901b5516b21",
+  "marker_winner_episode_id": null,
+  "method_predicate_source": "copromem.online.apply_task_batch and copromem.learning.LearningCore.promote_episode",
+  "offline_reconstructed_winner_episode_id": null,
+  "post_state_sha256": "14a71cc5051a0536a5c491ad49c3f7a2b983dcc99f228849fa23122a37d34fa5",
+  "pre_state_sha256": "dbce7c6badf7032bf88fd73408250157a92a7c277d545141bfddbdb62b88f879",
+  "run_manifest_sha256": "a4247de870f62788c209f6e66ca2b6619a92a31e44598e3cdf5398afed9ba2b4",
+  "task_id": "50e1ac9_1",
+  "task_marker_sha256": "81eeff0f1feae283df97b0ea5bd76f6c4f8970d535ca4e1ba95b138ff31892da",
+  "trajectories": [
+    {
+      "actions": 10,
+      "artifact_sha256": "1e0e82b48c4e0b3a285e404188c75470ad0069c15c6b576cd54b45aea7a17110",
+      "candidate_pending_reason": "insufficient structural evidence",
+      "candidate_schema_created": true,
+      "descriptor_matching": {
+        "descriptor_step_count": 9,
+        "matched_count": 1,
+        "matched_event_indexes": [
+          0
+        ],
+        "unmatched_event_indexes": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      },
+      "eligibility": {
+        "first_ineligible_predicate": "structural_signature_present",
+        "predicates": {
+          "has_events": true,
+          "has_observable_checked_output": true,
+          "official_success": true,
+          "structural_signature_present": false
+        },
+        "signature_sha256": null,
+        "structural_step_count": 0
+      },
+      "episode_count_delta": 1,
+      "episode_recorded": true,
+      "episode_schema_id": "candidate_562144c7197a5356",
+      "first_promotion_blocker": "schema_exists",
+      "generated_procedure_count": 0,
+      "generated_procedure_ids": [],
+      "history_sha256": "36ccb0044190aa70a510d46543fe75b43c0b200d0ccbc4212dfbfb6cf2304294",
+      "official_score": 1.0,
+      "promotion_predicates": {
+        "episode_success": true,
+        "has_generated_procedure": false,
+        "schema_exists": false,
+        "schema_not_quarantined": true
+      },
+      "public_operations": [
+        {
+          "has_check": true,
+          "input_slots": [
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_descriptions",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [],
+          "observed": true,
+          "operation": "apis.supervisor.show_account_passwords",
+          "output_slots": [
+            "var_1"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "password",
+            "username",
+            "var_2"
+          ],
+          "observed": true,
+          "operation": "apis.spotify.login",
+          "output_slots": [
+            "var_3"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_4"
+          ],
+          "observed": false,
+          "operation": "results.extend",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "song_ids.add",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "song_ids.add",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "song_ids.add",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "song_id",
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_song",
+          "output_slots": []
+        },
+        {
+          "has_check": true,
+          "input_slots": [],
+          "observed": true,
+          "operation": "songs.values",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [],
+          "observed": true,
+          "operation": "s.get",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "key",
+            "reverse",
+            "var_5"
+          ],
+          "observed": true,
+          "operation": "rnb_songs.sort",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "answer"
+          ],
+          "observed": true,
+          "operation": "apis.supervisor.complete_task",
+          "output_slots": [
+            "observation"
+          ]
+        }
+      ],
+      "rejection_classification": "documented_method_grounding_gate",
+      "termination": "completed",
+      "trial_id": 0
+    },
+    {
+      "actions": 17,
+      "artifact_sha256": "b40ec836e211c78001d197a1a2eef948e5bbf749ac45dcdb6f7bc976a3778703",
+      "candidate_pending_reason": "insufficient structural evidence",
+      "candidate_schema_created": true,
+      "descriptor_matching": {
+        "descriptor_step_count": 9,
+        "matched_count": 1,
+        "matched_event_indexes": [
+          0
+        ],
+        "unmatched_event_indexes": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "eligibility": {
+        "first_ineligible_predicate": "structural_signature_present",
+        "predicates": {
+          "has_events": true,
+          "has_observable_checked_output": true,
+          "official_success": true,
+          "structural_signature_present": false
+        },
+        "signature_sha256": null,
+        "structural_step_count": 0
+      },
+      "episode_count_delta": 1,
+      "episode_recorded": true,
+      "episode_schema_id": "candidate_4d1322393927a4a3",
+      "first_promotion_blocker": "schema_exists",
+      "generated_procedure_count": 0,
+      "generated_procedure_ids": [],
+      "history_sha256": "e911234970482b5ee4beaf52eee82200e490604707e2e1adcf8f095e6a2fff16",
+      "official_score": 1.0,
+      "promotion_predicates": {
+        "episode_success": true,
+        "has_generated_procedure": false,
+        "schema_exists": false,
+        "schema_not_quarantined": true
+      },
+      "public_operations": [
+        {
+          "has_check": true,
+          "input_slots": [
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_descriptions",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [],
+          "observed": true,
+          "operation": "apis.supervisor.show_account_passwords",
+          "output_slots": [
+            "var_1"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "password",
+            "username",
+            "var_2"
+          ],
+          "observed": true,
+          "operation": "apis.spotify.login",
+          "output_slots": [
+            "var_3"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "access_token",
+            "page_index",
+            "page_limit",
+            "var_4",
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_song_library",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "song_library.extend",
+          "output_slots": []
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "access_token",
+            "page_index",
+            "page_limit",
+            "var_4",
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_album_library",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "album_library.extend",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "access_token",
+            "page_index",
+            "page_limit",
+            "var_4",
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_playlist_library",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "playlist_library.extend",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_7"
+          ],
+          "observed": false,
+          "operation": "song_ids.add",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_8"
+          ],
+          "observed": false,
+          "operation": "song_ids.add",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_8"
+          ],
+          "observed": false,
+          "operation": "song_ids.add",
+          "output_slots": []
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "song_id",
+            "var_8"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_song",
+          "output_slots": []
+        },
+        {
+          "has_check": false,
+          "input_slots": [
+            "var_9"
+          ],
+          "observed": false,
+          "operation": "song_details.append",
+          "output_slots": []
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "key",
+            "reverse",
+            "var_10"
+          ],
+          "observed": true,
+          "operation": "rb_songs.sort",
+          "output_slots": [
+            "observation"
+          ]
+        },
+        {
+          "has_check": true,
+          "input_slots": [
+            "answer"
+          ],
+          "observed": true,
+          "operation": "apis.supervisor.complete_task",
+          "output_slots": [
+            "observation"
+          ]
+        }
+      ],
+      "rejection_classification": "documented_method_grounding_gate",
+      "termination": "completed",
+      "trial_id": 1
+    }
+  ],
+  "winner_filter": {
+    "eligible_episode_ids": [],
+    "result": "no_eligible_grounded_candidate",
+    "tie_break_order": [
+      "official_score_desc",
+      "settled_cost_asc",
+      "actions_asc",
+      "trial_id_asc"
+    ],
+    "tie_breaking_applied": false
+  }
+}
