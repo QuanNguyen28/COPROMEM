@@ -1,12 +1,21 @@
 from pathlib import Path
 import pytest
-from copromem.experiments.reme_copromem.contrastive_v6_dispatcher import ContrastiveV6Dispatcher
+from copromem.experiments.reme_copromem.contrastive_v6_dispatcher import ContrastiveV6Dispatcher, SharedTrajectoryExecutor
 from copromem.contrastive_graph_v6 import digest
 
 def _registry(): return {"registry_sha256":"r","operations":[{"operation":"apis.x.read","app":"x","function_name":"read","access_mode":"read","required_parameters":[],"output_slots":[]},{"operation":"apis.x.write","app":"x","function_name":"write","access_mode":"write","required_parameters":[],"output_slots":[]}],"dependency_edges":[]}
 def test_dispatcher_has_no_v53_lifecycle_import():
  import inspect, copromem.experiments.reme_copromem.contrastive_v6_dispatcher as m
  assert "task_boundary" not in inspect.getsource(m)
+ assert "v5_3" not in inspect.getsource(m)
+def test_shared_executor_is_a_lazy_boundary(tmp_path, monkeypatch):
+ import copromem.experiments.reme_copromem.contrastive_v6_dispatcher as module
+ called=[]
+ monkeypatch.setattr(module,"execute_trajectory",lambda **kw: called.append(kw) or {"execution_evidence_path":"evidence","after_score":1.0})
+ boundary=SharedTrajectoryExecutor(tmp_path,tmp_path/"progress.jsonl",object(),"not-a-secret",["A"],30,.7,{"version":"public-execution-evidence-v1"})
+ assert called==[]
+ artifact=boundary(task="A",pre_state={},retrieval={"guidance":""},arm="copromem_v6_dynamic",trial=1,seed=1)
+ assert artifact["evidence_path"]=="evidence" and len(called)==1
 def test_same_task_retrievals_share_pre_state_and_reuse(tmp_path):
  d=ContrastiveV6Dispatcher(tmp_path,_registry(),lambda **_: {},policy_sha256="p")
  r=d.prepare("A",{},[["apis.x.write"],["apis.x.write"]])

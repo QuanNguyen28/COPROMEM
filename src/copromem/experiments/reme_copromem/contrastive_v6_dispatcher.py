@@ -6,14 +6,51 @@ shared boundaries; v5.3 task-boundary code is deliberately never imported.
 from __future__ import annotations
 import hashlib, json, os
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Callable, Mapping
 from ...contrastive_graph_v6 import digest, reproduce_retrieval
 from .contrastive_v6_runner import (STATE_FORMAT, commit_task_batch,
                                     plan_task_batch_from_artifacts,
                                     retrieval_record, validate_task_batch)
+from .runner import execute_trajectory
 
 VERSION = "copromem-v6-live-dispatcher-v1"
 TRANSITIONS = ("initialized", "task_pre_state_frozen", "retrievals_materialized", "trajectories_complete", "batch_ready", "plan_persisted", "validation_persisted", "commit_persisted", "next_task_authorized", "finalized")
+
+
+@dataclass(frozen=True)
+class SharedTrajectoryExecutor:
+    """Thin adapter to the maintained common executor boundary.
+
+    Constructing this adapter has no side effects. Its call is the sole point
+    at which a future registered launch reaches model/AppWorld/scorer code.
+    """
+    run: Path
+    progress: Path
+    ledger: Any
+    api_key: str
+    all_task_ids: list[str]
+    max_actions: int
+    temperature: float
+    execution_evidence: dict[str, Any]
+
+    def __call__(self, *, task: str, pre_state: Mapping[str, Any], retrieval: Mapping[str, Any],
+                 arm: str, trial: int, seed: int, **_: Any) -> dict[str, Any]:
+        artifact_path = self.run / "trajectory-artifacts" / task / f"{arm}-{trial}.json"
+        guidance = str(retrieval["guidance"])
+        result = execute_trajectory(
+            run=self.run, progress=self.progress, ledger=self.ledger, api_key=self.api_key,
+            all_task_ids=self.all_task_ids, arm=arm, task_id=task, trial_id=trial, seed=seed,
+            max_actions=self.max_actions, temperature=self.temperature, phase="evaluation",
+            artifact_path=artifact_path, execution_evidence=self.execution_evidence,
+            memory_for_instruction=lambda _instruction, _benchmark, _meta: guidance,
+        )
+        evidence_path = result.get("execution_evidence_path")
+        if not evidence_path:
+            raise ValueError("shared executor did not durably produce execution evidence")
+        return {**result, "evidence_path": str(evidence_path),
+                "shared_executor_artifact": str(artifact_path),
+                "retrieval_pre_state_sha256": digest(pre_state)}
 
 def _write(path: Path, value: Mapping[str, Any]) -> str:
     path.parent.mkdir(parents=True, exist_ok=True); payload = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()+b"\n"
