@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import subprocess
 import time
 from dataclasses import asdict
@@ -52,6 +53,20 @@ def _env(name: str) -> str:
     raise RuntimeError(f"required credential {name} is absent")
 
 
+def _git_env() -> dict[str, str]:
+    """Resolve a Windows worktree pointer when the runner is launched in WSL."""
+    env = dict(os.environ)
+    for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+        env.pop(name, None)
+    pointer = ROOT / ".git"
+    if pointer.is_file():
+        match = re.match(r"gitdir:\s*([A-Za-z]):/(.+)", pointer.read_text(encoding="utf-8").strip())
+        if match:
+            env["GIT_DIR"] = f"/mnt/{match.group(1).lower()}/{match.group(2)}"
+            env["GIT_WORK_TREE"] = str(ROOT)
+    return env
+
+
 def _status(state: str, **extra: Any) -> None:
     write_json(STATUS, {"state": state, "pid": os.getpid(), "updated_ns": time.time_ns(),
                         "manifest_sha256": MANIFEST_SHA.read_text(encoding="utf-8").strip(), **extra})
@@ -71,9 +86,9 @@ def _load() -> dict[str, Any]:
         raise RuntimeError("006 task or trajectory count mismatch")
     if len(evaluation.get("seeds", [])) != 2 or len(evaluation.get("trial_ids", [])) != 2:
         raise RuntimeError("006 seed/trial count mismatch")
-    if value.get("git_commit") != subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip():
+    if value.get("git_commit") != subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, env=_git_env()).strip():
         raise RuntimeError("running source differs from frozen manifest")
-    changed = subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no", "--", "src", "scripts"], cwd=ROOT, text=True).strip()
+    changed = subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no", "--", "src", "scripts"], cwd=ROOT, text=True, env=_git_env()).strip()
     if changed:
         raise RuntimeError("tracked runtime source differs from frozen commit")
     expected = v5_budget_bound(call_limits=value["budget"]["call_limits"],

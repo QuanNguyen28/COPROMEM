@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import subprocess
 
 from copromem.benchmarks.appworld.adapter import CoProMemAppWorldAdapter
@@ -61,6 +62,12 @@ def source_commit() -> str:
     """Ignore cross-OS worktree variables inherited by launcher shells."""
     env = dict(os.environ)
     env.pop("GIT_DIR", None); env.pop("GIT_WORK_TREE", None); env.pop("GIT_INDEX_FILE", None)
+    pointer = ROOT / ".git"
+    if pointer.is_file():
+        match = re.match(r"gitdir:\s*([A-Za-z]):/(.+)", pointer.read_text(encoding="utf-8").strip())
+        if match:
+            env["GIT_DIR"] = f"/mnt/{match.group(1).lower()}/{match.group(2)}"
+            env["GIT_WORK_TREE"] = str(ROOT)
     return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, env=env).strip()
 
 
