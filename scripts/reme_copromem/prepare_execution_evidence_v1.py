@@ -39,6 +39,11 @@ def all_prior_task_ids() -> set[str]:
         for path in root.rglob("*"):
             if not path.is_file() or path.suffix.lower() not in {".json", ".jsonl", ".md", ".txt", ".log"}:
                 continue
+            # This is the permitted pre-execution public catalog, not a prior
+            # task-use record.  Treating its complete development inventory as
+            # exposure would make fresh deterministic selection impossible.
+            if path.resolve() == (ROOT / INVENTORY_RELATIVE_PATH).resolve():
+                continue
             try:
                 # IDs are public opaque labels; no parsed task payload or action
                 # history is retained by this inventory operation.
@@ -48,15 +53,20 @@ def all_prior_task_ids() -> set[str]:
     return result
 
 
-def select_pair(registry: dict[str, Any], inventory: dict[str, Any], excluded: set[str]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def select_pair(registry: dict[str, Any], inventory: dict[str, Any], excluded: set[str]) -> tuple[dict[str, Any] | None, list[dict[str, Any]], dict[str, int]]:
     fresh = {str(row["task_id"]): row for row in inventory["tasks"] if str(row["task_id"]) not in excluded}
     per_task = {task_id: _candidate_paths(registry, str(row["instruction"])) for task_id, row in fresh.items()}
     index = tool_operation_index(registry)
     candidates: list[dict[str, Any]] = []
+    audit = {"inventory_tasks": len(inventory["tasks"]), "excluded_tasks": len(inventory["tasks"]) - len(fresh),
+             "fresh_tasks": len(fresh), "same_family_pairs": 0, "shared_complete_paths": 0}
     for left, right in itertools.combinations(sorted(per_task), 2):
         if left.rsplit("_", 1)[0] != right.rsplit("_", 1)[0]:
             continue
-        for path in sorted(set(per_task[left]) & set(per_task[right])):
+        audit["same_family_pairs"] += 1
+        shared = sorted(set(per_task[left]) & set(per_task[right]))
+        audit["shared_complete_paths"] += len(shared)
+        for path in shared:
             descriptor = _descriptor(index, path)
             candidates.append({"a_task_id": left, "b_task_id": right, "family": left.rsplit("_", 1)[0],
                                "operations": list(path), "descriptor": descriptor,
@@ -64,27 +74,33 @@ def select_pair(registry: dict[str, Any], inventory: dict[str, Any], excluded: s
                                "a_public_instruction_sha256": hashlib.sha256(str(fresh[left]["instruction"]).encode("utf-8")).hexdigest(),
                                "b_public_instruction_sha256": hashlib.sha256(str(fresh[right]["instruction"]).encode("utf-8")).hexdigest()})
     candidates.sort(key=lambda row: (row["descriptor_sha256"], row["a_task_id"], row["b_task_id"]))
-    if not candidates:
-        raise RuntimeError("no fresh sibling development pair has a complete registry-supported public path")
-    return candidates[0], candidates
+    return (candidates[0] if candidates else None), candidates, audit
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(); parser.add_argument("--run", type=pathlib.Path, required=True); args = parser.parse_args()
-    if args.run.exists() and any(args.run.iterdir()):
-        raise RuntimeError("013 run directory already exists")
+    if args.run.exists() and any(args.run.iterdir()) and (args.run / "manifest.json").exists():
+        raise RuntimeError("013 manifest already exists")
     registry_path = ROOT / REGISTRY_RELATIVE_PATH
     registry = json.loads(registry_path.read_text(encoding="utf-8")); verify_public_tool_schema_registry(registry)
     inventory_path = ROOT / INVENTORY_RELATIVE_PATH
     inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
     excluded = all_prior_task_ids()
-    selected, candidates = select_pair(registry, inventory, excluded)
+    selected, candidates, inventory_audit = select_pair(registry, inventory, excluded)
+    args.run.mkdir(parents=True, exist_ok=True)
+    write_json(args.run / "descriptor-audit-selection.json", {"provider_calls": 0, "test_normal_used": False,
+        "exclusion_set_sha256": canonical_digest(sorted(excluded)), "exclusion_count": len(excluded),
+        "candidate_list_sha256": canonical_digest(candidates), "candidate_count": len(candidates),
+        "ordering_rule": "(descriptor_sha256, a_task_id, b_task_id)", "registry_sha256": registry["registry_sha256"],
+        "telemetry_implementation_sha256": sha(ROOT / EVIDENCE_RELATIVE_PATH), "inventory_audit": inventory_audit,
+        "selection_state": "no_go_no_eligible_fresh_sibling_pair" if selected is None else "candidate_selected"})
+    if selected is None:
+        raise RuntimeError("no fresh sibling development pair has a complete registry-supported public path")
     acquisition_path = ROOT / ACQUISITION_RELATIVE_PATH
     acquisition = json.loads(acquisition_path.read_text(encoding="utf-8")); acquisition = acquisition.get("trajectories", acquisition)
     pair = [selected["a_task_id"], selected["b_task_id"]]
     if len(acquisition) != 32 or set(pair) & {str(row["task_id"]) for row in acquisition}:
         raise RuntimeError("frozen acquisition export is not disjoint from selected evaluation pair")
-    args.run.mkdir(parents=True, exist_ok=False)
     limits = {"executor": 240, "reme_lifecycle": 0, "reme_embedding": 0, "copromem_decomposition": 0}
     ledger = AppendOnlyLedger(args.run / "ledger.jsonl", 100.0, limits)
     state, _ = construct_copromem(run=args.run, progress=args.run / "progress.jsonl", ledger=ledger,
@@ -127,7 +143,7 @@ def main() -> int:
         "task_boundary_policy": "observable_tool_schema_execution_evidence_v1",
     }
     write_json(args.run / "template.json", manifest)
-    write_json(args.run / "descriptor-audit.json", {"provider_calls": 0, "test_normal_used": False,
+    write_json(args.run / "descriptor-audit-selection.json", {"provider_calls": 0, "test_normal_used": False,
         "exclusion_set_sha256": manifest["selection"]["exclusion_set_sha256"], "candidate_list_sha256": manifest["selection"]["candidate_list_sha256"],
         "ordering_rule": manifest["selection"]["ordering_rule"], "selected": {key: selected[key] for key in ("a_task_id", "b_task_id", "family", "descriptor_sha256", "operations")},
         "registry_sha256": registry["registry_sha256"], "telemetry_implementation_sha256": sha(evidence_path), "initial_compatibility": initial})
