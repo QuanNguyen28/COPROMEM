@@ -23,3 +23,7 @@ def test_v6_registry_projection_retains_frozen_callable_identity(tmp_path, monke
  registry=tmp_path/'registry.json';registry.write_text('{"registry_sha256":"full","operations":[],"dependency_edges":[]}')
  monkeypatch.setattr(MOD,'REGISTRY',registry)
  assert MOD._registry()['registry_sha256']=='full'
+def test_v6_cli_normalizes_run_path_before_worker_boundary(monkeypatch, tmp_path):
+ seen=[]; monkeypatch.setattr(MOD,'prepare',lambda path:seen.append(path))
+ monkeypatch.setattr(MOD.sys,'argv',['run_contrastive_v6.py','prepare','--run',str(tmp_path/'relative')])
+ MOD.main(); assert seen[0].is_absolute()

@@ -136,5 +136,6 @@ def run(run:pathlib.Path,preflight:bool=False)->None:
  write_json(status,{'state':'completed','a_schema':marker['winner_schema_id'],'b_marker':marker_b,'manifest_sha256':sha(run/'manifest.json')})
 def main()->None:
  p=argparse.ArgumentParser();p.add_argument('command',choices=['prepare','freeze','preflight','run']);p.add_argument('--run',required=True,type=pathlib.Path);a=p.parse_args()
+ a.run=a.run.resolve()
  {'prepare':prepare,'freeze':freeze}.get(a.command,lambda _:run(a.run,a.command=='preflight'))(a.run)
 if __name__=='__main__':main()
