@@ -11,7 +11,8 @@ import json
 import pathlib
 import subprocess
 
-from copromem.experiments.reme_copromem.runner import digest, v5_budget_bound, write_json
+from copromem.experiments.reme_copromem.runner import (AppendOnlyLedger, construct_copromem, digest,
+    raw_acquisition_trajectories, v5_budget_bound, write_json)
 from copromem.benchmarks.appworld.adapter import CoProMemAppWorldAdapter
 from copromem.learning import ActionObservation, LearningCore
 
@@ -38,7 +39,7 @@ def sha(path: pathlib.Path) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(); parser.add_argument("--run", type=pathlib.Path, required=True)
     parser.add_argument("--acquisition", type=pathlib.Path, required=True)
-    parser.add_argument("--initial-state", type=pathlib.Path, required=True)
+    parser.add_argument("--initial-state", type=pathlib.Path)
     args = parser.parse_args()
     inventory = ROOT / "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v5_engineering_001/public-dev-descriptors.json"
     public = json.loads(inventory.read_text(encoding="utf-8"))
@@ -54,7 +55,16 @@ def main() -> None:
     # currently uncovered by the fresh acquisition-only bank.
     events = tuple(ActionObservation(**item) for item in FLAT_SPOTIFY_DESCRIPTOR)
     if not LearningCore.signature(events): raise RuntimeError("flat descriptor is not structurally valid")
-    state = json.loads(args.initial_state.read_text(encoding="utf-8"))
+    initial_state = args.initial_state or (args.run / "copromem" / "initial-state.json")
+    if initial_state.exists():
+        state = json.loads(initial_state.read_text(encoding="utf-8"))
+    else:
+        # This is a fresh, local-only construction from the immutable export;
+        # call_cap=0 prohibits any decomposition/provider dispatch.
+        ledger = AppendOnlyLedger(args.run / "ledger.jsonl", 100.0,
+            {"executor": 240, "reme_lifecycle": 0, "reme_embedding": 0, "copromem_decomposition": 0})
+        state, _ = construct_copromem(run=args.run, progress=args.run / "progress.jsonl", ledger=ledger,
+            api_key="", raw=raw_acquisition_trajectories(rows), call_cap=0)
     adapter = CoProMemAppWorldAdapter(api_key=""); adapter.clone_from_state(state)
     compatibility = adapter.module.learning.retrieve("appworld", events).compatibility
     if compatibility != "unknown": raise RuntimeError("selected descriptor is not initially unknown")
