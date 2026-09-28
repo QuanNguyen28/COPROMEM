@@ -1,0 +1,1034 @@
+{
+  "artifact_count": 2,
+  "artifacts": [
+    {
+      "artifact_sha256": "d3f2ec0af35636771cecd6ba9d28252181b0aebc59d7370e8f7f5aacd2709754",
+      "dataflow_edges": [],
+      "decision": "terminal_effect_nested_or_not_directly_observed",
+      "frozen_descriptor_operations": [
+        "apis.spotify.search_artists",
+        "apis.spotify.show_artist",
+        "apis.spotify.follow_artist"
+      ],
+      "history_sha256": "21d37e415748c6c472386bbdbf6c7330995bb0bcb353a883e27457518fbe6e2e",
+      "missing_descriptor_operations": [
+        "apis.spotify.search_artists",
+        "apis.spotify.show_artist",
+        "apis.spotify.follow_artist"
+      ],
+      "normalized_operation_count": 16,
+      "operations": [
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "api_docs",
+              "callable_name": "api_docs__show_api_descriptions",
+              "operation": "apis.api_docs.show_api_descriptions",
+              "output_slots": [
+                "description",
+                "name"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "app_name"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 0,
+          "input_slots": [
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_descriptions",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "supervisor",
+              "callable_name": "supervisor__show_account_passwords",
+              "operation": "apis.supervisor.show_account_passwords",
+              "output_slots": [
+                "account_name",
+                "password"
+              ],
+              "public_optional_present": [],
+              "public_required": [],
+              "runtime_context_present": []
+            }
+          },
+          "index": 1,
+          "input_slots": [],
+          "observed": true,
+          "operation": "apis.supervisor.show_account_passwords",
+          "output_slots": [
+            "var_1"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__login",
+              "operation": "apis.spotify.login",
+              "output_slots": [
+                "access_token",
+                "token_type"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "password",
+                "username"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 2,
+          "input_slots": [
+            "password",
+            "username",
+            "var_2"
+          ],
+          "observed": true,
+          "operation": "apis.spotify.login",
+          "output_slots": [
+            "var_3"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "api_docs",
+              "callable_name": "api_docs__show_api_doc",
+              "operation": "apis.api_docs.show_api_doc",
+              "output_slots": [
+                "api_name",
+                "app_name",
+                "description",
+                "method",
+                "parameters",
+                "path",
+                "response_schemas"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "api_name",
+                "app_name"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 3,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "api_docs",
+              "callable_name": "api_docs__show_api_doc",
+              "operation": "apis.api_docs.show_api_doc",
+              "output_slots": [
+                "api_name",
+                "app_name",
+                "description",
+                "method",
+                "parameters",
+                "path",
+                "response_schemas"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "api_name",
+                "app_name"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 4,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__show_liked_songs",
+              "operation": "apis.spotify.show_liked_songs",
+              "output_slots": [
+                "album_id",
+                "album_title",
+                "artists",
+                "duration",
+                "liked_at",
+                "song_id",
+                "title"
+              ],
+              "public_optional_present": [
+                "page_index",
+                "page_limit"
+              ],
+              "public_required": [],
+              "runtime_context_present": [
+                "access_token"
+              ]
+            }
+          },
+          "index": 5,
+          "input_slots": [
+            "access_token",
+            "page_index",
+            "page_limit",
+            "var_4",
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_liked_songs",
+          "output_slots": [],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 6,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "liked_songs.extend",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__show_liked_albums",
+              "operation": "apis.spotify.show_liked_albums",
+              "output_slots": [
+                "album_id",
+                "artists",
+                "genre",
+                "like_count",
+                "liked_at",
+                "rating",
+                "release_date",
+                "review_count",
+                "song_ids",
+                "title"
+              ],
+              "public_optional_present": [
+                "page_index",
+                "page_limit"
+              ],
+              "public_required": [],
+              "runtime_context_present": [
+                "access_token"
+              ]
+            }
+          },
+          "index": 7,
+          "input_slots": [
+            "access_token",
+            "page_index",
+            "page_limit",
+            "var_4",
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_liked_albums",
+          "output_slots": [],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 8,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "liked_albums.extend",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 9,
+          "input_slots": [
+            "var_7"
+          ],
+          "observed": false,
+          "operation": "artist_ids.add",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 10,
+          "input_slots": [
+            "var_7"
+          ],
+          "observed": false,
+          "operation": "artist_ids.add",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "api_docs",
+              "callable_name": "api_docs__show_api_doc",
+              "operation": "apis.api_docs.show_api_doc",
+              "output_slots": [
+                "api_name",
+                "app_name",
+                "description",
+                "method",
+                "parameters",
+                "path",
+                "response_schemas"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "api_name",
+                "app_name"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 11,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__show_following_artists",
+              "operation": "apis.spotify.show_following_artists",
+              "output_slots": [
+                "artist_id",
+                "created_at",
+                "followed_at",
+                "follower_count",
+                "genre",
+                "name"
+              ],
+              "public_optional_present": [
+                "page_index",
+                "page_limit"
+              ],
+              "public_required": [],
+              "runtime_context_present": [
+                "access_token"
+              ]
+            }
+          },
+          "index": 12,
+          "input_slots": [
+            "access_token",
+            "page_index",
+            "page_limit",
+            "var_4",
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_following_artists",
+          "output_slots": [],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 13,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "following.extend",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__follow_artist",
+              "operation": "apis.spotify.follow_artist",
+              "output_slots": [
+                "message"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "artist_id"
+              ],
+              "runtime_context_present": [
+                "access_token"
+              ]
+            }
+          },
+          "index": 14,
+          "input_slots": [
+            "access_token",
+            "artist_id",
+            "var_4",
+            "var_8"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.follow_artist",
+          "output_slots": [],
+          "role": "terminal_effect"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "supervisor",
+              "callable_name": "supervisor__complete_task",
+              "operation": "apis.supervisor.complete_task",
+              "output_slots": [
+                "message"
+              ],
+              "public_optional_present": [],
+              "public_required": [],
+              "runtime_context_present": []
+            }
+          },
+          "index": 15,
+          "input_slots": [],
+          "observed": true,
+          "operation": "apis.supervisor.complete_task",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        }
+      ],
+      "terminal_effect": "apis.spotify.follow_artist",
+      "terminal_effect_directly_observed": false,
+      "terminal_effect_present_in_response_attested_program": true,
+      "terminal_effect_program_evidence": [
+        {
+          "control_context": [
+            "For"
+          ],
+          "direct_statement": false,
+          "occurrence": 0,
+          "operation": "apis.spotify.follow_artist",
+          "program_response_observed": true
+        }
+      ]
+    },
+    {
+      "artifact_sha256": "b2515821806062622640bf3e962debd189f335767a8080934dcb83856d7f346b",
+      "dataflow_edges": [],
+      "decision": "terminal_effect_nested_or_not_directly_observed",
+      "frozen_descriptor_operations": [
+        "apis.spotify.search_artists",
+        "apis.spotify.show_artist",
+        "apis.spotify.follow_artist"
+      ],
+      "history_sha256": "5399072f7bc6e51396a0ea072744fa2346d18382429b1a126c15f8ea7a1c3b62",
+      "missing_descriptor_operations": [
+        "apis.spotify.search_artists",
+        "apis.spotify.show_artist",
+        "apis.spotify.follow_artist"
+      ],
+      "normalized_operation_count": 19,
+      "operations": [
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "api_docs",
+              "callable_name": "api_docs__show_api_descriptions",
+              "operation": "apis.api_docs.show_api_descriptions",
+              "output_slots": [
+                "description",
+                "name"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "app_name"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 0,
+          "input_slots": [
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_descriptions",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "supervisor",
+              "callable_name": "supervisor__show_account_passwords",
+              "operation": "apis.supervisor.show_account_passwords",
+              "output_slots": [
+                "account_name",
+                "password"
+              ],
+              "public_optional_present": [],
+              "public_required": [],
+              "runtime_context_present": []
+            }
+          },
+          "index": 1,
+          "input_slots": [],
+          "observed": true,
+          "operation": "apis.supervisor.show_account_passwords",
+          "output_slots": [
+            "var_1"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__login",
+              "operation": "apis.spotify.login",
+              "output_slots": [
+                "access_token",
+                "token_type"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "password",
+                "username"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 2,
+          "input_slots": [
+            "password",
+            "username",
+            "var_2"
+          ],
+          "observed": true,
+          "operation": "apis.spotify.login",
+          "output_slots": [
+            "var_3"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "api_docs",
+              "callable_name": "api_docs__show_api_doc",
+              "operation": "apis.api_docs.show_api_doc",
+              "output_slots": [
+                "api_name",
+                "app_name",
+                "description",
+                "method",
+                "parameters",
+                "path",
+                "response_schemas"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "api_name",
+                "app_name"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 3,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__show_liked_songs",
+              "operation": "apis.spotify.show_liked_songs",
+              "output_slots": [
+                "album_id",
+                "album_title",
+                "artists",
+                "duration",
+                "liked_at",
+                "song_id",
+                "title"
+              ],
+              "public_optional_present": [
+                "page_index"
+              ],
+              "public_required": [],
+              "runtime_context_present": [
+                "access_token"
+              ]
+            }
+          },
+          "index": 4,
+          "input_slots": [
+            "access_token",
+            "page_index",
+            "var_4",
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_liked_songs",
+          "output_slots": [],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 5,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "liked_songs.extend",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "api_docs",
+              "callable_name": "api_docs__show_api_doc",
+              "operation": "apis.api_docs.show_api_doc",
+              "output_slots": [
+                "api_name",
+                "app_name",
+                "description",
+                "method",
+                "parameters",
+                "path",
+                "response_schemas"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "api_name",
+                "app_name"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 6,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__show_liked_albums",
+              "operation": "apis.spotify.show_liked_albums",
+              "output_slots": [
+                "album_id",
+                "artists",
+                "genre",
+                "like_count",
+                "liked_at",
+                "rating",
+                "release_date",
+                "review_count",
+                "song_ids",
+                "title"
+              ],
+              "public_optional_present": [
+                "page_index"
+              ],
+              "public_required": [],
+              "runtime_context_present": [
+                "access_token"
+              ]
+            }
+          },
+          "index": 7,
+          "input_slots": [
+            "access_token",
+            "page_index",
+            "var_4",
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_liked_albums",
+          "output_slots": [],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 8,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "liked_albums.extend",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 9,
+          "input_slots": [
+            "var_7"
+          ],
+          "observed": false,
+          "operation": "artist_ids.add",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 10,
+          "input_slots": [
+            "var_7"
+          ],
+          "observed": false,
+          "operation": "artist_ids.add",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "api_docs",
+              "callable_name": "api_docs__show_api_doc",
+              "operation": "apis.api_docs.show_api_doc",
+              "output_slots": [
+                "api_name",
+                "app_name",
+                "description",
+                "method",
+                "parameters",
+                "path",
+                "response_schemas"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "api_name",
+                "app_name"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 11,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__show_following_artists",
+              "operation": "apis.spotify.show_following_artists",
+              "output_slots": [
+                "artist_id",
+                "created_at",
+                "followed_at",
+                "follower_count",
+                "genre",
+                "name"
+              ],
+              "public_optional_present": [
+                "page_index"
+              ],
+              "public_required": [],
+              "runtime_context_present": [
+                "access_token"
+              ]
+            }
+          },
+          "index": 12,
+          "input_slots": [
+            "access_token",
+            "page_index",
+            "var_4",
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_following_artists",
+          "output_slots": [],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 13,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "following.extend",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "api_docs",
+              "callable_name": "api_docs__show_api_doc",
+              "operation": "apis.api_docs.show_api_doc",
+              "output_slots": [
+                "api_name",
+                "app_name",
+                "description",
+                "method",
+                "parameters",
+                "path",
+                "response_schemas"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "api_name",
+                "app_name"
+              ],
+              "runtime_context_present": []
+            }
+          },
+          "index": 14,
+          "input_slots": [
+            "api_name",
+            "app_name"
+          ],
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__follow_artist",
+              "operation": "apis.spotify.follow_artist",
+              "output_slots": [
+                "message"
+              ],
+              "public_optional_present": [],
+              "public_required": [
+                "artist_id"
+              ],
+              "runtime_context_present": [
+                "access_token"
+              ]
+            }
+          },
+          "index": 15,
+          "input_slots": [
+            "access_token",
+            "artist_id",
+            "var_4",
+            "var_8"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.follow_artist",
+          "output_slots": [],
+          "role": "terminal_effect"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "spotify",
+              "callable_name": "spotify__show_following_artists",
+              "operation": "apis.spotify.show_following_artists",
+              "output_slots": [
+                "artist_id",
+                "created_at",
+                "followed_at",
+                "follower_count",
+                "genre",
+                "name"
+              ],
+              "public_optional_present": [
+                "page_index"
+              ],
+              "public_required": [],
+              "runtime_context_present": [
+                "access_token"
+              ]
+            }
+          },
+          "index": 16,
+          "input_slots": [
+            "access_token",
+            "page_index",
+            "var_4",
+            "var_5"
+          ],
+          "observed": false,
+          "operation": "apis.spotify.show_following_artists",
+          "output_slots": [],
+          "role": "public_incidental_or_alternative"
+        },
+        {
+          "callable_schema": {
+            "matched": false,
+            "rejection": "unknown public callable operation"
+          },
+          "index": 17,
+          "input_slots": [
+            "var_6"
+          ],
+          "observed": false,
+          "operation": "following.extend",
+          "output_slots": [],
+          "role": "unknown_operation"
+        },
+        {
+          "callable_schema": {
+            "matched": true,
+            "signature": {
+              "application": "supervisor",
+              "callable_name": "supervisor__complete_task",
+              "operation": "apis.supervisor.complete_task",
+              "output_slots": [
+                "message"
+              ],
+              "public_optional_present": [],
+              "public_required": [],
+              "runtime_context_present": []
+            }
+          },
+          "index": 18,
+          "input_slots": [],
+          "observed": true,
+          "operation": "apis.supervisor.complete_task",
+          "output_slots": [
+            "observation"
+          ],
+          "role": "public_incidental_or_alternative"
+        }
+      ],
+      "terminal_effect": "apis.spotify.follow_artist",
+      "terminal_effect_directly_observed": false,
+      "terminal_effect_present_in_response_attested_program": true,
+      "terminal_effect_program_evidence": [
+        {
+          "control_context": [
+            "For"
+          ],
+          "direct_statement": false,
+          "occurrence": 0,
+          "operation": "apis.spotify.follow_artist",
+          "program_response_observed": true
+        }
+      ]
+    }
+  ],
+  "audit_sha256": "e3629bad7017f5c264cda1121188b099150e8cc476b82e4c876647635dbf6590",
+  "audit_version": "v5_4_effect_path_012_forensic_v1",
+  "frozen_before_history_read": true,
+  "manifest_sha256": "701755a6e1ddcb72b8eadabe5347d5cc71822bf4c65d70ea29a4de86f3c6af92",
+  "provider_calls": 0,
+  "registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423",
+  "terminal_effect_observed_in_all": false
+}
