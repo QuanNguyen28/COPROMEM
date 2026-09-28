@@ -41,7 +41,8 @@ def sha(path: pathlib.Path) -> str:
 
 
 def c_free_gb() -> float:
-    stat = os.statvfs(os.environ.get("COPROMEM_DISK_FLOOR_PATH", str(RUN)))
+    # The registered floor protects Windows C, not the E-backed artifact run.
+    stat = os.statvfs(os.environ.get("COPROMEM_DISK_FLOOR_PATH", "/mnt/c"))
     return stat.f_bavail * stat.f_frsize / 1024 ** 3
 
 
@@ -91,7 +92,7 @@ def _load() -> dict[str, Any]:
     if sha(MANIFEST) != MANIFEST_SHA.read_text(encoding="utf-8").strip():
         raise RuntimeError("006 manifest checksum mismatch")
     value = json.loads(raw)
-    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary", "v5_engineering_008_task_boundary", "v5_1_engineering_009_observable_subgraph", "v5_2_engineering_011_observable_path", "v5_3_engineering_012_tool_schema"}:
+    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary", "v5_engineering_008_task_boundary", "v5_1_engineering_009_observable_subgraph", "v5_2_engineering_011_observable_path", "v5_3_engineering_012_tool_schema", "v5_3_engineering_013_execution_evidence"}:
         raise RuntimeError("wrong protocol")
     if value.get("arms") != ["no_memory", "copromem_dynamic"]:
         raise RuntimeError("task-boundary run must have exactly the two registered arms")
@@ -132,6 +133,9 @@ def _load() -> dict[str, Any]:
             evidence = value["evaluation"].get("execution_evidence")
             if not isinstance(evidence, dict) or evidence.get("registry_sha256") != registry["registry_sha256"]:
                 raise RuntimeError("execution-evidence registry is not frozen with v5.3 manifest")
+            implementation = ROOT / evidence.get("implementation_relative_path", "")
+            if not implementation.is_file() or sha(implementation) != evidence.get("implementation_sha256"):
+                raise RuntimeError("execution-evidence implementation differs from frozen manifest")
     return value
 
 
