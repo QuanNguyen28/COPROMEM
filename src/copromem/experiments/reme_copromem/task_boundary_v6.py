@@ -154,9 +154,15 @@ def _complete_task(adapter: CoProMemAppWorldAdapter, task_id: str, trials: list[
     from . import config as maintained
     maintained.complete_copro_task(adapter, task_id, trials, seeds)
     marker = RUN / "copromem" / "task_updates" / f"{task_id}.json"
-    if not marker.exists() or not _task_state_path(task_id).exists():
-        raise RuntimeError("task-boundary merge is not durable")
-    return json.loads(marker.read_text(encoding="utf-8"))
+    if not marker.exists():
+        raise RuntimeError("task-boundary merge marker is not durable")
+    result = json.loads(marker.read_text(encoding="utf-8"))
+    if result.get("state") == "committed":
+        if not _task_state_path(task_id).exists():
+            raise RuntimeError("committed task-boundary state is not durable")
+    elif result.get("state") != "rejected":
+        raise RuntimeError("task-boundary marker has an unknown state")
+    return result
 
 
 def _snapshot(path: pathlib.Path, state: dict[str, Any]) -> None:
