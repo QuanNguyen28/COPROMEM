@@ -222,11 +222,16 @@ class LearningCore:
     def retrieve(self, family: str, events: Sequence[ActionObservation] | None = None) -> Retrieval:
         signature = self.signature(events or ())
         if signature is None:
-            return Retrieval("Explore the task state and verify each observed step before proceeding.")
+            # An incompatible descriptor is not learned memory.  Returning
+            # generic advice here makes the memory arm differ from No Memory
+            # while providing no provenance-bound procedure, and it can be
+            # mistaken for retrieval in aggregate reporting.  Keep the
+            # structural classification, but inject no text.
+            return Retrieval("", compatibility="unknown")
         sid = f"schema_{_digest([family, signature])[:16]}"
         schema = self.schemas.get(sid)
         if schema is None or schema.status not in {"provisional", "admitted"}:
-            return Retrieval("Explore the task state and verify each observed step before proceeding.",
+            return Retrieval("",
                              compatibility="conflict" if schema is not None and schema.status == "quarantined"
                              else "unknown")
         lines = [f"# Admitted workflow ({sid})"]

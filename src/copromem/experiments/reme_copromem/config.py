@@ -242,6 +242,7 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
     pre_path = RUN / "copromem/task_pre_states" / f"{task_id}.json"
     pre = json.loads(pre_path.read_text(encoding="utf-8"))
     marker_path = RUN / "copromem/task_updates" / f"{task_id}.json"
+    pending_path = RUN / "copromem/task_updates_pending" / f"{task_id}.json"
     if marker_path.exists():
         marker_row = json.loads(marker_path.read_text(encoding="utf-8"))
         if marker_row["before_state_sha256"] != digest(pre):
@@ -261,6 +262,11 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
             raise RuntimeError("CoProMem task merge marker changed")
         adapter.clone_from_state(saved)
         return
+    # All scorer and retrieval inputs are durable before the state-changing
+    # merge.  A separately retained pending record makes an interruption
+    # between writing the state snapshot and committing the update marker
+    # auditable and replay-free: reconstruction below is pure local state
+    # work over those completed artifacts.
     adapter.clone_from_state(pre)
     candidates = []
     artifact_hashes = {}
@@ -286,14 +292,35 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
             provenance.get("selected_schema_id"), float(baseline["after_score"])))
         artifact_hashes[str(trial)] = file_sha(scored_path)
         retrieval_hashes[str(trial)] = file_sha(retrieval_path)
+    pending = {"state": "prepared", "task_id": task_id,
+               "before_state_sha256": digest(pre),
+               "scored_artifact_sha256": artifact_hashes,
+               "retrieval_artifact_sha256": retrieval_hashes}
+    if pending_path.exists():
+        prior_pending = json.loads(pending_path.read_text(encoding="utf-8"))
+        if prior_pending != pending:
+            raise RuntimeError("CoProMem pending task merge inputs changed")
+    else:
+        write_json(pending_path, pending)
     winner = apply_task_batch(adapter, candidates)
     updated = adapter.export_state()
-    write_json(RUN / "copromem/task_states" / f"{task_id}.json", updated)
-    write_json(RUN / "copromem/shared-state.json", updated)
+    state_path = RUN / "copromem/task_states" / f"{task_id}.json"
+    if state_path.exists():
+        if digest(json.loads(state_path.read_text(encoding="utf-8"))) != digest(updated):
+            raise RuntimeError("CoProMem interrupted task merge state changed")
+    else:
+        write_json(state_path, updated)
+    shared_path = RUN / "copromem/shared-state.json"
+    if shared_path.exists():
+        shared_hash = digest(json.loads(shared_path.read_text(encoding="utf-8")))
+        if shared_hash not in {digest(pre), digest(updated)}:
+            raise RuntimeError("CoProMem shared state is inconsistent with task merge")
+    write_json(shared_path, updated)
     write_json(marker_path, {"task_id": task_id, "before_state_sha256": digest(pre),
                              "after_state_sha256": digest(updated),
                              "scored_artifact_sha256": artifact_hashes,
                              "retrieval_artifact_sha256": retrieval_hashes,
+                             "pending_update_sha256": file_sha(pending_path),
                              "winner_episode_id": winner})
 
 

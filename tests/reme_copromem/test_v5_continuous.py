@@ -1,4 +1,5 @@
 import json
+import hashlib
 
 import pytest
 
@@ -51,6 +52,9 @@ def test_task_boundary_merge_uses_one_snapshot_and_resume_is_idempotent(tmp_path
     config.complete_copro_task(adapter, "task", [0, 1], [10, 11])
     first = adapter.export_state()
     marker = json.loads((tmp_path / "copromem/task_updates/task.json").read_text())
+    pending = tmp_path / "copromem/task_updates_pending/task.json"
+    assert pending.is_file()
+    assert marker["pending_update_sha256"] == hashlib.sha256(pending.read_bytes()).hexdigest()
     assert marker["winner_episode_id"] == "task::seed=11::trajectory=1"
     assert len(first["learning"]["episodes"]) == 2
     assert sum(schema["status"] == "provisional" for schema in first["learning"]["schemas"]) == 1
@@ -63,3 +67,32 @@ def test_task_boundary_merge_uses_one_snapshot_and_resume_is_idempotent(tmp_path
     write_json(provenance, row)
     with pytest.raises(RuntimeError, match="retrieval provenance changed"):
         config.complete_copro_task(CoProMemAppWorldAdapter(api_key=""), "task", [0, 1], [10, 11])
+
+
+def test_interrupted_task_merge_reconciles_from_pending_inputs_without_rescoring(tmp_path, monkeypatch):
+    """A marker-loss interruption is resolved from completed local evidence only."""
+    monkeypatch.setattr(config, "RUN", tmp_path)
+    monkeypatch.setattr(config, "LEDGER", tmp_path / "ledger.jsonl")
+    adapter = CoProMemAppWorldAdapter(api_key="")
+    pre = adapter.export_state()
+    write_json(tmp_path / "copromem/task_pre_states/task.json", pre)
+    history = [{"role": "user", "content": "Update order"},
+               {"role": "assistant", "content": "orders.update(id='123')"},
+               {"role": "user", "content": "Output: done"}]
+    for trial, seed, score in ((0, 10, 0.0), (1, 11, 1.0)):
+        for arm, arm_score in (("copromem_dynamic", score), ("no_memory", 0.0)):
+            write_json(config.artifact(arm, "task", trial), {
+                "arm": arm, "task_id": "task", "trial_id": trial,
+                "history": history, "history_sha256": digest(history),
+                "after_score": arm_score, "actions": 1})
+        write_json(tmp_path / "retrieval/copromem_dynamic/task" / f"trial-{trial}.json",
+                   {"provenance": {"pre_state_sha256": digest(pre), "selected_schema_id": None}})
+    config.complete_copro_task(adapter, "task", [0, 1], [10, 11])
+    committed = adapter.export_state()
+    # Simulate a crash only after the durable state snapshot: never call a
+    # scorer or provider to recover, and recompute the pure merge from pre.
+    (tmp_path / "copromem/task_updates/task.json").unlink()
+    resumed = CoProMemAppWorldAdapter(api_key="")
+    config.complete_copro_task(resumed, "task", [0, 1], [10, 11])
+    assert resumed.export_state() == committed
+    assert (tmp_path / "copromem/task_updates/task.json").is_file()

@@ -73,10 +73,11 @@ def test_copromem_retrieves_once_and_only_appends_registered_guidance():
     assert provenance["selected_schema_id"] is None
     assert CoProMemAppWorldAdapter.reproduce_retrieval(state, provenance["task_input"], provenance) == guidance
     result = adapter.run_trial(trial, 0, lambda prompt, tools: {"prompt": prompt, "tools": tools}, lambda _: True)
-    assert result.injected_memory
-    assert "Explore the task state" in result.injected_memory
+    # Unknown structure is explicitly an empty retrieval, never generic text
+    # that could be misreported as learned procedural guidance.
+    assert result.injected_memory == ""
     assert no_memory_prompt(trial) == "COMMON EXECUTOR PROMPT"
-    assert result.prompt == "COMMON EXECUTOR PROMPT\n\n" + result.injected_memory
+    assert result.prompt == "COMMON EXECUTOR PROMPT"
     assert result.tool_spec == {"same": "tools"}
     assert result.scorer_input["task_id"] == "dev_eval_01"
     try:

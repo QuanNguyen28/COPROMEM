@@ -38,7 +38,8 @@ def build_report(run: pathlib.Path) -> pathlib.Path:
                      "official_score": float(item["after_score"]), "actions": int(item["actions"]),
                      "termination": item.get("termination"),
                      "artifact_sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
-    if {(row["arm"], row["task_id"], row["trial_id"]) for row in rows} != wanted:
+    observed = {(row["arm"], row["task_id"], row["trial_id"]) for row in rows}
+    if observed != wanted or len(rows) != len(wanted):
         raise RuntimeError(f"incomplete evaluation: {len(rows)}/{len(wanted)}")
     learning_timeline = []
     for task_id in tasks:
@@ -46,7 +47,7 @@ def build_report(run: pathlib.Path) -> pathlib.Path:
         if not path.exists():
             raise RuntimeError(f"missing CoProMem task-boundary update for {task_id}")
         marker = json.loads(path.read_text(encoding="utf-8"))
-        if marker.get("task_id") != task_id:
+        if marker.get("task_id") != task_id or not marker.get("pending_update_sha256"):
             raise RuntimeError("CoProMem task update identity mismatch")
         learning_timeline.append(marker)
     lookup = {(row["arm"], row["task_id"], row["trial_id"]): row["official_score"] for row in rows}

@@ -33,6 +33,14 @@ class ProvenanceTest(unittest.TestCase):
         adapter.retrieve_with_provenance(trial, 1)
         with self.assertRaises(RuntimeError): adapter.retrieve_with_provenance(trial, 1)
 
+    def test_unknown_retrieval_is_empty_and_not_generic_guidance(self) -> None:
+        adapter = CoProMemAppWorldAdapter()
+        guidance, provenance = adapter.retrieve_with_provenance(
+            TrialInput("x", "Inspect a record.", "appworld", base_prompt="Inspect a record."), 1)
+        self.assertEqual(guidance, "")
+        self.assertEqual(provenance["fallback_category"], "empty")
+        self.assertIsNone(provenance["selected_schema_id"])
+
     def test_model_response_replays_offline_and_rejects_changed_record(self) -> None:
         def fake_call(**request):
             assert request["schema_name"] == "copromem_complexity_v1"

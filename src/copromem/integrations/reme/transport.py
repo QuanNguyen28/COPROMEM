@@ -140,14 +140,36 @@ class AppendOnlyLedger:
                 latest[item["id"]] = float(item["usd"])
         return sum(latest.values())
 
+    def _call_state(self) -> tuple[dict[str, float], set[str]]:
+        """Return reservations and settled IDs from durable append-only rows."""
+        reserved: dict[str, float] = {}
+        settled: set[str] = set()
+        if not self.path.exists():
+            return reserved, settled
+        for line in self.path.read_text(encoding="utf-8").splitlines():
+            item = json.loads(line)
+            if item.get("event") == "reserve":
+                reserved[str(item["id"])] = float(item["usd"])
+            elif item.get("event") == "settle":
+                settled.add(str(item["id"]))
+        return reserved, settled
+
     def reserve(self, call_id: str, upper_usd: float, metadata: dict[str, Any]) -> None:
         with self._locked_file():
+            reserved, _ = self._call_state()
+            if call_id in reserved:
+                raise DispatchFailure("duplicate provider call ID")
             if upper_usd < 0 or self._exposure() + upper_usd > self.cap_usd:
                 raise DispatchFailure("USD cap would be exceeded")
             self._append({"event": "reserve", "id": call_id, "usd": upper_usd, **metadata})
 
     def settle(self, call_id: str, actual_usd: float, metadata: dict[str, Any]) -> None:
         with self._locked_file():
+            reserved, settled = self._call_state()
+            if call_id not in reserved or call_id in settled:
+                raise DispatchFailure("unknown or already-settled provider call")
+            if actual_usd < 0 or actual_usd > reserved[call_id]:
+                raise DispatchFailure("provider settlement exceeds reserved exposure")
             self._append({"event": "settle", "id": call_id, "usd": actual_usd, **metadata})
             if self._exposure() > self.cap_usd:
                 raise DispatchFailure("provider cost exceeded USD cap")

@@ -23,13 +23,16 @@ from .transport import (
 )
 
 
-ROOT = pathlib.Path("/mnt/e/Project/AAMAS/COPROMEM")
-SOURCE = pathlib.Path("/home/xiqhq/copromem-reme")
+ROOT = pathlib.Path(os.environ.get("COPROMEM_ROOT", pathlib.Path(__file__).resolve().parents[4]))
+SOURCE = pathlib.Path(os.environ.get("COPROMEM_REME_SOURCE", "/home/xiqhq/copromem-reme"))
 
 
 def load_env() -> dict[str, str]:
     values: dict[str, str] = {}
-    for line in (ROOT / ".env").read_text(encoding="utf-8").splitlines():
+    env_path = ROOT / ".env"
+    if not env_path.is_file():
+        raise RuntimeError("locked OpenRouter credential file is absent")
+    for line in env_path.read_text(encoding="utf-8").splitlines():
         if "=" in line and not line.lstrip().startswith("#"):
             key, value = line.split("=", 1)
             values[key.strip()] = value.strip().strip("'\"")
