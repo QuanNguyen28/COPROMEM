@@ -117,13 +117,14 @@ def run(run:pathlib.Path,preflight:bool=False)->None:
  lock=run/'runner.lock'
  if lock.exists():raise RuntimeError('runner lock exists')
  write_json(lock,{'pid':os.getpid()});ledger=AppendOnlyLedger(run/'ledger.jsonl',100.,value['budget']['call_limits']);key=_cred()
- registry=value['registry'];dispatcher=ContrastiveV6Dispatcher(run,registry,SharedTrajectoryExecutor(run,progress,ledger,key,value['evaluation']['task_ids'],30,.7,{'registry_sha256':registry['registry_sha256']}),policy_sha256=digest({'policy':POLICY_VERSION,'registry':registry['registry_sha256']}))
+ registry=value['registry']; evidence={'registry_path':str(REGISTRY),'registry_sha256':registry['registry_sha256']}
+ dispatcher=ContrastiveV6Dispatcher(run,registry,SharedTrajectoryExecutor(run,progress,ledger,key,value['evaluation']['task_ids'],30,.7,evidence),policy_sha256=digest({'policy':POLICY_VERSION,'registry':registry['registry_sha256']}))
  a,b=value['evaluation']['task_ids']; apps=set(value['evaluation']['descriptor']['public_apps'])
  query=[x['operation'] for x in registry['operations'] if x.get('app') in apps]
  if not query:raise RuntimeError('public descriptor has no callable retrieval query')
  def no_memory(task:str,trial:int,seed:int)->None:
   target=run/'no-memory'/task/f'trial-{trial}.json'
-  if not target.exists():execute_trajectory(run=run,progress=progress,ledger=ledger,api_key=key,all_task_ids=[a,b],arm='no_memory',task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=target,execution_evidence={'registry_sha256':registry['registry_sha256']})
+  if not target.exists():execute_trajectory(run=run,progress=progress,ledger=ledger,api_key=key,all_task_ids=[a,b],arm='no_memory',task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=target,execution_evidence=evidence)
  def task(task:str,state:dict[str,Any])->tuple[dict[str,Any],dict[str,Any]]:
   for trial,seed in zip(value['evaluation']['trial_ids'],value['evaluation']['seeds']):no_memory(task,trial,seed)
   return dispatcher.execute_batch(task,state,[query,query],[{'arm':'copromem_v6_dynamic','trial':t,'seed':s} for t,s in zip(value['evaluation']['trial_ids'],value['evaluation']['seeds'])])

@@ -16,3 +16,6 @@ def test_v6_git_helper_accepts_windows_worktree_pointer(monkeypatch, tmp_path):
 def test_v6_has_no_reme_or_v53_lifecycle():
  source=(Path(__file__).parents[2]/'scripts'/'run_contrastive_v6.py').read_text()
  assert 'ReMe' not in source and 'task_boundary' not in source and 'embedding' not in source
+def test_v6_execution_evidence_configuration_has_worker_required_path():
+ source=(Path(__file__).parents[2]/'scripts'/'run_contrastive_v6.py').read_text()
+ assert "'registry_path':str(REGISTRY)" in source and "execution_evidence=evidence" in source
