@@ -72,7 +72,7 @@ def main() -> None:
     limits = {"executor": 240, "reme_lifecycle": 0, "reme_embedding": 0, "copromem_decomposition": 0}
     budget = v5_budget_bound(call_limits=limits, historical_usd=historical)
     budget.update({"hard_cap_usd": 100.0, "fits_hard_cap": budget["all_in_usd"] <= 100.0,
-                   "ledger_dispatch_cap_usd": budget["dispatchable_usd"]})
+                   "ledger_dispatch_cap_usd": budget["dispatchable_usd"], "call_limits": limits})
     if not budget["fits_hard_cap"]: raise RuntimeError("006 conservative budget exceeds hard cap")
     task_public = {row["task_id"]: row for row in public["tasks"] if row["task_id"] in selected}
     template = {"protocol": "v5_engineering_006_task_boundary", "engineering_only_exposed": True,
