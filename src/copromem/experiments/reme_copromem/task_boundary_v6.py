@@ -61,10 +61,10 @@ def _load() -> dict[str, Any]:
     if sha(MANIFEST) != MANIFEST_SHA.read_text(encoding="utf-8").strip():
         raise RuntimeError("006 manifest checksum mismatch")
     value = json.loads(raw)
-    if value.get("protocol") != "v5_engineering_006_task_boundary":
+    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary"}:
         raise RuntimeError("wrong protocol")
     if value.get("arms") != ["no_memory", "copromem_dynamic"]:
-        raise RuntimeError("006 must have exactly the two registered arms")
+        raise RuntimeError("task-boundary run must have exactly the two registered arms")
     evaluation = value.get("evaluation", {})
     if evaluation.get("expected_trajectories") != 8 or len(evaluation.get("task_ids", [])) != 2:
         raise RuntimeError("006 task or trajectory count mismatch")
@@ -200,17 +200,26 @@ def _a_gate(value: dict[str, Any], initial: dict[str, Any], marker: dict[str, An
     for row in rows:
         events = normalize_appworld_history(row["history"], float(row["after_score"]) == 1.0)
         observed.append(bool(LearningCore.signature(events)) and fully_observed(events))
+    pending = json.loads((RUN / "copromem" / "task_updates_pending" / f"{task_id}.json").read_text(encoding="utf-8"))
+    from .task_boundary import commit_task_boundary_plan
+    reconstructed, validation = commit_task_boundary_plan(initial, pending["plan"])
     winner = marker.get("winner_episode_id")
-    state = json.loads(_task_state_path(task_id).read_text(encoding="utf-8"))
+    state = json.loads(_task_state_path(task_id).read_text(encoding="utf-8")) if marker.get("state") == "committed" else initial
     procedures = state.get("learning", {}).get("episode_procedures", {}).get(winner, []) if winner else []
     schema = state.get("learning", {}).get("episode_schemas", {}).get(winner) if winner else None
     result = {"task_id": task_id, "official_scores": [float(row["after_score"]) for row in rows],
               "full_success": any(float(row["after_score"]) == 1.0 for row in rows),
               "fully_observed": all(observed), "winner_episode_id": winner, "winner_schema_id": schema,
               "eligible_procedure_count": len(procedures), "post_state_sha256": digest(state),
-              "pre_state_sha256": digest(initial)}
+              "pre_state_sha256": digest(initial), "marker_state": marker.get("state"),
+              "offline_reproduction": digest(reconstructed) == digest(state),
+              "idempotent_commit": digest(commit_task_boundary_plan(initial, pending["plan"])[0]) == digest(reconstructed),
+              "candidate_audit_separate": pending["plan"].get("candidate_audit_state_sha256") != digest(state),
+              "plan_validation": validation}
     result["passed"] = bool(result["full_success"] and result["fully_observed"] and winner and schema and
-                            str(schema).startswith("schema_") and procedures)
+                            str(schema).startswith("schema_") and procedures and result["marker_state"] == "committed" and
+                            result["offline_reproduction"] and result["idempotent_commit"] and result["candidate_audit_separate"] and
+                            validation["passed"])
     write_json(RUN / "gates" / "a-task-boundary-gate.json", result)
     append(PROGRESS, {"event": "a_task_boundary_gate", **result})
     return result
@@ -227,9 +236,12 @@ def _b_gate(value: dict[str, Any], a_gate: dict[str, Any], a_state: dict[str, An
         checks.append({"pre_state": record["pre_state_sha256"] == digest(a_state),
                        "selected": provenance.get("selected_schema_id") == winner,
                        "reproduced": hashlib.sha256(guidance.encode()).hexdigest() == provenance.get("guidance_sha256"),
-                       "learned": provenance.get("fallback_category") == "learned"})
+                       "learned": provenance.get("fallback_category") == "learned",
+                       "no_candidate_or_quarantine": provenance.get("selected_schema_id") in
+                           set(provenance.get("candidate_schema_ids", [])),
+                       "supported_procedures_only": bool(provenance.get("injected_procedure_ids"))})
     result = {"task_id": task_id, "a_winner_schema_id": winner, "retrieval_checks": checks,
-              "merge_once": bool(b_marker.get("winner_episode_id") is not None or b_marker.get("after_state_sha256")),
+              "merge_once": b_marker.get("state") == "committed",
               "post_state_sha256": b_marker.get("after_state_sha256")}
     result["passed"] = all(all(check.values()) for check in checks) and result["merge_once"]
     write_json(RUN / "gates" / "b-retrieval-gate.json", result)
@@ -245,6 +257,28 @@ def _summary(value: dict[str, Any], state: str) -> None:
                          "evaluation_expected": value["evaluation"]["expected_trajectories"],
                          "per_arm_completed": by_arm, "c_free_gb": c_free_gb(),
                          "manifest_sha256": MANIFEST_SHA.read_text().strip()})
+
+
+def _final_report(value: dict[str, Any], state: str, a_gate: dict[str, Any] | None = None,
+                  b_gate: dict[str, Any] | None = None) -> None:
+    """Sanitized, deterministic engineering report; raw histories stay local."""
+    rows: list[dict[str, Any]] = []
+    for path in sorted((RUN / "evaluation").glob("*/*/*.json")):
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        rows.append({key: artifact.get(key) for key in
+                     ("arm", "task_id", "trial_id", "seed", "after_score", "actions", "termination", "history_sha256")})
+    reservations = settlements = 0
+    for line in LEDGER.read_text(encoding="utf-8").splitlines() if LEDGER.exists() else ():
+        item = json.loads(line)
+        reservations += int(item.get("event") == "reserve")
+        settlements += int(item.get("event") == "settle")
+    write_json(RUN / "final-report.json", {
+        "classification": "engineering-only strict-v5 task-boundary validation; no efficacy claim",
+        "state": state, "manifest_sha256": MANIFEST_SHA.read_text(encoding="utf-8").strip(),
+        "source_commit": value["git_commit"], "expected_trajectories": value["evaluation"]["expected_trajectories"],
+        "completed_trajectories": len(rows), "trajectory_results": rows, "a_gate": a_gate,
+        "b_gate": b_gate, "ledger_events": {"reservations": reservations, "settlements": settlements},
+    })
 
 
 def run(preflight_only: bool = False) -> None:
@@ -273,14 +307,14 @@ def run(preflight_only: bool = False) -> None:
     a_marker = _run_task(value, ledger, initial, a)
     gate = _a_gate(value, initial, a_marker)
     if not gate["passed"]:
-        _status("terminal_no_go_a_unsuitable", a_gate=gate); _summary(value, "terminal_no_go_a_unsuitable"); return
+        state = "terminal_no_go_a_unsuitable"
+        _status(state, a_gate=gate); _summary(value, state); _final_report(value, state, a_gate=gate); return
     a_state = json.loads(_task_state_path(a).read_text(encoding="utf-8"))
     b_marker = _run_task(value, ledger, a_state, b)
     b_gate = _b_gate(value, gate, a_state, b_marker)
     final = "completed" if b_gate["passed"] else "terminal_no_go_b_retrieval"
     _status(final, a_gate=gate, b_gate=b_gate); _summary(value, final)
-    write_json(RUN / "final-report.json", {"classification": "engineering-only task-boundary probe", "state": final,
-        "a_gate": gate, "b_gate": b_gate, "manifest_sha256": MANIFEST_SHA.read_text().strip()})
+    _final_report(value, final, gate, b_gate)
 
 
 def main() -> None:
