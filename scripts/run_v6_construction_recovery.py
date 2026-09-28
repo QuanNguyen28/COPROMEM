@@ -18,6 +18,7 @@ from typing import Any
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 os.environ.setdefault("COPROMEM_ROOT", str(ROOT))
 import sys
+sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, append, v5_budget_bound, write_json
