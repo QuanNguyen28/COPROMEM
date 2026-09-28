@@ -200,8 +200,7 @@ def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descripto
     return plan
 
 
-def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
-    """Validate the frozen, strict-v5 predicate without changing state."""
+def _verify_plan(plan: dict[str, Any]) -> None:
     expected = canonical_digest({key: value for key, value in plan.items() if key != "plan_sha256"})
     if plan.get("plan_sha256") != expected:
         raise ValueError("task-boundary plan digest mismatch")
@@ -209,6 +208,13 @@ def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("task-boundary policy mismatch")
     if canonical_digest(plan.get("pre_state")) != plan.get("pre_state_sha256") or canonical_digest(plan.get("trials")) != plan.get("trials_sha256"):
         raise ValueError("task-boundary frozen input mismatch")
+    if canonical_digest(plan.get("projection_audit", [])) != plan.get("projection_audit_sha256"):
+        raise ValueError("task-boundary projection audit mismatch")
+
+
+def validate_strict_v5(plan: dict[str, Any]) -> dict[str, Any]:
+    """Original strict predicate: every raw normalized event is required."""
+    _verify_plan(plan)
     traces = plan.get("candidate_traces", [])
     full_success = any(item["predicates"]["official_full_success"] for item in traces)
     fully_observed = bool(traces) and all(item["predicates"]["all_executor_operations_observed"] for item in traces)
@@ -224,16 +230,56 @@ def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
     eligible = [item for item in traces if all(item["predicates"][key] for key in
                 ("official_full_success", "all_executor_operations_observed", "structural_signature", "observable_procedure", "has_extracted_procedure", "schema_is_grounded"))]
     winner = min(eligible, key=lambda item: tuple(item["tie_break"]))["episode_id"] if eligible else None
-    projection_valid = (True if plan["policy_version"] != OBSERVABLE_SUBGRAPH_POLICY_VERSION else
-                        bool(plan.get("projection_audit")) and all(item["audit"]["valid"] for item in plan["projection_audit"]))
-    valid = bool(full_success and fully_observed and structural and descriptor_exact and procedure and winner and projection_valid)
+    valid = bool(full_success and fully_observed and structural and descriptor_exact and procedure and winner)
     return {"plan_sha256": plan["plan_sha256"], "task_id": plan["task_id"], "full_success": full_success,
             "fully_observed": fully_observed, "structural_evidence": structural,
             "descriptor_exact_match": descriptor_exact,
-            "projection_valid": projection_valid,
             "procedure_eligible": procedure, "eligible_episode_ids": [item["episode_id"] for item in eligible],
             "winner_episode_id": winner if valid else None, "passed": valid,
             "rejection_reason": None if valid else "strict_v5_structural_grounding_failed"}
+
+
+def validate_observable_subgraph_v5_1(plan: dict[str, Any]) -> dict[str, Any]:
+    """Validate only frozen projected evidence; raw trace is audit-only."""
+    _verify_plan(plan)
+    traces, projections = plan.get("candidate_traces", []), plan.get("projection_audit", [])
+    audits = {int(item["trajectory_index"]): item["audit"] for item in projections}
+    eligible = []
+    for trace in traces:
+        audit = audits.get(int(trace["tie_break"][-1]), {})
+        predicates = trace["predicates"]
+        direct = bool(predicates["structural_signature"] and predicates["observable_procedure"] and
+                      predicates["has_extracted_procedure"] and predicates["schema_is_grounded"])
+        if predicates["official_full_success"] and audit.get("valid") and direct and trace["signature_sha256"] == plan.get("descriptor_signature_sha256"):
+            eligible.append(trace)
+    winner = min(eligible, key=lambda item: tuple(item["tie_break"]))["episode_id"] if eligible else None
+    successful = any(item["predicates"]["official_full_success"] for item in traces)
+    audits_valid = bool(projections) and all(item["audit"].get("valid") for item in projections)
+    coverage = bool(projections) and all(not item["audit"].get("missing_operations") for item in projections)
+    unresolved = any(item["audit"].get("unresolved_dependency_slots") for item in projections)
+    procedures = any(item["predicates"]["has_extracted_procedure"] for item in traces)
+    exact = bool(traces) and all(item["signature_sha256"] == plan.get("descriptor_signature_sha256") for item in traces)
+    if not successful: reason = "v5_1_no_successful_projected_episode"
+    elif unresolved: reason = "v5_1_unresolved_dependency"
+    elif not coverage: reason = "v5_1_descriptor_coverage_incomplete"
+    elif not procedures: reason = "v5_1_no_eligible_procedure"
+    elif not audits_valid or not exact or not winner: reason = "v5_1_projection_invalid"
+    else: reason = None
+    return {"plan_sha256": plan["plan_sha256"], "task_id": plan["task_id"], "full_success": successful,
+            "projection_valid": audits_valid, "descriptor_exact_match": exact, "descriptor_coverage": coverage,
+            "unresolved_dependency": unresolved, "procedure_eligible": procedures,
+            "eligible_episode_ids": [item["episode_id"] for item in eligible], "winner_episode_id": winner if reason is None else None,
+            "passed": reason is None, "rejection_reason": reason}
+
+
+def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
+    """Dispatch to an explicitly versioned, fail-closed policy validator."""
+    policy = plan.get("policy_version")
+    if policy == OBSERVABLE_SUBGRAPH_POLICY_VERSION:
+        return validate_observable_subgraph_v5_1(plan)
+    if policy in {POLICY_VERSION, STRICT_POLICY_VERSION}:
+        return validate_strict_v5(plan)
+    raise ValueError("unknown task-boundary policy")
 
 
 def commit_task_boundary_plan(frozen_pre_state: dict[str, Any], plan: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
