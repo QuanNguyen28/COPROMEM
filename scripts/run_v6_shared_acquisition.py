@@ -51,7 +51,15 @@ def file_sha(path: pathlib.Path) -> str:
 
 
 def git_head() -> str:
-    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    # A linked Windows worktree records an ``E:/...`` gitdir, which native
+    # Linux Git cannot resolve unless it is translated before invocation.
+    env = dict(os.environ); pointer = ROOT / ".git"
+    if pointer.is_file():
+        match = re.match(r"gitdir:\s*([A-Za-z]):/(.+)", pointer.read_text(encoding="utf-8").strip())
+        if match:
+            env["GIT_DIR"] = f"/mnt/{match.group(1).lower()}/{match.group(2)}"
+            env["GIT_WORK_TREE"] = str(ROOT)
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, env=env).strip()
 
 
 def c_free_gib() -> float:

@@ -30,3 +30,7 @@ def test_selection_fails_closed_when_six_two_sibling_families_do_not_exist():
                                         for item in (_row(family, 1), _row(family, 2))]}
     allocation, audit = MOD.select_allocation(inventory, {"execution_exclusion": []}, {"registry_sha256": "registry"})
     assert allocation == [] and audit["shortfall"] == {"required_families": 6, "available_families": 5}
+
+
+def test_git_head_resolves_the_current_linked_worktree():
+    assert len(MOD.git_head()) == 40
