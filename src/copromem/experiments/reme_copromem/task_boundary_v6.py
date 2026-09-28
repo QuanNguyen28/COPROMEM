@@ -195,10 +195,11 @@ def _a_gate(value: dict[str, Any], initial: dict[str, Any], marker: dict[str, An
     task_id = value["evaluation"]["task_ids"][0]; trials = value["evaluation"]["trial_ids"]
     rows = [_verify_artifact(_artifact("copromem_dynamic", task_id, trial), "copromem_dynamic", task_id, trial) for trial in trials]
     from ...benchmarks.appworld.adapter import normalize_appworld_history
+    from .task_boundary import fully_observed
     observed = []
     for row in rows:
         events = normalize_appworld_history(row["history"], float(row["after_score"]) == 1.0)
-        observed.append(bool(LearningCore.signature(events)) and all(event.observed and not event.parameters and not event.check for event in events))
+        observed.append(bool(LearningCore.signature(events)) and fully_observed(events))
     winner = marker.get("winner_episode_id")
     state = json.loads(_task_state_path(task_id).read_text(encoding="utf-8"))
     procedures = state.get("learning", {}).get("episode_procedures", {}).get(winner, []) if winner else []

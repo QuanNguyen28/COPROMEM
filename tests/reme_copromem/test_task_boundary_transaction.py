@@ -11,7 +11,7 @@ import pytest
 from copromem.benchmarks.appworld.adapter import CoProMemAppWorldAdapter
 from copromem.experiments.reme_copromem.task_boundary import (
     POLICY_VERSION, canonical_digest, commit_task_boundary_plan,
-    plan_task_boundary_update, validate_task_boundary_plan,
+    fully_observed, plan_task_boundary_update, validate_task_boundary_plan,
 )
 
 
@@ -70,6 +70,11 @@ def test_sanitized_005_and_006_nested_shapes_reject_without_payloads():
         item["events"].append({"operation": f"helper.{label}", "input_slots": ["results"], "output_slots": [], "observed": False})
         plan = plan_task_boundary_update(pre, [], [item])
         assert not validate_task_boundary_plan(plan)["passed"]
+
+
+def test_observed_response_check_is_positive_evidence_not_a_rejection():
+    from copromem.learning import ActionObservation
+    assert fully_observed((ActionObservation("apis.x", ("input",), ("output",), check="API response observed"),))
 
 
 def test_deterministic_ids_match_in_fresh_python_process(tmp_path):

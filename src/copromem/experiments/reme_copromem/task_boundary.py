@@ -40,6 +40,16 @@ def _events(value: Sequence[dict[str, Any]]) -> tuple[ActionObservation, ...]:
         observed=bool(item.get("observed", True))) for item in value)
 
 
+def fully_observed(events: Sequence[ActionObservation]) -> bool:
+    """Strict v5 evidence predicate: an observed response has a check.
+
+    ``check`` is positive evidence, not a reason to reject a step. Concrete
+    parameters are not admitted into signatures because ``LearningCore``
+    templates them before deriving the content-addressed structure.
+    """
+    return bool(events) and all(event.observed for event in events)
+
+
 def _trial_candidate(item: dict[str, Any]) -> ScoredCandidate:
     required = {"task_id", "seed", "trajectory_index", "intent", "score", "no_memory_score", "actions", "cost_usd", "events"}
     if not required <= set(item):
@@ -66,7 +76,7 @@ def _candidate_trace(candidate: ScoredCandidate, adapter: CoProMemAppWorldAdapte
     predicates = {
         "official_full_success": candidate.trajectory.success,
         "has_events": bool(events),
-        "all_executor_operations_observed": bool(events) and all(event.observed for event in events),
+        "all_executor_operations_observed": fully_observed(events),
         "structural_signature": signature is not None,
         "observable_procedure": any(event.check and event.output_slots for event in events),
         "has_extracted_procedure": bool(procedures),
