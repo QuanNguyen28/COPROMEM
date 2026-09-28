@@ -44,7 +44,12 @@ def c_free_gb() -> float:
 
 
 def _env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if value:
+        return value
     env_file = ROOT / ".env"
+    if not env_file.is_file():
+        raise RuntimeError(f"required credential {name} is absent")
     for line in env_file.read_text(encoding="utf-8").splitlines():
         if "=" in line and line.split("=", 1)[0].strip() == name:
             value = line.split("=", 1)[1].strip().strip("'\"")
