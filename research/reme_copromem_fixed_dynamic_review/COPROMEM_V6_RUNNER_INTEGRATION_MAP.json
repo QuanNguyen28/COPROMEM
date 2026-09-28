@@ -1,0 +1,23 @@
+{
+  "protocol": "v6_engineering_001_contrastive_graph",
+  "provider_calls": 0,
+  "shared_boundaries": {
+    "executor": "runner.execute_trajectory",
+    "native_telemetry": "benchmarks.appworld.worker + execution_evidence",
+    "score_artifact": "runner.execute_trajectory artifact",
+    "ledger": "runner.AppendOnlyLedger"
+  },
+  "v5_3_only_paths_not_permitted_for_v6": [
+    "config.complete_copro_task",
+    "task_boundary.plan_task_boundary_update",
+    "task_boundary.validate_tool_schema_path_v5_3",
+    "task_boundary.commit_task_boundary_plan"
+  ],
+  "v6_paths": {
+    "telemetry_to_graph": "contrastive_graph_v6.build_graph",
+    "batch_plan": "contrastive_graph_v6.plan_task_batch",
+    "validation": "contrastive_graph_v6.validate_plan",
+    "commit": "contrastive_graph_v6.commit",
+    "retrieval": "contrastive_graph_v6.retrieve/reproduce_retrieval"
+  }
+}

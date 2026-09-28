@@ -71,3 +71,10 @@ def test_duplicate_commit_and_cross_process_canonical_hash_are_deterministic():
     _, plan, state, marker = _promoted_state()
     again, marker_again = commit(state, plan)
     assert again == state and marker_again["winner_schema_id"] == marker["winner_schema_id"]
+
+
+def test_v6_runner_does_not_route_to_the_v53_exact_path_lifecycle():
+    import inspect
+    from copromem.experiments.reme_copromem import contrastive_v6_runner
+    source = inspect.getsource(contrastive_v6_runner)
+    assert "complete_copro_task" not in source and "validate_tool_schema_path_v5_3" not in source
