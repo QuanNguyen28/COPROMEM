@@ -38,7 +38,8 @@ def _registry() -> dict:
                      "parameters": parameters, "required_parameters": required,
                      "optional_parameters": optional, "context_parameters": context, "output_slots": outputs})
     registry = {"registry_version": "appworld-public-tool-schema-registry-v5_3", "operations": rows,
-                "normalization": {"operation_aliases": {row["function_name"]: row["operation"] for row in rows}}}
+                "normalization": {"operation_aliases": {row["function_name"]: row["operation"] for row in rows},
+                                  "runtime_context_fields": ["access_token"]}}
     registry["registry_sha256"] = digest(registry)
     return registry
 
@@ -138,6 +139,19 @@ def test_registry_mismatch_duplicate_event_and_response_attested_projection(tmp_
     duplicate = dict(records[0]); duplicate["response_shape"] = {"kind": "tampered"}
     with pytest.raises(ValueError, match="duplicate conflicts"):
         journal.append(duplicate)
+
+
+def test_global_frozen_runtime_context_is_not_an_undeclared_public_argument(tmp_path):
+    """The dispatcher may add access_token to a locally parameterless call."""
+    registry = _registry(); journal = ExecutionEvidenceJournal(tmp_path / "events.jsonl", require_e_backed=False)
+    requester = _Requester(); recorder = DispatcherEvidenceRecorder(registry, journal, "program-global-context", registry["registry_sha256"])
+    recorder.install(requester)
+    requester._request("demo", "loop", item_id="private", access_token="runtime-secret")
+    recorder.flush()
+    row = _records(journal.path)[0]
+    assert row["schema_accepted"]
+    assert row["operation_signature"]["runtime_context_present"] == ["access_token"]
+    assert "access_token" not in [item["name"] for item in row["operation_signature"]["declared_parameters"]]
 
 
 def test_explicit_path_boundary_converts_windows_path_and_preflights_parent(tmp_path, monkeypatch):

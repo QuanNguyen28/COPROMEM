@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from copromem.benchmarks.appworld.execution_evidence import partition_v6_graph_evidence
+from copromem.benchmarks.appworld.execution_evidence import VERSION, partition_v6_graph_evidence
 from copromem.contrastive_graph_v6 import build_graph, commit, digest, plan_task_batch, reproduce_retrieval, retrieve
 from copromem.experiments.reme_copromem.contrastive_v6_integration_fixture import (
     FIXTURE_ID,
@@ -95,3 +95,22 @@ def test_v6_negative_controls_fail_closed_and_fixed_retrieval_does_not_mutate():
     with pytest.raises(ValueError):
         reproduce_retrieval(state, ["apis.demo.inspect", "apis.demo.apply_effect"], tampered)
     assert "abstract-value" not in repr(state)
+
+
+def test_partition_reclassifies_only_frozen_global_runtime_context_legacy_rows():
+    registry = fixture_registry()
+    legacy = {"version": VERSION, "parent_program_id": "legacy", "monotonic_index": 0,
+              "callable_registry_sha256": registry["registry_sha256"], "schema_accepted": False,
+              "schema_error": "unknown_undeclared_field", "unknown_fields": ["access_token"],
+              "missing_required": [], "response_success": True,
+              "operation_signature": {"operation": "apis.demo.inspect"}}
+    legacy["event_sha256"] = digest(legacy)
+    original = dict(legacy)
+    rows, audit = partition_v6_graph_evidence([legacy], registry["registry_sha256"], runtime_context_fields=frozenset({"access_token"}))
+    assert legacy == original  # Raw journal evidence remains immutable.
+    assert rows[0]["schema_accepted"] and audit["legacy_runtime_context_reclassified_rows"] == 1
+    assert rows[0]["legacy_runtime_context_reclassification"]["fields"] == ["access_token"]
+    legacy["unknown_fields"] = ["undeclared"]
+    legacy["event_sha256"] = digest({key: value for key, value in legacy.items() if key != "event_sha256"})
+    with pytest.raises(ValueError, match="telemetry integrity rejection"):
+        partition_v6_graph_evidence([legacy], registry["registry_sha256"], runtime_context_fields=frozenset({"access_token"}))

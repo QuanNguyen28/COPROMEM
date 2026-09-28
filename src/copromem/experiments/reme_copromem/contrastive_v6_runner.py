@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, Mapping
-from ...benchmarks.appworld.execution_evidence import journal_records, partition_v6_graph_evidence
+from ...benchmarks.appworld.execution_evidence import journal_records, partition_v6_graph_evidence, runtime_context_fields
 from ...contrastive_graph_v6 import build_graph, commit, digest, plan_task_batch, reproduce_retrieval, retrieve, validate_plan
 
 STATE_FORMAT = "copromem-v6-contrastive-state-v1"
@@ -15,7 +15,8 @@ def plan_task_batch_from_artifacts(*, artifacts: list[Mapping[str, Any]], regist
     """Build the pure v6 plan from durable, scored public evidence only."""
     if len(artifacts) != len(evidence_paths) or any("after_score" not in item for item in artifacts):
         raise ValueError("complete scored batch and evidence paths required")
-    partitions = [partition_v6_graph_evidence(journal_records(path), str(registry["registry_sha256"])) for path in evidence_paths]
+    partitions = [partition_v6_graph_evidence(journal_records(path), str(registry["registry_sha256"]),
+                                               runtime_context_fields=runtime_context_fields(registry)) for path in evidence_paths]
     graphs = [build_graph(rows, registry) for rows, _ in partitions]
     success = [graph for graph, item in zip(graphs, artifacts) if float(item["after_score"]) == 1.0]
     failed = [graph for graph, item in zip(graphs, artifacts) if float(item["after_score"]) != 1.0]

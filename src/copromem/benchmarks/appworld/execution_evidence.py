@@ -89,6 +89,21 @@ def _registry_index(registry: Mapping[str, Any]) -> tuple[dict[str, dict[str, An
     return index, {str(key): str(value) for key, value in aliases.items()}
 
 
+def runtime_context_fields(registry: Mapping[str, Any]) -> frozenset[str]:
+    """Return the frozen, task-independent dispatcher context field set.
+
+    AppWorld injects authentication context into some calls even when the
+    individual callable's public declaration has no explicit parameter.  The
+    v5.3 registry freezes this classification in its normalization metadata.
+    These fields are never learned API arguments.
+    """
+    normalization = registry.get("normalization", {})
+    fields = normalization.get("runtime_context_fields", ()) if isinstance(normalization, Mapping) else ()
+    if not isinstance(fields, (list, tuple)) or any(not isinstance(value, str) or not value for value in fields):
+        raise ValueError("public callable registry has malformed runtime context fields")
+    return frozenset(fields)
+
+
 def _operation_record(registry: Mapping[str, Any], app_name: str, api_name: str, data: Mapping[str, Any]) -> dict[str, Any]:
     index, aliases = _registry_index(registry)
     submitted = f"apis.{app_name}.{api_name}"
@@ -103,7 +118,8 @@ def _operation_record(registry: Mapping[str, Any], app_name: str, api_name: str,
     parameters = meta.get("parameters", {})
     names = set(values)
     known = set(parameters)
-    unknown = sorted(names - known)
+    context = set(meta.get("context_parameters", ())) | set(runtime_context_fields(registry))
+    unknown = sorted(names - known - context)
     required = set(meta.get("required_parameters", ()))
     missing = sorted(required - names)
     accepted = not unknown and not missing
@@ -115,7 +131,7 @@ def _operation_record(registry: Mapping[str, Any], app_name: str, api_name: str,
                  "access_mode": str(meta.get("access_mode", "unknown")),
                  "public_required": list(meta.get("required_parameters", ())),
                  "public_optional_present": sorted(names & set(meta.get("optional_parameters", ()))),
-                 "runtime_context_present": sorted(names & set(meta.get("context_parameters", ()))),
+                 "runtime_context_present": sorted(names & context),
                  "output_slots": list(meta.get("output_slots", ())) }
     return {"schema_accepted": accepted,
             "schema_error": None if accepted else ("missing_public_required" if missing else "unknown_undeclared_field"),
@@ -305,14 +321,15 @@ def journal_records(path: str | Path, *, require_e_backed: bool = True) -> list[
     return [json.loads(line) for line in journal.path.read_text(encoding="utf-8").splitlines()]
 
 
-def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha256: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha256: str, *,
+                                runtime_context_fields: frozenset[str] = frozenset()) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Separate callable evidence from immutable telemetry without renumbering.
 
     Lifecycle-independent audit rows carry no callable signature and are kept in
     the audit partition. Malformed or contradictory callable rows are rejected
     fail-closed rather than silently filtered.
     """
-    eligible: list[dict[str, Any]]=[]; audit_only=[]; callable_errors=[]; rejected=[]
+    eligible: list[dict[str, Any]]=[]; audit_only=[]; callable_errors=[]; rejected=[]; legacy_reclassified=[]
     for position,row in enumerate(records):
         signature=row.get("operation_signature")
         if not isinstance(signature, Mapping):
@@ -322,13 +339,32 @@ def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha25
         if row.get("event_sha256") != digest({k:v for k,v in row.items() if k!="event_sha256"}):
             rejected.append({"position":position,"reason":"event_hash_mismatch"});continue
         if not row.get("schema_accepted"):
-            rejected.append({"position":position,"reason":"schema_mismatch"});continue
+            # The first v6 acquisition emitted immutable evidence before the
+            # dispatcher consumed the registry's global runtime-context list.
+            # Reclassify only that narrow case; all other schema failures stay
+            # fail-closed and the source journal is never modified.
+            unknown = {str(value) for value in row.get("unknown_fields", ())}
+            missing = {str(value) for value in row.get("missing_required", ())}
+            legacy_context_only = (row.get("schema_error") == "unknown_undeclared_field" and bool(unknown)
+                                   and unknown <= set(runtime_context_fields) and not missing)
+            if not legacy_context_only:
+                rejected.append({"position":position,"reason":"schema_mismatch"});continue
+            reclassified = dict(row)
+            reclassified.update({"schema_accepted": True, "schema_error": None, "unknown_fields": [],
+                                 "legacy_runtime_context_reclassification": {
+                                     "version": "v6-runtime-context-reclassification-v1",
+                                     "fields": sorted(unknown),
+                                     "source_event_sha256": row.get("event_sha256"),
+                                 }})
+            row = reclassified
+            legacy_reclassified.append({"position": position, "event_sha256": row.get("event_sha256"), "fields": sorted(unknown)})
         if not row.get("response_success"):
             callable_errors.append(dict(row));continue
         eligible.append(dict(row))
     if rejected: raise ValueError(f"v6 telemetry integrity rejection: {rejected[0]['reason']}")
     audit={"version":VERSION,"registry_sha256":registry_sha256,"total_rows":len(records),"eligible_rows":len(eligible),
            "audit_only_rows":len(audit_only),"callable_error_rows":len(callable_errors),"rejected_rows":len(rejected),
+           "legacy_runtime_context_reclassified_rows":len(legacy_reclassified), "legacy_runtime_context_reclassified":legacy_reclassified,
            "eligible_sha256":digest(eligible),"audit_only_sha256":digest(audit_only),"callable_errors_sha256":digest(callable_errors),"records_sha256":digest(records)}
     return eligible,audit
 
