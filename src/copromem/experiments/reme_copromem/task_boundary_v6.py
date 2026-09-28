@@ -61,7 +61,7 @@ def _load() -> dict[str, Any]:
     if sha(MANIFEST) != MANIFEST_SHA.read_text(encoding="utf-8").strip():
         raise RuntimeError("006 manifest checksum mismatch")
     value = json.loads(raw)
-    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary", "v5_engineering_008_task_boundary"}:
+    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary", "v5_engineering_008_task_boundary", "v5_1_engineering_009_observable_subgraph"}:
         raise RuntimeError("wrong protocol")
     if value.get("arms") != ["no_memory", "copromem_dynamic"]:
         raise RuntimeError("task-boundary run must have exactly the two registered arms")
@@ -148,12 +148,12 @@ def _task_state_path(task_id: str) -> pathlib.Path:
 
 
 def _complete_task(adapter: CoProMemAppWorldAdapter, task_id: str, trials: list[int], seeds: list[int],
-                   descriptor: list[dict[str, Any]]) -> dict[str, Any]:
+                   descriptor: list[dict[str, Any]], policy_version: str) -> dict[str, Any]:
     """Use the maintained task-boundary implementation without ReMe imports."""
     # The maintained helper is parameterized entirely by COPROMEM_RUN_DIR; it
     # does not initialize any ReMe service or transport.
     from . import config as maintained
-    maintained.complete_copro_task(adapter, task_id, trials, seeds, descriptor=descriptor)
+    maintained.complete_copro_task(adapter, task_id, trials, seeds, descriptor=descriptor, policy_version=policy_version)
     marker = RUN / "copromem" / "task_updates" / f"{task_id}.json"
     if not marker.exists():
         raise RuntimeError("task-boundary merge marker is not durable")
@@ -195,7 +195,8 @@ def _run_task(value: dict[str, Any], ledger: AppendOnlyLedger, initial: dict[str
                 max_actions=int(value["execution"]["max_actions"]), temperature=float(value["execution"]["temperature"]),
                 phase="evaluation", artifact_path=target, memory_for_instruction=callback)
     merged = CoProMemAppWorldAdapter(api_key=""); merged.clone_from_state(initial)
-    marker = _complete_task(merged, task_id, trials, seeds, raw_descriptor)
+    marker = _complete_task(merged, task_id, trials, seeds, raw_descriptor,
+                            value.get("task_boundary_policy", "strict_exact_v5"))
     return marker
 
 

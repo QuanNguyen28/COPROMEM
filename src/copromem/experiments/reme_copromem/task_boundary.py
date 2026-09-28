@@ -18,6 +18,14 @@ from ...learning import ActionObservation, LearningCore
 from ...online import ScoredCandidate, apply_task_batch
 
 POLICY_VERSION = "v5-task-boundary-transaction-v1"
+OBSERVABLE_SUBGRAPH_POLICY_VERSION = "observable_supported_subgraph_v5_1"
+STRICT_POLICY_VERSION = "strict_exact_v5"
+HELPER_REGISTRY_VERSION = "public-helper-registry-v1"
+
+# Identity-only categories.  The data-flow test below, rather than score or
+# task content, decides whether a helper can actually be excluded.
+PUBLIC_HELPER_PREFIXES = ("apis.api_docs.",)
+PUBLIC_HELPER_OPERATIONS = {"apis.supervisor.complete_task", "apis.supervisor.show_account_passwords"}
 
 
 def canonical_bytes(value: Any) -> bytes:
@@ -48,6 +56,63 @@ def fully_observed(events: Sequence[ActionObservation]) -> bool:
     templates them before deriving the content-addressed structure.
     """
     return bool(events) and all(event.observed for event in events)
+
+
+def _same_shape(left: ActionObservation, right: ActionObservation) -> bool:
+    return (left.operation == right.operation and set(left.input_slots) == set(right.input_slots)
+            and set(left.output_slots) == set(right.output_slots))
+
+
+def _helper_category(event: ActionObservation) -> str | None:
+    if event.operation.startswith(PUBLIC_HELPER_PREFIXES): return "allowed_infrastructure_helper"
+    if event.operation in PUBLIC_HELPER_OPERATIONS or event.operation.endswith(".login"):
+        return "allowed_infrastructure_helper"
+    return None
+
+
+def project_observable_supported_subgraph(descriptor: Sequence[ActionObservation],
+                                          events: Sequence[ActionObservation]) -> tuple[tuple[ActionObservation, ...], dict[str, Any]]:
+    """Project only directly observed, public descriptor steps without values.
+
+    The result is independent of score, private state, or model output.  A
+    helper whose output feeds a required descriptor input is unresolved rather
+    than silently accepted.
+    """
+    desc, raw = tuple(descriptor), tuple(events)
+    included: list[ActionObservation] = []; records: list[dict[str, Any]] = []; cursor = 0
+    descriptor_inputs = {slot for item in desc for slot in item.input_slots}
+    for index, event in enumerate(raw):
+        if cursor < len(desc) and _same_shape(event, desc[cursor]):
+            category = "included_descriptor_step" if event.observed and event.check else "disqualifying_unsupported_operation"
+            records.append({"index": index, "category": category, "operation": event.operation,
+                            "input_slots": sorted(event.input_slots), "output_slots": sorted(event.output_slots)})
+            if category == "included_descriptor_step": included.append(event); cursor += 1
+            continue
+        helper = _helper_category(event)
+        output_feeds_required = bool(set(event.output_slots) & descriptor_inputs)
+        if helper and not output_feeds_required:
+            category = helper
+        elif helper:
+            category = "unresolved_dependency"
+        elif not event.observed:
+            category = "disqualifying_unsupported_operation"
+        else:
+            category = "excluded_unrelated_exploration"
+        records.append({"index": index, "category": category, "operation": event.operation,
+                        "input_slots": sorted(event.input_slots), "output_slots": sorted(event.output_slots)})
+    missing = [item.operation for item in desc[cursor:]]
+    included_outputs: set[str] = set(); unresolved_inputs: list[str] = []
+    helper_outputs = {slot for item, row in zip(raw, records) if row["category"] == "unresolved_dependency" for slot in item.output_slots}
+    for item in included:
+        for slot in item.input_slots:
+            if slot in helper_outputs: unresolved_inputs.append(slot)
+        included_outputs.update(item.output_slots)
+    audit = {"registry_version": HELPER_REGISTRY_VERSION, "required_count": len(desc),
+             "included_count": len(included), "missing_operations": missing,
+             "unresolved_dependency_slots": sorted(set(unresolved_inputs)), "records": records,
+             "valid": bool(desc) and len(included) == len(desc) and not missing and not unresolved_inputs and
+                      not any(row["category"] == "disqualifying_unsupported_operation" for row in records)}
+    return tuple(included), audit
 
 
 def _trial_candidate(item: dict[str, Any]) -> ScoredCandidate:
@@ -99,6 +164,17 @@ def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descripto
     trials = sorted((_clone(item) for item in frozen_scored_trials), key=_trial_order)
     if not trials or len({item["task_id"] for item in trials}) != 1 or len({_trial_order(item) for item in trials}) != len(trials):
         raise ValueError("task-boundary plan requires one task and unique trials")
+    if policy_version == OBSERVABLE_SUBGRAPH_POLICY_VERSION:
+        descriptor_events = _events(descriptor)
+        projections = []
+        for item in trials:
+            projected, audit = project_observable_supported_subgraph(descriptor_events, _events(item["events"]))
+            item["events"] = [asdict(event) for event in projected]
+            projections.append({"trajectory_index": item["trajectory_index"], "audit": audit})
+    elif policy_version in {POLICY_VERSION, STRICT_POLICY_VERSION}:
+        projections = []
+    else:
+        raise ValueError("unknown task-boundary policy")
     # Candidate extraction is deliberately non-promoting.  Even the private
     # planning clone contains candidates only; validation decides whether a
     # second, canonical reconstruction may promote one.
@@ -116,6 +192,7 @@ def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descripto
         "task_id": str(trials[0]["task_id"]), "pre_state": pre, "pre_state_sha256": canonical_digest(pre),
         "descriptor": descriptor, "descriptor_sha256": canonical_digest(descriptor),
         "trials": trials, "trials_sha256": canonical_digest(trials),
+        "projection_audit": projections, "projection_audit_sha256": canonical_digest(projections),
         "descriptor_signature_sha256": canonical_digest(descriptor_signature) if descriptor_signature else None,
         "candidate_traces": traces, "candidate_audit_state": adapter.export_state(),
         "candidate_audit_state_sha256": canonical_digest(adapter.export_state())}
@@ -128,7 +205,7 @@ def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
     expected = canonical_digest({key: value for key, value in plan.items() if key != "plan_sha256"})
     if plan.get("plan_sha256") != expected:
         raise ValueError("task-boundary plan digest mismatch")
-    if plan.get("version") != POLICY_VERSION or plan.get("policy_version") != POLICY_VERSION:
+    if plan.get("version") != POLICY_VERSION or plan.get("policy_version") not in {POLICY_VERSION, STRICT_POLICY_VERSION, OBSERVABLE_SUBGRAPH_POLICY_VERSION}:
         raise ValueError("task-boundary policy mismatch")
     if canonical_digest(plan.get("pre_state")) != plan.get("pre_state_sha256") or canonical_digest(plan.get("trials")) != plan.get("trials_sha256"):
         raise ValueError("task-boundary frozen input mismatch")
@@ -147,10 +224,13 @@ def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
     eligible = [item for item in traces if all(item["predicates"][key] for key in
                 ("official_full_success", "all_executor_operations_observed", "structural_signature", "observable_procedure", "has_extracted_procedure", "schema_is_grounded"))]
     winner = min(eligible, key=lambda item: tuple(item["tie_break"]))["episode_id"] if eligible else None
-    valid = bool(full_success and fully_observed and structural and descriptor_exact and procedure and winner)
+    projection_valid = (True if plan["policy_version"] != OBSERVABLE_SUBGRAPH_POLICY_VERSION else
+                        bool(plan.get("projection_audit")) and all(item["audit"]["valid"] for item in plan["projection_audit"]))
+    valid = bool(full_success and fully_observed and structural and descriptor_exact and procedure and winner and projection_valid)
     return {"plan_sha256": plan["plan_sha256"], "task_id": plan["task_id"], "full_success": full_success,
             "fully_observed": fully_observed, "structural_evidence": structural,
             "descriptor_exact_match": descriptor_exact,
+            "projection_valid": projection_valid,
             "procedure_eligible": procedure, "eligible_episode_ids": [item["episode_id"] for item in eligible],
             "winner_episode_id": winner if valid else None, "passed": valid,
             "rejection_reason": None if valid else "strict_v5_structural_grounding_failed"}

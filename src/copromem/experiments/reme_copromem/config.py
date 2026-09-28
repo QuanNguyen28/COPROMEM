@@ -29,6 +29,7 @@ from .runner import append, decomposition_json_call, digest, execute_trajectory,
 from ...integrations.reme.transport import AppendOnlyLedger
 from ...integrations.reme.bank import construct_once, load_clone
 from ...benchmarks.appworld.adapter import CoProMemAppWorldAdapter, TrialInput
+from .task_boundary import POLICY_VERSION
 
 RUN = pathlib.Path(os.environ.get(
     "COPROMEM_RUN_DIR", ROOT / "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v5"
@@ -246,7 +247,8 @@ def _trajectory_cost(role: str) -> float:
 
 
 def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
-                        trials: list[int], seeds: list[int], descriptor: list[dict[str, Any]] | None = None) -> None:
+                        trials: list[int], seeds: list[int], descriptor: list[dict[str, Any]] | None = None,
+                        policy_version: str = POLICY_VERSION) -> None:
     """Transactionally merge one scored winner after every trial is durable."""
     from ...benchmarks.appworld.adapter import AcquisitionIdentity, RawAcquisitionTrajectory, normalize_appworld_history
     from .task_boundary import (POLICY_VERSION, commit_task_boundary_plan,
@@ -312,7 +314,7 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
             "scored_artifact_sha256": file_sha(scored_path), "retrieval_artifact_sha256": file_sha(retrieval_path)})
         artifact_hashes[str(trial)] = file_sha(scored_path)
         retrieval_hashes[str(trial)] = file_sha(retrieval_path)
-    plan = plan_task_boundary_update(pre, descriptor or [], trial_inputs, POLICY_VERSION)
+    plan = plan_task_boundary_update(pre, descriptor or [], trial_inputs, policy_version)
     validation = validate_task_boundary_plan(plan)
     pending = {"state": "prepared", "task_id": task_id,
                "before_state_sha256": digest(pre),

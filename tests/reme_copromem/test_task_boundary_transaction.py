@@ -11,7 +11,8 @@ import pytest
 from copromem.benchmarks.appworld.adapter import CoProMemAppWorldAdapter
 from copromem.experiments.reme_copromem.task_boundary import (
     POLICY_VERSION, canonical_digest, commit_task_boundary_plan,
-    fully_observed, plan_task_boundary_update, validate_task_boundary_plan,
+    OBSERVABLE_SUBGRAPH_POLICY_VERSION, fully_observed, plan_task_boundary_update,
+    project_observable_supported_subgraph, validate_task_boundary_plan,
 )
 
 
@@ -54,6 +55,38 @@ def test_strict_descriptor_mismatch_rejects_before_promotion():
     assert not validation["descriptor_exact_match"]
     assert validation["winner_episode_id"] is None
     assert post == pre
+
+
+def test_v51_projects_observed_descriptor_steps_and_ignores_repeated_public_docs():
+    descriptor = [{"operation": "apis.notes.search", "input_slots": ["query"], "output_slots": ["results"]}]
+    raw = [
+        {"operation": "apis.api_docs.show_api_doc", "input_slots": ["api_name"], "output_slots": ["observation"], "check": "public", "observed": True},
+        {"operation": "apis.notes.search", "input_slots": ["query"], "output_slots": ["results"], "check": "direct", "observed": True},
+        {"operation": "apis.api_docs.show_api_doc", "input_slots": ["api_name"], "output_slots": ["observation"], "check": "public", "observed": True},
+    ]
+    projected, audit = project_observable_supported_subgraph(
+        tuple(__import__("copromem.learning", fromlist=["ActionObservation"]).ActionObservation(**x) for x in descriptor),
+        tuple(__import__("copromem.learning", fromlist=["ActionObservation"]).ActionObservation(**x) for x in raw))
+    assert audit["valid"] and len(projected) == 1 and projected[0].operation == "apis.notes.search"
+    row = trial(11, 1); row["events"] = raw
+    pre = CoProMemAppWorldAdapter(api_key="").export_state()
+    plan = plan_task_boundary_update(pre, descriptor, [row], OBSERVABLE_SUBGRAPH_POLICY_VERSION)
+    post, validation = commit_task_boundary_plan(pre, plan)
+    assert validation["passed"] and validation["descriptor_exact_match"] and post != pre
+
+
+def test_v51_quarantines_helper_dataflow_and_policy_mismatch_fails():
+    descriptor = [{"operation": "apis.notes.search", "input_slots": ["token"], "output_slots": ["results"]}]
+    row = trial(11, 1); row["events"] = [
+        {"operation": "apis.supervisor.show_account_passwords", "input_slots": [], "output_slots": ["token"], "check": "public", "observed": True},
+        {"operation": "apis.notes.search", "input_slots": ["token"], "output_slots": ["results"], "check": "direct", "observed": True},
+    ]
+    pre = CoProMemAppWorldAdapter(api_key="").export_state()
+    plan = plan_task_boundary_update(pre, descriptor, [row], OBSERVABLE_SUBGRAPH_POLICY_VERSION)
+    post, validation = commit_task_boundary_plan(pre, plan)
+    assert not validation["passed"] and not validation["projection_valid"] and post == pre
+    plan["policy_version"] = "unknown"
+    with pytest.raises(ValueError): validate_task_boundary_plan(plan)
 
 
 def test_trial_and_mapping_order_do_not_change_content_addressed_plan():
