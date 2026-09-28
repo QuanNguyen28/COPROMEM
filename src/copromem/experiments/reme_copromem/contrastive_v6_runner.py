@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, Mapping
-from ...benchmarks.appworld.execution_evidence import journal_records
+from ...benchmarks.appworld.execution_evidence import journal_records, partition_v6_graph_evidence
 from ...contrastive_graph_v6 import build_graph, commit, digest, plan_task_batch, reproduce_retrieval, retrieve, validate_plan
 
 STATE_FORMAT = "copromem-v6-contrastive-state-v1"
@@ -15,13 +15,14 @@ def plan_task_batch_from_artifacts(*, artifacts: list[Mapping[str, Any]], regist
     """Build the pure v6 plan from durable, scored public evidence only."""
     if len(artifacts) != len(evidence_paths) or any("after_score" not in item for item in artifacts):
         raise ValueError("complete scored batch and evidence paths required")
-    graphs = [build_graph(journal_records(path), registry) for path in evidence_paths]
+    partitions = [partition_v6_graph_evidence(journal_records(path), str(registry["registry_sha256"])) for path in evidence_paths]
+    graphs = [build_graph(rows, registry) for rows, _ in partitions]
     success = [graph for graph, item in zip(graphs, artifacts) if float(item["after_score"]) == 1.0]
     failed = [graph for graph, item in zip(graphs, artifacts) if float(item["after_score"]) != 1.0]
     plan = plan_task_batch(success, failed, pre_state)
     audit = {"state_format": STATE_FORMAT, "pre_state_sha256": digest(pre_state),
              "graph_hashes": [graph.sha256 for graph in graphs], "plan_sha256": plan["plan_sha256"],
-             "success_count": len(success), "failure_count": len(failed)}
+             "success_count": len(success), "failure_count": len(failed), "ingestion_audits": [audit for _, audit in partitions]}
     return plan, audit
 
 

@@ -305,6 +305,34 @@ def journal_records(path: str | Path, *, require_e_backed: bool = True) -> list[
     return [json.loads(line) for line in journal.path.read_text(encoding="utf-8").splitlines()]
 
 
+def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha256: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Separate callable evidence from immutable telemetry without renumbering.
+
+    Lifecycle-independent audit rows carry no callable signature and are kept in
+    the audit partition. Malformed or contradictory callable rows are rejected
+    fail-closed rather than silently filtered.
+    """
+    eligible: list[dict[str, Any]]=[]; audit_only=[]; callable_errors=[]; rejected=[]
+    for position,row in enumerate(records):
+        signature=row.get("operation_signature")
+        if not isinstance(signature, Mapping):
+            audit_only.append({"position":position,"event_sha256":row.get("event_sha256"),"reason":"non_callable_audit_event"});continue
+        if row.get("version") != VERSION or row.get("callable_registry_sha256") != registry_sha256:
+            rejected.append({"position":position,"reason":"version_or_registry_mismatch"});continue
+        if row.get("event_sha256") != digest({k:v for k,v in row.items() if k!="event_sha256"}):
+            rejected.append({"position":position,"reason":"event_hash_mismatch"});continue
+        if not row.get("schema_accepted"):
+            rejected.append({"position":position,"reason":"schema_mismatch"});continue
+        if not row.get("response_success"):
+            callable_errors.append(dict(row));continue
+        eligible.append(dict(row))
+    if rejected: raise ValueError(f"v6 telemetry integrity rejection: {rejected[0]['reason']}")
+    audit={"version":VERSION,"registry_sha256":registry_sha256,"total_rows":len(records),"eligible_rows":len(eligible),
+           "audit_only_rows":len(audit_only),"callable_error_rows":len(callable_errors),"rejected_rows":len(rejected),
+           "eligible_sha256":digest(eligible),"audit_only_sha256":digest(audit_only),"callable_errors_sha256":digest(callable_errors),"records_sha256":digest(records)}
+    return eligible,audit
+
+
 def learning_events(records: list[Mapping[str, Any]], registry_sha256: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Project response-attested public events without exposing values.
 
