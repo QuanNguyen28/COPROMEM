@@ -6,7 +6,7 @@ import pytest
 from copromem.benchmarks.appworld.adapter import CoProMemAppWorldAdapter
 from copromem.experiments.reme_copromem import config
 from copromem.experiments.reme_copromem.runner import (
-    construct_copromem, digest, raw_acquisition_trajectories, write_json,
+    ReMeService, construct_copromem, digest, raw_acquisition_trajectories, write_json,
 )
 from copromem.integrations.reme.transport import AppendOnlyLedger
 
@@ -96,3 +96,26 @@ def test_interrupted_task_merge_reconciles_from_pending_inputs_without_rescoring
     config.complete_copro_task(resumed, "task", [0, 1], [10, 11])
     assert resumed.export_state() == committed
     assert (tmp_path / "copromem/task_updates/task.json").is_file()
+
+
+def test_reme_service_preserves_src_import_root_for_split_environment(tmp_path, monkeypatch):
+    captured = {}
+
+    class Process:
+        def poll(self): return 0
+
+    def fake_popen(command, **kwargs):
+        captured["command"] = command
+        captured["env"] = kwargs["env"]
+        return Process()
+
+    monkeypatch.setattr("copromem.experiments.reme_copromem.runner.subprocess.Popen", fake_popen)
+    service = ReMeService(port=19999, name="fixture", run=tmp_path,
+                          ledger=tmp_path / "ledger.jsonl", progress=tmp_path / "progress.jsonl",
+                          cap_usd=1.0)
+    try:
+        roots = captured["env"]["PYTHONPATH"].split(__import__("os").pathsep)
+        assert str(__import__("copromem.experiments.reme_copromem.runner", fromlist=["ROOT"]).ROOT / "src") in roots
+        assert captured["command"][-2:] == ["-m", "copromem.integrations.reme.corrected_service"]
+    finally:
+        service._log.close()

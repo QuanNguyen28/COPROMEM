@@ -68,7 +68,11 @@ class ReMeService:
         runtime = run / "services" / name
         self.log_path = run / "services" / f"{name}.log"
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
-        env = {**os.environ, "PYTHONPATH": str(ROOT), "OFFICIAL_REME_PORT": str(port),
+        # The upstream ReMe interpreter is intentionally a separate virtual
+        # environment.  It still needs the maintained bridge package, whose
+        # import root is ``ROOT/src`` rather than the repository root.
+        env = {**os.environ, "PYTHONPATH": os.pathsep.join((str(ROOT / "src"), str(ROOT))),
+               "OFFICIAL_REME_PORT": str(port),
                "OFFICIAL_REME_RUN_DIR": str(runtime), "OFFICIAL_REME_PROGRESS": str(progress),
                "OFFICIAL_REME_LEDGER": str(ledger), "OFFICIAL_PILOT_HARD_CAP": str(cap_usd),
                "OFFICIAL_REME_SERVICE_NAME": name,
