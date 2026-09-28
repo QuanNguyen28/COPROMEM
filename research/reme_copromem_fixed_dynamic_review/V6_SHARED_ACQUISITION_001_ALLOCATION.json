@@ -1,0 +1,23 @@
+{
+  "candidate_list_sha256": "220405dcb7c27918a9dc6534a0c06efd5ccd6e8d23800a3c3568a28167a5ab3c",
+  "custody_audit_sha256": "48b286e4b4c46ed81ffd2f2997c63b7d3e9fab6a86d71aee5dcf5e0419b2f096",
+  "expected_trajectories": 24,
+  "ordering_rule": "(family_effect_sha256, descriptor_sha256, task_id)",
+  "protocol": "v6_shared_acquisition_001",
+  "seeds": [10101, 10102],
+  "selection_is_pre_payload": true,
+  "tasks": [
+    {"descriptor_sha256": "9750559fb5b8dd89a470f278ddfc169d9a1315028bcd06a066dd7f3e309d340b", "family": "692c77d", "task_id": "692c77d_2"},
+    {"descriptor_sha256": "a79723fb9c73635f6329d1820a54c954f6e2e1c484148f698e2fa1e0b6f57f04", "family": "692c77d", "task_id": "692c77d_3"},
+    {"descriptor_sha256": "b528f81954bcdfd575d05b874fca9d15a260b764f84c336ff747cc963efbc825", "family": "60d0b5b", "task_id": "60d0b5b_1"},
+    {"descriptor_sha256": "aca61f8a1ba816900c280ec94021c6eb9f2e0e59a9d8f9db1fad2f3fca05d0cd", "family": "60d0b5b", "task_id": "60d0b5b_3"},
+    {"descriptor_sha256": "3806e5d645235bc751cf3a057e087a022a6cce6bdfd3fbb4b871564117adfa34", "family": "cf6abd2", "task_id": "cf6abd2_1"},
+    {"descriptor_sha256": "f4c35c218420cdb1b96b63fc33e1af3d01384d7425e82d079f4f21779bf585ff", "family": "cf6abd2", "task_id": "cf6abd2_2"},
+    {"descriptor_sha256": "040a094f180291495c937788d05c3c9ed013c8e1beb2324adbc5801299ccea15", "family": "82e2fac", "task_id": "82e2fac_1"},
+    {"descriptor_sha256": "bccfacbeb1bb7c7cce741a0ecf24d1677ea123e33d79b2a944313be82fb4e9fd", "family": "82e2fac", "task_id": "82e2fac_2"},
+    {"descriptor_sha256": "d68593dca83b1c0a30c90409007a0b220a15ee87ad6d23e72e2d6bf663057ccc", "family": "d0b1f43", "task_id": "d0b1f43_2"},
+    {"descriptor_sha256": "5f92b37c3ea644a97f00b782ff38642b0394dddb7f1476ce39f67d7e476acb51", "family": "d0b1f43", "task_id": "d0b1f43_3"},
+    {"descriptor_sha256": "bf15301d0177f4917ec41b137e0d8498d5fcdf4e0834a533b1dc9a285603f388", "family": "771d8fc", "task_id": "771d8fc_1"},
+    {"descriptor_sha256": "bf15301d0177f4917ec41b137e0d8498d5fcdf4e0834a533b1dc9a285603f388", "family": "771d8fc", "task_id": "771d8fc_2"}
+  ]
+}
