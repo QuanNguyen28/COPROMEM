@@ -63,7 +63,11 @@ class AppWorldProxy:
         self._proc.stdin.write(json.dumps(value) + "\n"); self._proc.stdin.flush()
         response = json.loads(self._proc.stdout.readline())
         if not response.get("ok"):
-            raise RuntimeError("native AppWorld worker rejected request")
+            # The worker already emits only a bounded, sanitized diagnostic.
+            # Preserve it so a pre-dispatch telemetry failure is repairable.
+            kind = str(response.get("error_type") or "WorkerError")[:128]
+            detail = str(response.get("error") or "no diagnostic")[:256]
+            raise RuntimeError(f"native AppWorld worker rejected request: {kind}: {detail}")
         return response
 
     def __enter__(self) -> "AppWorldProxy": return self
