@@ -247,9 +247,10 @@ def _trajectory_cost(role: str) -> float:
 
 def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
                         trials: list[int], seeds: list[int]) -> None:
-    """Merge one scored winner after every trial of a task has completed."""
+    """Transactionally merge one scored winner after every trial is durable."""
     from ...benchmarks.appworld.adapter import AcquisitionIdentity, RawAcquisitionTrajectory, normalize_appworld_history
-    from ...online import ScoredCandidate, apply_task_batch
+    from .task_boundary import (POLICY_VERSION, commit_task_boundary_plan,
+                                plan_task_boundary_update, validate_task_boundary_plan)
     pre_path = RUN / "copromem/task_pre_states" / f"{task_id}.json"
     pre = json.loads(pre_path.read_text(encoding="utf-8"))
     marker_path = RUN / "copromem/task_updates" / f"{task_id}.json"
@@ -268,8 +269,13 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
             for trial in trials
         }:
             raise RuntimeError("CoProMem retrieval provenance changed after task merge")
+        if marker_row.get("state") == "rejected":
+            if marker_row.get("after_state_sha256") != digest(pre):
+                raise RuntimeError("rejected CoProMem task changed retrieval state")
+            adapter.clone_from_state(pre)
+            return
         saved = json.loads((RUN / "copromem/task_states" / f"{task_id}.json").read_text(encoding="utf-8"))
-        if marker_row["after_state_sha256"] != digest(saved):
+        if marker_row.get("state") != "committed" or marker_row["after_state_sha256"] != digest(saved):
             raise RuntimeError("CoProMem task merge marker changed")
         adapter.clone_from_state(saved)
         return
@@ -279,7 +285,7 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
     # auditable and replay-free: reconstruction below is pure local state
     # work over those completed artifacts.
     adapter.clone_from_state(pre)
-    candidates = []
+    trial_inputs = []
     artifact_hashes = {}
     retrieval_hashes = {}
     for trial, seed in zip(trials, seeds):
@@ -298,23 +304,40 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
             actions, {"evaluation": True, "scored_artifact_sha256": file_sha(scored_path)},
             events=normalize_appworld_history(row["history"], success))
         role = f"executor:copromem_dynamic:{task_id}:trial={trial}:seed={seed}"
-        candidates.append(ScoredCandidate(
-            trajectory, float(row["after_score"]), _trajectory_cost(role), int(row["actions"]),
-            provenance.get("selected_schema_id"), float(baseline["after_score"])))
+        trial_inputs.append({"task_id": task_id, "seed": seed, "trajectory_index": trial,
+            "intent": intent, "score": float(row["after_score"]), "no_memory_score": float(baseline["after_score"]),
+            "cost_usd": _trajectory_cost(role), "actions": int(row["actions"]), "actions_text": list(actions),
+            "task_state": {"evaluation": True, "scored_artifact_sha256": file_sha(scored_path)},
+            "events": [asdict(event) for event in trajectory.events],
+            "scored_artifact_sha256": file_sha(scored_path), "retrieval_artifact_sha256": file_sha(retrieval_path)})
         artifact_hashes[str(trial)] = file_sha(scored_path)
         retrieval_hashes[str(trial)] = file_sha(retrieval_path)
+    plan = plan_task_boundary_update(pre, [], trial_inputs, POLICY_VERSION)
+    validation = validate_task_boundary_plan(plan)
     pending = {"state": "prepared", "task_id": task_id,
                "before_state_sha256": digest(pre),
                "scored_artifact_sha256": artifact_hashes,
-               "retrieval_artifact_sha256": retrieval_hashes}
+               "retrieval_artifact_sha256": retrieval_hashes,
+               "plan": plan, "plan_sha256": plan["plan_sha256"], "validation": validation}
     if pending_path.exists():
         prior_pending = json.loads(pending_path.read_text(encoding="utf-8"))
         if prior_pending != pending:
             raise RuntimeError("CoProMem pending task merge inputs changed")
     else:
         write_json(pending_path, pending)
-    winner = apply_task_batch(adapter, candidates)
-    updated = adapter.export_state()
+    updated, validation = commit_task_boundary_plan(pre, plan)
+    if not validation["passed"]:
+        adapter.clone_from_state(pre)
+        write_json(marker_path, {"state": "rejected", "task_id": task_id,
+            "before_state_sha256": digest(pre), "after_state_sha256": digest(pre),
+            "scored_artifact_sha256": artifact_hashes, "retrieval_artifact_sha256": retrieval_hashes,
+            "pending_update_sha256": file_sha(pending_path), "plan_sha256": plan["plan_sha256"],
+            "validation": validation, "winner_episode_id": None})
+        return
+    winner = validation["winner_episode_id"]
+    # ``commit_task_boundary_plan`` is pure; make the caller's mutable stream
+    # reflect the now-durable committed snapshot only after validation passed.
+    adapter.clone_from_state(updated)
     state_path = RUN / "copromem/task_states" / f"{task_id}.json"
     if state_path.exists():
         if digest(json.loads(state_path.read_text(encoding="utf-8"))) != digest(updated):
@@ -327,11 +350,12 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
         if shared_hash not in {digest(pre), digest(updated)}:
             raise RuntimeError("CoProMem shared state is inconsistent with task merge")
     write_json(shared_path, updated)
-    write_json(marker_path, {"task_id": task_id, "before_state_sha256": digest(pre),
+    write_json(marker_path, {"state": "committed", "task_id": task_id, "before_state_sha256": digest(pre),
                              "after_state_sha256": digest(updated),
                              "scored_artifact_sha256": artifact_hashes,
                              "retrieval_artifact_sha256": retrieval_hashes,
                              "pending_update_sha256": file_sha(pending_path),
+                             "plan_sha256": plan["plan_sha256"], "validation": validation,
                              "winner_episode_id": winner})
 
 

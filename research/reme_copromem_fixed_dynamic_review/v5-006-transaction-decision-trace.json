@@ -1,0 +1,46 @@
+{
+  "classification": [
+    "METHOD-DESIGN LIMITATION",
+    "TASK-BOUNDARY TRANSACTION/REPRODUCTION BUG"
+  ],
+  "evidence_scope": "Sanitized immutable v5_engineering_006_task_boundary evidence; no task instructions, histories, scorer state, prompts, or provider responses are included.",
+  "immutable_run": {
+    "manifest_sha256": "3d277170a17f4a685c13495979b562b3215b8d6fdde96443343ad955ee69a79f",
+    "pre_state_sha256": "dbce7c6badf7032bf88fd73408250157a92a7c277d545141bfddbdb62b88f879",
+    "recorded_post_state_sha256": "ff0c8455089257ca99416f937293056c2f3edce1d4875f2e628967bf7db81438",
+    "a_gate": {
+      "full_success": true,
+      "eligible_procedure_count": 7,
+      "fully_observed": false,
+      "winner_episode_id_present": true,
+      "winner_schema_id_present": true,
+      "passed": false
+    }
+  },
+  "old_mutation_sequence": [
+    "score artifacts and retrieval artifacts became durable",
+    "complete_copro_task normalized and ingested trials",
+    "apply_task_batch selected/promoted a winner and mutated the live adapter",
+    "task state and marker were persisted",
+    "task_boundary_v6 evaluated fully_observed afterwards"
+  ],
+  "first_invalid_mutation": "apply_task_batch in complete_copro_task, before the A acceptance gate",
+  "reconstruction_findings": {
+    "canonical_runner_history_digest": "stable",
+    "adapter_normalization_of_sanitized_artifact_shapes": "deterministic",
+    "prior_offline_mismatch": "The report-only reconstruction passed normalized events positionally as RawAcquisitionTrajectory.handoffs instead of events; this yielded an empty event sequence. It did not alter the immutable live state.",
+    "prevented_by_repair": [
+      "canonical state and marker reconstruction share commit_task_boundary_plan",
+      "trials are canonically sorted by task_id, seed, trajectory_index",
+      "all IDs derive from canonical event/episode content",
+      "input state is JSON-cloned before planning",
+      "candidate-only audit state is never used as a retrieval bank"
+    ]
+  },
+  "repaired_006_counterfactual": {
+    "validation_passed": false,
+    "committed_winner_episode_id": null,
+    "promoted_schema": null,
+    "semantic_post_state_sha256": "dbce7c6badf7032bf88fd73408250157a92a7c277d545141bfddbdb62b88f879"
+  }
+}
