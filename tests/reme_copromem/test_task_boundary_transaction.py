@@ -11,9 +11,10 @@ import pytest
 from copromem.benchmarks.appworld.adapter import CoProMemAppWorldAdapter
 from copromem.experiments.reme_copromem.task_boundary import (
     POLICY_VERSION, canonical_digest, commit_task_boundary_plan,
-    OBSERVABLE_SUBGRAPH_POLICY_VERSION, fully_observed, plan_task_boundary_update,
-    project_observable_supported_subgraph, validate_task_boundary_plan,
+    OBSERVABLE_PATH_POLICY_VERSION, OBSERVABLE_SUBGRAPH_POLICY_VERSION, fully_observed, plan_task_boundary_update,
+    project_observable_registry_path, project_observable_supported_subgraph, validate_task_boundary_plan,
 )
+from copromem.experiments.reme_copromem.public_path_registry import canonical_digest as registry_digest
 
 
 def trial(seed: int, index: int, *, observed: bool = True, score: float = 1.0) -> dict:
@@ -129,3 +130,55 @@ def test_deterministic_ids_match_in_fresh_python_process(tmp_path):
     env = {**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)}
     output = subprocess.check_output([sys.executable, "-c", code, str(fixture)], text=True, env=env).strip()
     assert output == plan["plan_sha256"]
+
+
+def _v52_registry():
+    registry = {"registry_version": "appworld-public-alternative-path-registry-v5_2", "source_metadata": [],
+                "operations": [
+                    {"operation": "apis.notes.search", "app": "notes", "http_method": "GET", "access_mode": "read",
+                     "path_template": "/search", "operation_id": "notes__search", "input_slots": [], "optional_input_slots": [], "output_slots": ["result_id"]},
+                    {"operation": "apis.notes.archive", "app": "notes", "http_method": "POST", "access_mode": "write",
+                     "path_template": "/{result_id}/archive", "operation_id": "notes__archive", "input_slots": ["result_id"], "optional_input_slots": [], "output_slots": ["message"]},
+                ], "alternative_groups": [{"group_id": "input:apis.notes.archive:result_id", "consumer_operation": "apis.notes.archive",
+                                              "input_slot": "result_id", "producer_operations": ["apis.notes.search"],
+                                              "semantic_status": "schema_compatible_not_semantically_equivalent"}],
+                "dependency_edges": [{"from_operation": "apis.notes.search", "to_operation": "apis.notes.archive", "via_slot": "result_id", "kind": "public_schema_flow"}],
+                "normalization": {"aliases": []}, "path_rule": {"ordered": True}}
+    registry["registry_sha256"] = registry_digest(registry)
+    return registry
+
+
+def test_v52_registry_path_is_value_free_transactional_and_reproducible():
+    registry = _v52_registry()
+    descriptor = [{"operation": "apis.notes.search", "input_slots": [], "output_slots": ["result_id"]},
+                  {"operation": "apis.notes.archive", "input_slots": ["result_id"], "output_slots": ["message"]}]
+    raw = [
+        {"operation": "apis.api_docs.show_api_doc", "input_slots": [], "output_slots": ["observation"], "check": "public", "observed": True},
+        {"operation": "apis.notes.search", "input_slots": [], "output_slots": ["result_id"], "parameters": {"must_not": "persist"}, "check": "direct", "observed": True},
+        {"operation": "apis.notes.archive", "input_slots": ["result_id"], "output_slots": ["message"], "parameters": {"must_not": "persist"}, "check": "direct", "observed": True},
+    ]
+    projected, audit = project_observable_registry_path(registry,
+        tuple(__import__("copromem.learning", fromlist=["ActionObservation"]).ActionObservation(**x) for x in descriptor),
+        tuple(__import__("copromem.learning", fromlist=["ActionObservation"]).ActionObservation(**x) for x in raw))
+    assert audit["valid"] and len(projected) == 2 and all(not item.parameters for item in projected)
+    item = trial(11, 1); item["events"] = raw
+    pre = CoProMemAppWorldAdapter(api_key="").export_state()
+    plan = plan_task_boundary_update(pre, descriptor, [item], OBSERVABLE_PATH_POLICY_VERSION, registry)
+    post, validation = commit_task_boundary_plan(pre, plan)
+    assert validation["passed"] and post != pre
+    replay, second = commit_task_boundary_plan(pre, json.loads(json.dumps(plan)))
+    assert second == validation and canonical_digest(replay) == canonical_digest(post)
+
+
+def test_v52_registry_hash_and_incomplete_path_fail_closed():
+    registry = _v52_registry()
+    descriptor = [{"operation": "apis.notes.search", "input_slots": [], "output_slots": ["result_id"]},
+                  {"operation": "apis.notes.archive", "input_slots": ["result_id"], "output_slots": ["message"]}]
+    item = trial(11, 1); item["events"] = descriptor[:1]
+    pre = CoProMemAppWorldAdapter(api_key="").export_state()
+    plan = plan_task_boundary_update(pre, descriptor, [item], OBSERVABLE_PATH_POLICY_VERSION, registry)
+    post, result = commit_task_boundary_plan(pre, plan)
+    assert not result["passed"] and result["rejection_reason"] == "v5_2_public_path_incomplete" and post == pre
+    plan["public_registry"]["operations"][0]["operation"] = "apis.tampered"
+    with pytest.raises(ValueError, match="digest"):
+        validate_task_boundary_plan(plan)

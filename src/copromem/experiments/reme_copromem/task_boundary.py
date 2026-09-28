@@ -16,9 +16,11 @@ from typing import Any, Sequence
 from ...benchmarks.appworld.adapter import AcquisitionIdentity, CoProMemAppWorldAdapter, RawAcquisitionTrajectory
 from ...learning import ActionObservation, LearningCore
 from ...online import ScoredCandidate, apply_task_batch
+from .public_path_registry import observed_public_operation_matches, public_path_audit, verify_public_registry
 
 POLICY_VERSION = "v5-task-boundary-transaction-v1"
 OBSERVABLE_SUBGRAPH_POLICY_VERSION = "observable_supported_subgraph_v5_1"
+OBSERVABLE_PATH_POLICY_VERSION = "observable_supported_path_v5_2"
 STRICT_POLICY_VERSION = "strict_exact_v5"
 HELPER_REGISTRY_VERSION = "public-helper-registry-v1"
 
@@ -115,6 +117,51 @@ def project_observable_supported_subgraph(descriptor: Sequence[ActionObservation
     return tuple(included), audit
 
 
+def project_observable_registry_path(registry: dict[str, Any], descriptor: Sequence[ActionObservation],
+                                     events: Sequence[ActionObservation]) -> tuple[tuple[ActionObservation, ...], dict[str, Any]]:
+    """Project one frozen public path without retaining values or raw checks.
+
+    A descriptor is a pre-execution path selected from the frozen registry.
+    The raw trace is consulted only for direct operation/slot evidence.  The
+    stored projection takes its names and slots from the descriptor and has no
+    parameters, concrete values, or task text.
+    """
+    verify_public_registry(registry)
+    desc, raw = tuple(descriptor), tuple(events)
+    cursor = 0; selected: list[ActionObservation] = []; records: list[dict[str, Any]] = []
+    for index, event in enumerate(raw):
+        matched, match_audit = (observed_public_operation_matches(registry, asdict(event), asdict(desc[cursor]))
+                                if cursor < len(desc) else (False, {"reason": "path_already_complete"}))
+        if cursor < len(desc) and matched and event.observed and bool(event.check):
+            expected = desc[cursor]
+            selected.append(ActionObservation(operation=expected.operation, input_slots=tuple(expected.input_slots),
+                                               output_slots=tuple(expected.output_slots), check="direct_public_observation",
+                                               observed=True))
+            records.append({"index": index, "category": "included_descriptor_path_step", "operation": event.operation,
+                            "input_slots": sorted(event.input_slots), "output_slots": sorted(event.output_slots),
+                            "normalization": match_audit})
+            cursor += 1
+        elif event.operation == (desc[cursor].operation if cursor < len(desc) else ""):
+            records.append({"index": index, "category": "descriptor_signature_not_directly_observed", "operation": event.operation,
+                            "input_slots": sorted(event.input_slots), "output_slots": sorted(event.output_slots),
+                            "normalization": match_audit})
+        else:
+            helper = _helper_category(event)
+            records.append({"index": index, "category": helper or "excluded_non_path_operation", "operation": event.operation,
+                            "input_slots": sorted(event.input_slots), "output_slots": sorted(event.output_slots)})
+    missing = [item.operation for item in desc[cursor:]]
+    path = public_path_audit(registry, [asdict(item) for item in selected]) if selected else {
+        "registry_sha256": registry["registry_sha256"], "selected_path": [],
+        "selected_path_sha256": canonical_digest([]), "passed": False,
+        "first_rejection": {"reason": "empty_or_incomplete_path"}, "rejections": [{"reason": "empty_or_incomplete_path"}],
+    }
+    valid = bool(desc) and not missing and len(selected) == len(desc) and bool(path["passed"])
+    audit = {"registry_version": registry["registry_version"], "registry_sha256": registry["registry_sha256"],
+             "required_count": len(desc), "included_count": len(selected), "missing_operations": missing,
+             "records": records, "path_audit": path, "path_audit_sha256": canonical_digest(path), "valid": valid}
+    return tuple(selected), audit
+
+
 def _trial_candidate(item: dict[str, Any]) -> ScoredCandidate:
     required = {"task_id", "seed", "trajectory_index", "intent", "score", "no_memory_score", "actions", "cost_usd", "events"}
     if not required <= set(item):
@@ -157,7 +204,8 @@ def _candidate_trace(candidate: ScoredCandidate, adapter: CoProMemAppWorldAdapte
 
 
 def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descriptor: Sequence[dict[str, Any]],
-                              frozen_scored_trials: Sequence[dict[str, Any]], policy_version: str = POLICY_VERSION) -> dict[str, Any]:
+                              frozen_scored_trials: Sequence[dict[str, Any]], policy_version: str = POLICY_VERSION,
+                              public_registry: dict[str, Any] | None = None) -> dict[str, Any]:
     """Plan on an isolated clone; this never mutates ``frozen_pre_state``."""
     pre = _clone(frozen_pre_state)
     descriptor = _clone(list(frozen_descriptor))
@@ -169,6 +217,16 @@ def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descripto
         projections = []
         for item in trials:
             projected, audit = project_observable_supported_subgraph(descriptor_events, _events(item["events"]))
+            item["events"] = [asdict(event) for event in projected]
+            projections.append({"trajectory_index": item["trajectory_index"], "audit": audit})
+    elif policy_version == OBSERVABLE_PATH_POLICY_VERSION:
+        if public_registry is None:
+            raise ValueError("v5.2 task-boundary plan requires frozen public registry")
+        verify_public_registry(public_registry)
+        descriptor_events = _events(descriptor)
+        projections = []
+        for item in trials:
+            projected, audit = project_observable_registry_path(public_registry, descriptor_events, _events(item["events"]))
             item["events"] = [asdict(event) for event in projected]
             projections.append({"trajectory_index": item["trajectory_index"], "audit": audit})
     elif policy_version in {POLICY_VERSION, STRICT_POLICY_VERSION}:
@@ -196,6 +254,9 @@ def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descripto
         "descriptor_signature_sha256": canonical_digest(descriptor_signature) if descriptor_signature else None,
         "candidate_traces": traces, "candidate_audit_state": adapter.export_state(),
         "candidate_audit_state_sha256": canonical_digest(adapter.export_state())}
+    if policy_version == OBSERVABLE_PATH_POLICY_VERSION:
+        plan["public_registry"] = _clone(public_registry)
+        plan["public_registry_sha256"] = str(public_registry["registry_sha256"])
     plan["plan_sha256"] = canonical_digest({key: value for key, value in plan.items() if key != "plan_sha256"})
     return plan
 
@@ -204,12 +265,17 @@ def _verify_plan(plan: dict[str, Any]) -> None:
     expected = canonical_digest({key: value for key, value in plan.items() if key != "plan_sha256"})
     if plan.get("plan_sha256") != expected:
         raise ValueError("task-boundary plan digest mismatch")
-    if plan.get("version") != POLICY_VERSION or plan.get("policy_version") not in {POLICY_VERSION, STRICT_POLICY_VERSION, OBSERVABLE_SUBGRAPH_POLICY_VERSION}:
+    if plan.get("version") != POLICY_VERSION or plan.get("policy_version") not in {POLICY_VERSION, STRICT_POLICY_VERSION, OBSERVABLE_SUBGRAPH_POLICY_VERSION, OBSERVABLE_PATH_POLICY_VERSION}:
         raise ValueError("task-boundary policy mismatch")
     if canonical_digest(plan.get("pre_state")) != plan.get("pre_state_sha256") or canonical_digest(plan.get("trials")) != plan.get("trials_sha256"):
         raise ValueError("task-boundary frozen input mismatch")
     if canonical_digest(plan.get("projection_audit", [])) != plan.get("projection_audit_sha256"):
         raise ValueError("task-boundary projection audit mismatch")
+    if plan.get("policy_version") == OBSERVABLE_PATH_POLICY_VERSION:
+        registry = plan.get("public_registry")
+        verify_public_registry(registry)
+        if plan.get("public_registry_sha256") != registry.get("registry_sha256"):
+            raise ValueError("task-boundary public registry digest mismatch")
 
 
 def validate_strict_v5(plan: dict[str, Any]) -> dict[str, Any]:
@@ -272,11 +338,47 @@ def validate_observable_subgraph_v5_1(plan: dict[str, Any]) -> dict[str, Any]:
             "passed": reason is None, "rejection_reason": reason}
 
 
+def validate_observable_path_v5_2(plan: dict[str, Any]) -> dict[str, Any]:
+    """Validate one complete, directly observed frozen public registry path."""
+    _verify_plan(plan)
+    traces, projections = plan.get("candidate_traces", []), plan.get("projection_audit", [])
+    audits = {int(item["trajectory_index"]): item["audit"] for item in projections}
+    eligible = []
+    for trace in traces:
+        audit = audits.get(int(trace["tie_break"][-1]), {})
+        predicates = trace["predicates"]
+        path = audit.get("path_audit", {})
+        direct = bool(predicates["structural_signature"] and predicates["observable_procedure"] and
+                      predicates["has_extracted_procedure"] and predicates["schema_is_grounded"])
+        exact = trace["signature_sha256"] == plan.get("descriptor_signature_sha256")
+        if predicates["official_full_success"] and audit.get("valid") and path.get("passed") and direct and exact:
+            eligible.append(trace)
+    winner = min(eligible, key=lambda item: tuple(item["tie_break"]))["episode_id"] if eligible else None
+    successful = any(item["predicates"]["official_full_success"] for item in traces)
+    complete = bool(projections) and all(item["audit"].get("valid") for item in projections)
+    reproduced_paths = bool(projections) and all(item["audit"].get("path_audit", {}).get("passed") for item in projections)
+    procedures = any(item["predicates"]["has_extracted_procedure"] for item in traces)
+    exact = bool(traces) and all(item["signature_sha256"] == plan.get("descriptor_signature_sha256") for item in traces)
+    if not successful: reason = "v5_2_no_successful_observed_path"
+    elif not complete: reason = "v5_2_public_path_incomplete"
+    elif not reproduced_paths: reason = "v5_2_public_path_validation_failed"
+    elif not procedures: reason = "v5_2_no_eligible_procedure"
+    elif not exact or not winner: reason = "v5_2_path_projection_invalid"
+    else: reason = None
+    return {"plan_sha256": plan["plan_sha256"], "task_id": plan["task_id"], "registry_sha256": plan["public_registry_sha256"],
+            "full_success": successful, "path_complete": complete, "path_reproduced": reproduced_paths,
+            "descriptor_exact_match": exact, "procedure_eligible": procedures,
+            "eligible_episode_ids": [item["episode_id"] for item in eligible],
+            "winner_episode_id": winner if reason is None else None, "passed": reason is None, "rejection_reason": reason}
+
+
 def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
     """Dispatch to an explicitly versioned, fail-closed policy validator."""
     policy = plan.get("policy_version")
     if policy == OBSERVABLE_SUBGRAPH_POLICY_VERSION:
         return validate_observable_subgraph_v5_1(plan)
+    if policy == OBSERVABLE_PATH_POLICY_VERSION:
+        return validate_observable_path_v5_2(plan)
     if policy in {POLICY_VERSION, STRICT_POLICY_VERSION}:
         return validate_strict_v5(plan)
     raise ValueError("unknown task-boundary policy")

@@ -1,0 +1,694 @@
+{
+  "audit_sha256": "4f1b6f9a857bf48ab13c0efc7002eab5cebe7cf2e1594ec1cfc4c085484627df",
+  "audit_version": "v5_2_registry_retrospective_audit_v1",
+  "provider_calls": 0,
+  "registry_frozen_before_history_read": true,
+  "registry_sha256": "b8214dc7079cd05f28c098ea1cb108508eb0aaed818ad8f58aba224f7a6b4b3b",
+  "runs": [
+    {
+      "artifact_count": 2,
+      "artifacts": [
+        {
+          "artifact_sha256": "16f5e441f2b030435a09003e901960c6fb841bbc7e8ae0b43eb65738a32aa1ce",
+          "candidate_paths": [
+            {
+              "operations": [
+                "apis.supervisor.show_account_passwords"
+              ],
+              "passed": false,
+              "path_sha256": "051b3cb4760e2893141fcd35b303b6d00a5f175450b708b8ac000e7c42357b41",
+              "rejection": {
+                "index": 1,
+                "operation": "apis.spotify.login",
+                "reason": "unsatisfied_public_dependency",
+                "slots": [
+                  "username"
+                ]
+              }
+            },
+            {
+              "operations": [
+                "apis.spotify.search_songs",
+                "apis.spotify.like_song"
+              ],
+              "passed": true,
+              "path_sha256": "61fe26a27d4e17c219165ee7b05f477df9b3f43286e63fed60dcf116309da745",
+              "rejection": null
+            }
+          ],
+          "canonical_public_signature_sha256": "32bb97b104cd3757fbe8a5561432b2d68a059b2a58412d18d00ee4e902a52957",
+          "history_sha256": "9aa295c1bec79904fff82583679fb3b1da9a068ec4198437644d2ec60b1f3003",
+          "normalization_rejections": [],
+          "normalized_event_signature_sha256": "73f24cb29e27e97244eb1a6fd6c92dd5b7bf944b4821ea5a85dafe2b0c5479f9",
+          "observed_public_signatures": [
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_descriptions"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "apis.supervisor.show_account_passwords"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "password",
+                "username"
+              ],
+              "operation": "apis.spotify.login"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "page_index",
+                "page_limit"
+              ],
+              "operation": "apis.spotify.show_following_artists"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "following_artists.extend"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "artist_id",
+                "page_index",
+                "page_limit"
+              ],
+              "operation": "apis.spotify.search_songs"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "all_songs.extend"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "song_id"
+              ],
+              "operation": "apis.spotify.like_song"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [],
+              "operation": "apis.supervisor.complete_task"
+            }
+          ]
+        },
+        {
+          "artifact_sha256": "236fd30a09768bdee4441b212b59d222d2dd6fd7d9eb10ae399e013c962609e9",
+          "candidate_paths": [
+            {
+              "operations": [
+                "apis.supervisor.show_account_passwords"
+              ],
+              "passed": false,
+              "path_sha256": "051b3cb4760e2893141fcd35b303b6d00a5f175450b708b8ac000e7c42357b41",
+              "rejection": {
+                "index": 1,
+                "operation": "apis.spotify.login",
+                "reason": "unsatisfied_public_dependency",
+                "slots": [
+                  "username"
+                ]
+              }
+            },
+            {
+              "operations": [
+                "apis.spotify.search_songs",
+                "apis.spotify.like_song"
+              ],
+              "passed": true,
+              "path_sha256": "61fe26a27d4e17c219165ee7b05f477df9b3f43286e63fed60dcf116309da745",
+              "rejection": null
+            }
+          ],
+          "canonical_public_signature_sha256": "1dc84a15e86138bd98dcd9ad6221c2b0ace302d492f0d8a02e5852fb6da18368",
+          "history_sha256": "d4456a88b10ab2380e82ed2cdebe5b1570623adcb4b96dd9c9e022eb761b40f9",
+          "normalization_rejections": [],
+          "normalized_event_signature_sha256": "74de52362972d9d786ef2c6d2ef8f0bc4098df24bba40e139fa3f0318642e6f9",
+          "observed_public_signatures": [
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "apis.supervisor.show_account_passwords"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "password",
+                "username"
+              ],
+              "operation": "apis.spotify.login"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_descriptions"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "page_index",
+                "page_limit"
+              ],
+              "operation": "apis.spotify.show_following_artists"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "following_artists.extend"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "artist_id",
+                "page_index",
+                "page_limit"
+              ],
+              "operation": "apis.spotify.search_songs"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "all_songs.extend"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "song_id"
+              ],
+              "operation": "apis.spotify.like_song"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [],
+              "operation": "apis.supervisor.complete_task"
+            }
+          ]
+        }
+      ],
+      "run_label": "v5_1_engineering_009_observable_subgraph"
+    },
+    {
+      "artifact_count": 2,
+      "artifacts": [
+        {
+          "artifact_sha256": "125d8c38555b7bfee9e29c2ec9a2c5357aefabaf0cea537c7e12b936ef2131aa",
+          "candidate_paths": [
+            {
+              "operations": [
+                "apis.supervisor.show_account_passwords"
+              ],
+              "passed": false,
+              "path_sha256": "051b3cb4760e2893141fcd35b303b6d00a5f175450b708b8ac000e7c42357b41",
+              "rejection": {
+                "index": 1,
+                "operation": "apis.phone.login",
+                "reason": "unsatisfied_public_dependency",
+                "slots": [
+                  "username"
+                ]
+              }
+            },
+            {
+              "operations": [
+                "apis.venmo.show_sent_payment_requests",
+                "apis.venmo.remind_payment_request"
+              ],
+              "passed": true,
+              "path_sha256": "660120a02513f3accf5f017e5b87825f9658f79bf9b21f2edbe7357ddbf8209f",
+              "rejection": null
+            }
+          ],
+          "canonical_public_signature_sha256": "7de64ce26660acf85445bf4a71b043e8d6ac1b358bf534e7eaa3e152049e71c8",
+          "history_sha256": "9b17f7dad8d16857827a5ba2442324f62d964ac6880f86fefd6c3e42eb0f9e8b",
+          "normalization_rejections": [],
+          "normalized_event_signature_sha256": "bce7c6ab679f613238a2f13463b243f74978a62416207913c5d2e4255c0dc244",
+          "observed_public_signatures": [
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_descriptions"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "apis.supervisor.show_account_passwords"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "password",
+                "username"
+              ],
+              "operation": "apis.venmo.login"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "page_index"
+              ],
+              "operation": "apis.venmo.show_sent_payment_requests"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "all_requests.extend"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_descriptions"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [],
+              "operation": "apis.phone.get_current_date_and_time"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "password",
+                "username"
+              ],
+              "operation": "apis.phone.login"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [],
+              "operation": "apis.phone.show_contact_relationships"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "page_index",
+                "relationship"
+              ],
+              "operation": "apis.phone.search_contacts"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "roommates.extend"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "datetime.strptime"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "datetime.strptime"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "pending_to_roommates.append"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "payment_request_id"
+              ],
+              "operation": "apis.venmo.remind_payment_request"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [],
+              "operation": "apis.supervisor.complete_task"
+            }
+          ]
+        },
+        {
+          "artifact_sha256": "555ac43408129d6c13662e179e704b8e615becbc48a346c940580cc2f5f42795",
+          "candidate_paths": [
+            {
+              "operations": [
+                "apis.supervisor.show_account_passwords"
+              ],
+              "passed": false,
+              "path_sha256": "051b3cb4760e2893141fcd35b303b6d00a5f175450b708b8ac000e7c42357b41",
+              "rejection": {
+                "index": 1,
+                "operation": "apis.phone.login",
+                "reason": "unsatisfied_public_dependency",
+                "slots": [
+                  "username"
+                ]
+              }
+            },
+            {
+              "operations": [
+                "apis.venmo.show_sent_payment_requests",
+                "apis.venmo.remind_payment_request"
+              ],
+              "passed": true,
+              "path_sha256": "660120a02513f3accf5f017e5b87825f9658f79bf9b21f2edbe7357ddbf8209f",
+              "rejection": null
+            }
+          ],
+          "canonical_public_signature_sha256": "c292dc4e72dd475727b591921048bd496fd17a0f23e542593bd707cf2b708a04",
+          "history_sha256": "8b2f6bfcccf1803a63db65e64c23cb4797e50a6e7a92a4025e403894ae31e9fb",
+          "normalization_rejections": [],
+          "normalized_event_signature_sha256": "2164975721fc10f73837402af746188f7318c1ee7939808ecc013bf216b934d8",
+          "observed_public_signatures": [
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_descriptions"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "apis.supervisor.show_account_passwords"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "password",
+                "username"
+              ],
+              "operation": "apis.venmo.login"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "page_index"
+              ],
+              "operation": "apis.venmo.search_friends"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "friends.extend"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_descriptions"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "password",
+                "username"
+              ],
+              "operation": "apis.phone.login"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [],
+              "operation": "apis.phone.show_contact_relationships"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "page_index",
+                "relationship"
+              ],
+              "operation": "apis.phone.search_contacts"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "roommates.extend"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "page_index",
+                "status"
+              ],
+              "operation": "apis.venmo.show_sent_payment_requests"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "pending_requests.extend"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [],
+              "operation": "apis.phone.get_current_date_and_time"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "datetime.fromisoformat"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 1,
+              "named_public_inputs": [],
+              "operation": "to_remind.append"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [
+                "api_name",
+                "app_name"
+              ],
+              "operation": "apis.api_docs.show_api_doc"
+            },
+            {
+              "infrastructure_input_present": true,
+              "local_binding_count": 2,
+              "named_public_inputs": [
+                "payment_request_id"
+              ],
+              "operation": "apis.venmo.remind_payment_request"
+            },
+            {
+              "infrastructure_input_present": false,
+              "local_binding_count": 0,
+              "named_public_inputs": [],
+              "operation": "apis.supervisor.complete_task"
+            }
+          ]
+        }
+      ],
+      "run_label": "v5_1_engineering_010_observable_subgraph"
+    }
+  ]
+}
