@@ -20,6 +20,7 @@ from ...benchmarks.appworld.adapter import CoProMemAppWorldAdapter, TrialInput
 from ...integrations.reme.transport import AppendOnlyLedger
 from ...learning import ActionObservation, LearningCore
 from .runner import append, construct_copromem, digest, execute_trajectory, raw_acquisition_trajectories, write_json, v5_budget_bound
+from .public_path_registry import verify_public_registry
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[4]
@@ -61,7 +62,7 @@ def _load() -> dict[str, Any]:
     if sha(MANIFEST) != MANIFEST_SHA.read_text(encoding="utf-8").strip():
         raise RuntimeError("006 manifest checksum mismatch")
     value = json.loads(raw)
-    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary", "v5_engineering_008_task_boundary", "v5_1_engineering_009_observable_subgraph"}:
+    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary", "v5_engineering_008_task_boundary", "v5_1_engineering_009_observable_subgraph", "v5_2_engineering_011_observable_path"}:
         raise RuntimeError("wrong protocol")
     if value.get("arms") != ["no_memory", "copromem_dynamic"]:
         raise RuntimeError("task-boundary run must have exactly the two registered arms")
@@ -82,6 +83,13 @@ def _load() -> dict[str, Any]:
             raise RuntimeError(f"006 budget mismatch: {key}")
     if not value["budget"].get("fits_hard_cap"):
         raise RuntimeError("006 budget does not fit hard cap")
+    if value.get("task_boundary_policy") == "observable_supported_path_v5_2":
+        registry_path = ROOT / value["evaluation"]["public_registry_relative_path"]
+        if not registry_path.is_file() or sha(registry_path) != value["evaluation"].get("public_registry_file_sha256"):
+            raise RuntimeError("v5.2 public registry file mismatch")
+        registry = json.loads(registry_path.read_text(encoding="utf-8")); verify_public_registry(registry)
+        if registry["registry_sha256"] != value["evaluation"].get("public_registry_sha256"):
+            raise RuntimeError("v5.2 public registry content mismatch")
     return value
 
 
@@ -148,12 +156,13 @@ def _task_state_path(task_id: str) -> pathlib.Path:
 
 
 def _complete_task(adapter: CoProMemAppWorldAdapter, task_id: str, trials: list[int], seeds: list[int],
-                   descriptor: list[dict[str, Any]], policy_version: str) -> dict[str, Any]:
+                   descriptor: list[dict[str, Any]], policy_version: str, public_registry: dict[str, Any] | None = None) -> dict[str, Any]:
     """Use the maintained task-boundary implementation without ReMe imports."""
     # The maintained helper is parameterized entirely by COPROMEM_RUN_DIR; it
     # does not initialize any ReMe service or transport.
     from . import config as maintained
-    maintained.complete_copro_task(adapter, task_id, trials, seeds, descriptor=descriptor, policy_version=policy_version)
+    maintained.complete_copro_task(adapter, task_id, trials, seeds, descriptor=descriptor, policy_version=policy_version,
+                                   public_registry=public_registry)
     marker = RUN / "copromem" / "task_updates" / f"{task_id}.json"
     if not marker.exists():
         raise RuntimeError("task-boundary merge marker is not durable")
@@ -174,7 +183,8 @@ def _snapshot(path: pathlib.Path, state: dict[str, Any]) -> None:
         write_json(path, state)
 
 
-def _run_task(value: dict[str, Any], ledger: AppendOnlyLedger, initial: dict[str, Any], task_id: str) -> dict[str, Any]:
+def _run_task(value: dict[str, Any], ledger: AppendOnlyLedger, initial: dict[str, Any], task_id: str,
+              public_registry: dict[str, Any] | None = None) -> dict[str, Any]:
     ev = value["evaluation"]; trials, seeds = list(ev["trial_ids"]), list(ev["seeds"])
     pre_file = RUN / "copromem" / "task_pre_states" / f"{task_id}.json"
     _snapshot(pre_file, initial)
@@ -196,7 +206,7 @@ def _run_task(value: dict[str, Any], ledger: AppendOnlyLedger, initial: dict[str
                 phase="evaluation", artifact_path=target, memory_for_instruction=callback)
     merged = CoProMemAppWorldAdapter(api_key=""); merged.clone_from_state(initial)
     marker = _complete_task(merged, task_id, trials, seeds, raw_descriptor,
-                            value.get("task_boundary_policy", "strict_exact_v5"))
+                            value.get("task_boundary_policy", "strict_exact_v5"), public_registry)
     return marker
 
 
@@ -218,6 +228,8 @@ def _a_gate(value: dict[str, Any], initial: dict[str, Any], marker: dict[str, An
     schema = state.get("learning", {}).get("episode_schemas", {}).get(winner) if winner else None
     if value.get("task_boundary_policy") == "observable_supported_subgraph_v5_1":
         observed = [bool(validation.get("projection_valid"))]
+    elif value.get("task_boundary_policy") == "observable_supported_path_v5_2":
+        observed = [bool(validation.get("path_complete") and validation.get("path_reproduced"))]
     result = {"task_id": task_id, "official_scores": [float(row["after_score"]) for row in rows],
               "full_success": any(float(row["after_score"]) == 1.0 for row in rows),
               "fully_observed": all(observed), "winner_episode_id": winner, "winner_schema_id": schema,
@@ -314,14 +326,18 @@ def run(preflight_only: bool = False) -> None:
     _status("preflight_passed", c_free_gb=c_free_gb(), initial_state_sha256=digest(initial), reme_initialized=False)
     _summary(value, "preflight_passed")
     if preflight_only: return
+    registry = None
+    if value.get("task_boundary_policy") == "observable_supported_path_v5_2":
+        registry = json.loads((ROOT / value["evaluation"]["public_registry_relative_path"]).read_text(encoding="utf-8"))
+        verify_public_registry(registry)
     a, b = value["evaluation"]["task_ids"]
-    a_marker = _run_task(value, ledger, initial, a)
+    a_marker = _run_task(value, ledger, initial, a, registry)
     gate = _a_gate(value, initial, a_marker)
     if not gate["passed"]:
         state = "terminal_no_go_a_unsuitable"
         _status(state, a_gate=gate); _summary(value, state); _final_report(value, state, a_gate=gate); return
     a_state = json.loads(_task_state_path(a).read_text(encoding="utf-8"))
-    b_marker = _run_task(value, ledger, a_state, b)
+    b_marker = _run_task(value, ledger, a_state, b, registry)
     b_gate = _b_gate(value, gate, a_state, b_marker)
     final = "completed" if b_gate["passed"] else "terminal_no_go_b_retrieval"
     _status(final, a_gate=gate, b_gate=b_gate); _summary(value, final)

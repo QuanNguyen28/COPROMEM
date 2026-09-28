@@ -248,7 +248,7 @@ def _trajectory_cost(role: str) -> float:
 
 def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
                         trials: list[int], seeds: list[int], descriptor: list[dict[str, Any]] | None = None,
-                        policy_version: str = POLICY_VERSION) -> None:
+                        policy_version: str = POLICY_VERSION, public_registry: dict[str, Any] | None = None) -> None:
     """Transactionally merge one scored winner after every trial is durable."""
     from ...benchmarks.appworld.adapter import AcquisitionIdentity, RawAcquisitionTrajectory, normalize_appworld_history
     from .task_boundary import (POLICY_VERSION, commit_task_boundary_plan,
@@ -314,7 +314,7 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
             "scored_artifact_sha256": file_sha(scored_path), "retrieval_artifact_sha256": file_sha(retrieval_path)})
         artifact_hashes[str(trial)] = file_sha(scored_path)
         retrieval_hashes[str(trial)] = file_sha(retrieval_path)
-    plan = plan_task_boundary_update(pre, descriptor or [], trial_inputs, policy_version)
+    plan = plan_task_boundary_update(pre, descriptor or [], trial_inputs, policy_version, public_registry)
     validation = validate_task_boundary_plan(plan)
     pending = {"state": "prepared", "task_id": task_id,
                "before_state_sha256": digest(pre),
