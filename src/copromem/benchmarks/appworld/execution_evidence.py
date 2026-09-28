@@ -58,6 +58,17 @@ def _response_shape(response: Any) -> dict[str, Any]:
         return {"kind": "unavailable"}
 
 
+def _response_output_hashes(response: Any, output_slots: list[str]) -> dict[str, str]:
+    """Retain equality witnesses for declared outputs, never their values."""
+    try:
+        body = response.json()
+    except Exception:
+        return {}
+    if not isinstance(body, Mapping):
+        return {}
+    return {name: digest(body[name]) for name in sorted(set(output_slots) & set(body))}
+
+
 def _registry_digest(registry: Mapping[str, Any]) -> str:
     body = {key: value for key, value in registry.items() if key != "registry_sha256"}
     return digest(body)
@@ -101,6 +112,7 @@ def _operation_record(registry: Mapping[str, Any], app_name: str, api_name: str,
                 for name in sorted(names & known)]
     signature = {"application": str(meta["app"]), "callable_name": str(meta["function_name"]),
                  "operation": operation, "declared_parameters": declared,
+                 "access_mode": str(meta.get("access_mode", "unknown")),
                  "public_required": list(meta.get("required_parameters", ())),
                  "public_optional_present": sorted(names & set(meta.get("optional_parameters", ()))),
                  "runtime_context_present": sorted(names & set(meta.get("context_parameters", ()))),
@@ -221,9 +233,10 @@ class DispatcherEvidenceRecorder:
         status = getattr(response, "status_code", None)
         success = status == 200
         shape = _response_shape(response)
+        outputs = _response_output_hashes(response, list(metadata["operation_signature"]["output_slots"])) if metadata["schema_accepted"] else {}
         self._queue({**base, "response_success": success, "response_status": status,
                      "response_error_class": None if success else f"http_{status}",
-                     "response_shape": shape, "response_sha256": digest(shape)})
+                     "response_shape": shape, "response_sha256": digest(shape), "response_output_value_hashes": outputs})
         return response
 
     def install(self, requester: Any) -> None:

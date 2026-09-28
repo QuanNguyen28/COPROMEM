@@ -1,0 +1,12 @@
+{
+  "policy_version": "copromem-v6-contrastive-graph-v1",
+  "provider_calls": 0,
+  "minimum_independent_successes": 2,
+  "negative_evidence_rule": "exclude an operation when failed support is at least successful support",
+  "terminal_effect_rule": "a promoted core must include a response-attested public write effect",
+  "allowed_evidence": ["public_callable_schema", "response_attested_event", "aggregate_official_outcome", "redacted_dataflow_equality"],
+  "forbidden_memory_content": ["task_id", "concrete_value", "raw_response", "hidden_state", "scorer_detail", "expected_answer", "provider_text"],
+  "transaction": ["plan", "validate", "commit"],
+  "retrieval": ["semantic_effect_candidates", "structural_verification", "offline_reproduction"],
+  "known_limitations": ["requires two independent successful traces by default", "cannot recover unobserved or unsupported calls", "does not establish efficacy"]
+}
