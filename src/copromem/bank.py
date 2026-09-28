@@ -330,15 +330,19 @@ class StructuralSchemaBank:
             # Update moving average of transfer reliability
             delta = (1.0 if trace.success else 0.0) - curr_rel
             new_rel = max(0.0, min(1.0, curr_rel + delta / exec_count))
+            successful_task_ids = set(schema.structural_stats.get("successful_task_ids", ()))
+            if trace.success:
+                successful_task_ids.add(trace.task_id)
 
             updated = schema.with_stats(
                 execution_count=exec_count,
                 transfer_reliability=round(new_rel, 3),
                 success_count=int(schema.structural_stats.get("success_count", 0)) + int(trace.success),
+                successful_task_ids=sorted(successful_task_ids),
             )
             if (
                 updated.status == "candidate"
-                and updated.structural_stats["success_count"] >= 2
+                and len(successful_task_ids) >= 2
                 and updated.transfer_reliability >= 0.7
             ):
                 updated = updated.admitted()

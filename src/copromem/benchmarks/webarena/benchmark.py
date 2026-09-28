@@ -124,6 +124,7 @@ from ...copromem_memory_module import (
 from ...contracts import Contract
 from ...schema import DecompositionSchema
 from ...types import HandoffEvent
+from ...learning import ActionObservation
 
 REASONINGBANK_MEMORY_HEADER = (
     "Below are some memory items that I accumulated from past interaction from the environment that may be helpful to solve the task. "
@@ -358,6 +359,24 @@ def abstract_trajectory_to_subtasks(actions: list[str]) -> str:
     subtasks.append("Verify observed state satisfies all constraints and extract target output")
 
     return " -> ".join(f"{i+1}. {s}" for i, s in enumerate(subtasks))
+
+
+def normalize_handoffs(handoffs: list[HandoffEvent]) -> tuple[ActionObservation, ...]:
+    """Expose action type and observable slot flow without browser values."""
+    events = []
+    for handoff in handoffs:
+        action = str(handoff.artifact.get("action", "")).split("(", 1)[0].strip()
+        operation = action or handoff.interface
+        passed = [str(result.get("reason", "")) if isinstance(result, dict) else result.reason
+                  for result in handoff.verifier_results
+                  if (result.get("passed") if isinstance(result, dict) else result.passed)]
+        events.append(ActionObservation(
+            operation=operation,
+            input_slots=tuple(sorted(handoff.artifact)),
+            output_slots=tuple(sorted(handoff.observable_state)),
+            check="; ".join(passed),
+        ))
+    return tuple(events)
 
 
 def induce_from_trajectory(
@@ -958,7 +977,7 @@ def run_benchmark(
                                     family = str(res_obj.schema_used.get("task_family", ""))
                                     if family.startswith("Domain_"):
                                         prior_domain = family.removeprefix("Domain_")
-                                if arm in ("semantic_rag", "copromem_v2") and res_obj.actions_taken and res_obj.success:
+                                if arm == "semantic_rag" and res_obj.actions_taken and res_obj.success:
                                     induced_mem = induce_from_trajectory(
                                         task_id=res_obj.task_id,
                                         goal=res_obj.intent,
@@ -977,6 +996,9 @@ def run_benchmark(
                                     if schema and not any(s.schema_id == schema.schema_id for s in memory_modules[arm].bank.schemas):
                                         memory_modules[arm].bank.schemas.append(schema)
                                     prior_handoffs = [HandoffEvent(**event) if isinstance(event, dict) else event for event in res_obj.handoffs]
+                                    memory_modules[arm].observe_events(
+                                        f"webarena:{res_obj.task_id}:{arm}", str(res_obj.task_id),
+                                        normalize_handoffs(prior_handoffs), res_obj.success, prior_domain)
                                     memory_modules[arm].record_episode(
                                         task_id=str(res_obj.task_id),
                                         arm=arm,
@@ -1267,7 +1289,7 @@ def run_benchmark(
             print(f" {status_str} in {res.steps} steps ({res.duration_seconds:.1f}s, ${res.cost_usd:.4f}){ans_str}")
 
             # Continual Learning: Induce and accumulate procedural memory
-            if arm in ("semantic_rag", "copromem_v2") and res.actions_taken:
+            if arm == "semantic_rag" and res.actions_taken:
                 induced_mem = induce_from_trajectory(
                     task_id=task_id,
                     goal=res.intent,
@@ -1282,6 +1304,9 @@ def run_benchmark(
                         defer_until_admitted=(arm == "copromem_v2"),
                     )
             if arm == "copromem_v2":
+                memory_modules[arm].observe_events(
+                    f"webarena:{task_id}:{arm}", str(task_id),
+                    normalize_handoffs(res.handoffs), res.success, res.domain)
                 memory_modules[arm].record_episode(
                     task_id=str(task_id),
                     arm=arm,

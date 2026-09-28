@@ -1,4 +1,4 @@
-"""Shared five-arm execution boundary for the corrected fixed/dynamic pilot.
+"""Shared execution boundary for the four-arm continuous CoProMem pilot.
 
 This is deliberately independent of historical smoke runners.  It uses the
 pinned upstream AppWorld agent for prompt construction, completion parsing and
@@ -23,7 +23,8 @@ from ...integrations.reme.transport import (
 from ...integrations.reme.upstream_executor import AppWorldProxy, CALL_ROLE, load_official_agent, safe_journal_path
 from .strict_json import StrictJSONError, extract as extract_copromem_json
 from ...benchmarks.appworld.adapter import AcquisitionIdentity, RawAcquisitionTrajectory
-from ...benchmarks.appworld.adapter import CoProMemAppWorldAdapter
+from ...benchmarks.appworld.adapter import CoProMemAppWorldAdapter, normalize_appworld_history
+from ...online import ScoredCandidate, apply_task_batch
 
 
 ROOT = pathlib.Path(os.environ.get("COPROMEM_ROOT", pathlib.Path(__file__).resolve().parents[4]))
@@ -70,6 +71,7 @@ class ReMeService:
         env = {**os.environ, "PYTHONPATH": str(ROOT), "OFFICIAL_REME_PORT": str(port),
                "OFFICIAL_REME_RUN_DIR": str(runtime), "OFFICIAL_REME_PROGRESS": str(progress),
                "OFFICIAL_REME_LEDGER": str(ledger), "OFFICIAL_PILOT_HARD_CAP": str(cap_usd),
+               "OFFICIAL_REME_SERVICE_NAME": name,
                "OFFICIAL_PILOT_LIFECYCLE_INPUT_TOKEN_CEILING": str(lifecycle_input_ceiling)}
         self._log = self.log_path.open("a", encoding="utf-8")
         self.proc = subprocess.Popen([REME_PYTHON, "-m", "copromem.integrations.reme.corrected_service"],
@@ -143,7 +145,7 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
         # method's memory.  It is the common raw evidence source, not a sixth
         # memory arm.
         use_memory = arm not in {"no_memory", "shared_acquisition"}
-        agent = Agent(index=seed, task_ids=[task_id], experiment_name="copromem_fixed_dynamic",
+        agent = Agent(index=seed, task_ids=[task_id], experiment_name="continuous_copromem_v5",
                       model_name="deepseek/deepseek-v4.1-flash", temperature=temperature,
                       max_interactions=max_actions, num_trials=1, use_memory=use_memory,
                       memory_base_url=(memory_base_url or "http://127.0.0.1:9/"),
@@ -269,13 +271,16 @@ def raw_acquisition_trajectories(records: list[dict[str, Any]]) -> list[RawAcqui
         output.append(RawAcquisitionTrajectory(identity=identity, intent=row["instruction"], domain="appworld",
                       success=float(row["after_score"]) == 1.0, actions=actions,
                       task_state={"history_sha256": row["history_sha256"],
-                                  "source_artifact_sha256": row["source_artifact_sha256"]}))
+                                  "source_artifact_sha256": row["source_artifact_sha256"],
+                                  "official_score": float(row["after_score"])},
+                      events=normalize_appworld_history(row["history"], float(row["after_score"]) == 1.0)))
     return output
 
 
-def construct_copromem(*, run: pathlib.Path, progress: pathlib.Path, ledger: AppendOnlyLedger,
-                       api_key: str, raw: list[RawAcquisitionTrajectory], call_cap: int = 320) -> tuple[dict[str, Any], str]:
-    """Build the single acquired CoProMem state through strict JSON calls."""
+def decomposition_json_call(*, run: pathlib.Path, progress: pathlib.Path,
+                            ledger: AppendOnlyLedger, api_key: str,
+                            role_prefix: str = "copromem_decomposition:acquisition") -> Callable[..., dict[str, Any] | None]:
+    """Use the same ledgered, cached decomposition boundary in acquisition and evaluation."""
     cache = run / "copromem" / "decomposition-cache.jsonl"
     provenance = run / "copromem" / "decomposition-provenance.jsonl"
 
@@ -287,11 +292,17 @@ def construct_copromem(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
             for line in cache.read_text(encoding="utf-8").splitlines():
                 row = json.loads(line)
                 if row.get("request_sha256") == request_hash:
+                    accepted = row["accepted_object"]
+                    if (row.get("schema_name") != schema_name
+                            or row.get("accepted_object_sha256") != hashlib.sha256(accepted.encode()).hexdigest()):
+                        raise RuntimeError("decomposition cache integrity mismatch")
                     parsed, _, _ = extract_copromem_json(schema_name or "", row["accepted_object"], "stop", False)
+                    if parsed != row.get("parsed"):
+                        raise RuntimeError("decomposition cache parsed object mismatch")
                     append(provenance, {"event": "decomposition_cache_reused", "request_sha256": request_hash})
                     return parsed
         client = LockedOpenAI(api_key=api_key, ledger=ledger, progress=progress,
-                              role=f"copromem_decomposition:{schema_name or 'unknown'}")
+                              role=f"{role_prefix}:{schema_name or 'unknown'}")
         response = client.chat.completions.create(model="deepseek/deepseek-v4.1-flash", stream=False,
             max_tokens=min(max_tokens, 2048), temperature=0.0,
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}])
@@ -306,21 +317,30 @@ def construct_copromem(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
             raise RuntimeError("CoProMem response violates frozen JSON contract") from exc
         row = {"request_sha256": request_hash, "schema_name": schema_name, "finish_reason": choice.finish_reason,
                "content_sha256": hashlib.sha256(content.encode()).hexdigest(), "accepted_object": accepted,
+               "accepted_object_sha256": hashlib.sha256(accepted.encode()).hexdigest(),
                "object_span": list(span), "parsed": parsed}
         append(cache, row)
         append(provenance, {"event": "decomposition_accepted", "request_sha256": request_hash,
                             "accepted_object_sha256": hashlib.sha256(accepted.encode()).hexdigest()})
         return parsed
 
-    adapter = CoProMemAppWorldAdapter(api_key="locked", model="deepseek/deepseek-v4.1-flash",
-        provider_only="deepseek", reasoning_effort="none", llm_json_call=json_call,
-        decomposition_call_cap=call_cap)
+    return json_call
+
+
+def construct_copromem(*, run: pathlib.Path, progress: pathlib.Path, ledger: AppendOnlyLedger,
+                       api_key: str, raw: list[RawAcquisitionTrajectory], call_cap: int = 320) -> tuple[dict[str, Any], str]:
+    """Build a mutable warm start from public, scored train trajectories."""
+    adapter = CoProMemAppWorldAdapter(api_key="")
+    by_task: dict[str, list[RawAcquisitionTrajectory]] = {}
     for episode in raw:
-        adapter.ingest(episode)
-    adapter.consolidate()
+        by_task.setdefault(episode.identity.task_id, []).append(episode)
+    for episodes in by_task.values():
+        apply_task_batch(adapter, [ScoredCandidate(
+            trajectory=episode, score=float(episode.task_state.get("official_score", episode.success)),
+            cost_usd=0.0, actions=len(episode.actions)) for episode in episodes])
     state = adapter.export_state()
     state_hash = digest(state)
     write_json(run / "copromem" / "initial-state.json", state)
-    append(progress, {"event": "copromem_initial_bank_frozen", "state_sha256": state_hash,
+    append(progress, {"event": "copromem_train_warm_start", "state_sha256": state_hash,
                       "episode_count": len(raw)})
     return state, state_hash

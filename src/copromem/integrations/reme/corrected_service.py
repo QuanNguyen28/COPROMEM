@@ -80,6 +80,7 @@ def main() -> None:
     port = int(os.environ["OFFICIAL_REME_PORT"])
     run_dir = pathlib.Path(os.environ["OFFICIAL_REME_RUN_DIR"])
     progress = pathlib.Path(os.environ["OFFICIAL_REME_PROGRESS"])
+    service_name = os.environ["OFFICIAL_REME_SERVICE_NAME"]
     ledger = AppendOnlyLedger(pathlib.Path(os.environ["OFFICIAL_REME_LEDGER"]),
                               float(os.environ["OFFICIAL_PILOT_HARD_CAP"]))
 
@@ -90,11 +91,11 @@ def main() -> None:
     import reme.core.embedding.openai_embedding_model as upstream_embedding
     upstream_llm.AsyncOpenAI = lambda **_: LockedAsyncOpenAI(
         api_key=values["OPENROUTER_API_KEY"], ledger=ledger, progress=progress,
-        role="reme_lifecycle",
+        role=f"reme_lifecycle:{service_name}",
     )
     upstream_embedding.AsyncOpenAI = lambda **_: LockedAsyncEmbeddingOpenAI(
         api_key=values["OPENROUTER_API_KEY"], base_url="https://openrouter.ai/api/v1",
-        ledger=ledger, progress=progress, role="reme_embedding",
+        ledger=ledger, progress=progress, role=f"reme_embedding:{service_name}",
         allowed_model="openai/text-embedding-3-small", provider="azure",
         provider_only="azure", usd_per_input_token=0.02 / 1_000_000,
     )

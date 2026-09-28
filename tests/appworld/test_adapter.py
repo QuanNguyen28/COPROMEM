@@ -8,19 +8,29 @@ from copromem.appworld_comparison_adapter import (
 )
 from copromem.checkpoints import RunStore
 from copromem.decomposition import RecursiveTaskDecomposer
-from copromem.copromem_memory_module import ProceduralMemoryItem
+from copromem.copromem_memory_module import ProceduralMemoryItem, extract_intent_constraints
 from copromem.providers import BudgetExceeded
 from copromem.reme_paper_lifecycle import ReMeMemory, ReMePaperLifecycle
 
 
-def _trajectory(index: int, success: bool = True) -> RawAcquisitionTrajectory:
+def _trajectory(index: int, success: bool = True, task_id: str = "dev_train_01") -> RawAcquisitionTrajectory:
     return RawAcquisitionTrajectory(
-        AcquisitionIdentity("dev_train_01", 17, index),
+        AcquisitionIdentity(task_id, 17, index),
         "find pending orders and identify the most recent customer",
         "appworld",
         success,
         ("search_orders()", "inspect_customer()"),
     )
+
+
+def test_intent_constraints_do_not_turn_count_into_identifier():
+    count = extract_intent_constraints('Tell me the number of reviews mentioning "disappointed"')
+    assert count["aggregation"] == "count"
+    assert "entity_id" not in count
+    assert extract_intent_constraints("Show me the customers who expressed dissatisfaction")["sentiment"] == "negative"
+    phone = extract_intent_constraints("Find the customer name and email with phone number 2137418080")
+    assert phone["target_type"] == "customer"
+    assert phone["entity_id"] == "2137418080"
 
 
 def test_comparison_adapter_starts_empty_and_preserves_unique_episodes():
@@ -29,7 +39,7 @@ def test_comparison_adapter_starts_empty_and_preserves_unique_episodes():
 
     adapter.ingest(_trajectory(0, True))
     adapter.ingest(_trajectory(1, True))
-    assert len(adapter.module.pending_memories) == 2
+    assert len(adapter.module.learning.pending) == 2
     adapter.consolidate()
     adapter.ingest(_trajectory(2, False))
     trace_ids = [trace.trace_id for trace in adapter.module.fast_buffer.traces]
@@ -37,30 +47,34 @@ def test_comparison_adapter_starts_empty_and_preserves_unique_episodes():
     assert trace_ids[0].endswith("trajectory=0")
     assert trace_ids[1].endswith("trajectory=1")
     assert adapter.module.fast_buffer.traces[2].success is False
-    assert not adapter.module.pending_memories
+    assert len(adapter.module.learning.pending) == 3
 
-    schema = adapter.module.bank.schemas[0]
-    assert schema.execution_count == 2
-    assert schema.status == "admitted"
-    assert {item.memory_id for item in adapter.module.memories} == {
-        "mem::dev_train_01::seed=17::trajectory=0",
-        "mem::dev_train_01::seed=17::trajectory=1",
-    }
+    assert adapter.module.bank.schemas == []
+    adapter.ingest(_trajectory(3, True, "dev_train_02"))
+    adapter.consolidate()
+    assert adapter.module.bank.schemas == []
+    assert adapter.module.memories == []
+    assert len(adapter.module.learning.pending) == 4
     assert adapter.module.fast_buffer.traces[2].success is False
 
 
 def test_copromem_retrieves_once_and_only_appends_registered_guidance():
     adapter = CoProMemAppWorldAdapter(api_key="")
     adapter.ingest(_trajectory(0, True))
-    adapter.ingest(_trajectory(1, True))
+    adapter.ingest(_trajectory(1, True, "dev_train_02"))
     adapter.consolidate()
     trial = TrialInput(
         "dev_eval_01", "find pending orders and identify the most recent customer",
         "appworld", base_prompt="COMMON EXECUTOR PROMPT", tool_spec={"same": "tools"},
     )
+    state = adapter.export_state()
+    guidance, provenance = adapter.retrieve_with_provenance(trial, 1)
+    assert provenance["selected_memory_id"] is None
+    assert provenance["selected_schema_id"] is None
+    assert CoProMemAppWorldAdapter.reproduce_retrieval(state, provenance["task_input"], provenance) == guidance
     result = adapter.run_trial(trial, 0, lambda prompt, tools: {"prompt": prompt, "tools": tools}, lambda _: True)
     assert result.injected_memory
-    assert "Observed AppWorld procedure" in result.injected_memory
+    assert "Explore the task state" in result.injected_memory
     assert no_memory_prompt(trial) == "COMMON EXECUTOR PROMPT"
     assert result.prompt == "COMMON EXECUTOR PROMPT\n\n" + result.injected_memory
     assert result.tool_spec == {"same": "tools"}

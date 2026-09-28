@@ -3,9 +3,11 @@ import unittest
 import json
 import pathlib
 import tempfile
+import hashlib
 from copromem.benchmarks.appworld.adapter import CoProMemAppWorldAdapter, TrialInput
 import copromem.experiments.reme_copromem.config as v4
 from copromem.experiments.reme_copromem.runner import digest
+from copromem.experiments.reme_copromem.runner import write_json
 
 class ProvenanceTest(unittest.TestCase):
     def test_exact_offline_reproduction_and_tamper_rejection(self) -> None:
@@ -16,6 +18,14 @@ class ProvenanceTest(unittest.TestCase):
         self.assertEqual(guidance, CoProMemAppWorldAdapter.reproduce_retrieval(state, provenance["task_input"], provenance))
         changed=dict(provenance); changed["guidance_sha256"]="0"*64
         with self.assertRaises(ValueError): CoProMemAppWorldAdapter.reproduce_retrieval(state, provenance["task_input"], changed)
+        forged=dict(provenance)
+        forged["guidance_bytes"]="ARBITRARY GUIDANCE"
+        forged["guidance_sha256"]=hashlib.sha256(forged["guidance_bytes"].encode()).hexdigest()
+        with self.assertRaisesRegex(ValueError, "retrieval decision or guidance changed"):
+            CoProMemAppWorldAdapter.reproduce_retrieval(state, provenance["task_input"], forged)
+        wrong_task=dict(provenance["task_input"]); wrong_task["intent"]="A different task"
+        with self.assertRaises(ValueError):
+            CoProMemAppWorldAdapter.reproduce_retrieval(state, wrong_task, provenance)
     def test_empty_intent_and_duplicate_retrieval_fail_closed(self) -> None:
         adapter=CoProMemAppWorldAdapter(); blank=TrialInput("x", "", "appworld")
         with self.assertRaises(ValueError): adapter.retrieve_with_provenance(blank, 1)
@@ -23,15 +33,42 @@ class ProvenanceTest(unittest.TestCase):
         adapter.retrieve_with_provenance(trial, 1)
         with self.assertRaises(RuntimeError): adapter.retrieve_with_provenance(trial, 1)
 
+    def test_model_response_replays_offline_and_rejects_changed_record(self) -> None:
+        def fake_call(**request):
+            assert request["schema_name"] == "copromem_complexity_v1"
+            return {"is_compound": False, "rationale": "single lookup"}
+        adapter = CoProMemAppWorldAdapter(api_key="locked", llm_json_call=fake_call)
+        state = adapter.export_state()
+        trial = TrialInput("x", "Find the current account balance.", "appworld", base_prompt="Find the current account balance.")
+        guidance, provenance = adapter.retrieve_with_provenance(trial, 1)
+        self.assertEqual(provenance["decomposition_calls"], [])
+        self.assertEqual(guidance, CoProMemAppWorldAdapter.reproduce_retrieval(state, provenance["task_input"], provenance))
+        changed = dict(provenance)
+        self.assertEqual(guidance, provenance["guidance_bytes"])
+
+    def test_repeated_intent_does_not_depend_on_unexported_process_cache(self) -> None:
+        seen = []
+        def fake_call(**request):
+            seen.append(request["schema_name"])
+            return {"is_compound": False, "rationale": "single lookup"}
+        adapter = CoProMemAppWorldAdapter(api_key="locked", llm_json_call=fake_call)
+        state = adapter.export_state()
+        for task_id in ("task-a", "task-b"):
+            trial = TrialInput(task_id, "Find the account balance.", "appworld", base_prompt="Find the account balance.")
+            guidance, provenance = adapter.retrieve_with_provenance(trial, 1)
+            self.assertEqual(provenance["decomposition_calls"], [])
+            self.assertEqual(guidance, CoProMemAppWorldAdapter.reproduce_retrieval(state, provenance["task_input"], provenance))
+        self.assertEqual(seen, [])
+
     def test_retrieval_restart_uses_persisted_pre_state_and_rejects_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             previous, v4.RUN = v4.RUN, pathlib.Path(directory)
             try:
                 fixed = CoProMemAppWorldAdapter(); before = fixed.semantic_state_hash()
-                callback = v4.copro_retrieval("copromem_fixed", fixed, "task-x", 1)
+                callback = v4.copro_retrieval("copromem_dynamic", fixed, "task-x", 1)
                 guidance = callback("Inspect a record.", "appworld", {})
                 self.assertEqual(before, fixed.semantic_state_hash())  # fixed reads do not mutate semantic state
-                path = v4.RUN / "retrieval/copromem_fixed/task-x/trial-1.json"
+                path = v4.RUN / "retrieval/copromem_dynamic/task-x/trial-1.json"
                 stored = json.loads(path.read_text())
                 self.assertIn("pre_state", stored["provenance"])
                 # A restored dynamic stream has exactly the state expected for
@@ -39,12 +76,14 @@ class ProvenanceTest(unittest.TestCase):
                 # retrieval/decomposition/provider callback.
                 dynamic = CoProMemAppWorldAdapter(); dynamic.clone_from_state(stored["provenance"]["pre_state"])
                 dynamic.retrieve_with_provenance = lambda *_a, **_k: self.fail("cached restart must not retrieve")
-                resumed = v4.copro_retrieval("copromem_fixed", dynamic, "task-x", 1)("Inspect a record.", "appworld", {})
+                resumed = v4.copro_retrieval("copromem_dynamic", dynamic, "task-x", 1)("Inspect a record.", "appworld", {})
                 self.assertEqual(guidance, resumed)
+                with self.assertRaisesRegex(RuntimeError, "provenance is invalid"):
+                    v4.copro_retrieval("copromem_dynamic", dynamic, "task-x", 1)("Inspect a different record.", "appworld", {})
                 stored["provenance"]["pre_state_sha256"] = "0" * 64
                 path.write_text(json.dumps(stored), encoding="utf-8")
                 with self.assertRaises(RuntimeError):
-                    v4.copro_retrieval("copromem_fixed", dynamic, "task-x", 1)("Inspect a record.", "appworld", {})
+                    v4.copro_retrieval("copromem_dynamic", dynamic, "task-x", 1)("Inspect a record.", "appworld", {})
             finally:
                 v4.RUN = previous
 
@@ -61,5 +100,36 @@ class ProvenanceTest(unittest.TestCase):
             row["history"][0]["content"] = "tampered"
             path.write_text(json.dumps(row, ensure_ascii=False, indent=1), encoding="utf-8")
             with self.assertRaises(RuntimeError): v4.verify_existing_artifact(path, "no_memory", "task-x", 1)
+
+    def test_task_merge_is_idempotent_after_scored_trials(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            previous, v4.RUN = v4.RUN, pathlib.Path(directory)
+            try:
+                adapter = CoProMemAppWorldAdapter(api_key="")
+                initial = adapter.export_state()
+                write_json(v4.RUN / "copromem/task_pre_states/task-x.json", initial)
+                for trial, seed in ((1, 7), (2, 8)):
+                    history = [{"role": "user", "content": "Find pending orders"},
+                               {"role": "assistant", "content": "orders.search(status='pending')"},
+                               {"role": "user", "content": "Output: []"}]
+                    for arm, score in (("copromem_dynamic", 1.0 if trial == 1 else 0.0),
+                                       ("no_memory", 0.0)):
+                        row = {"trajectory_id": f"evaluation:{arm}:task-x:trial={trial}:seed={seed}",
+                               "arm": arm, "task_id": "task-x", "trial_id": trial,
+                               "history": history, "history_sha256": digest(history),
+                               "after_score": score, "actions": 1}
+                        write_json(v4.artifact(arm, "task-x", trial), row)
+                    write_json(v4.RUN / "retrieval/copromem_dynamic/task-x" / f"trial-{trial}.json",
+                               {"provenance": {"pre_state_sha256": digest(initial), "selected_schema_id": None}})
+                v4.complete_copro_task(adapter, "task-x", [1, 2], [7, 8])
+                updated = adapter.export_state()
+                self.assertEqual(len(updated["learning"]["episodes"]), 2)
+                self.assertEqual(len([s for s in updated["learning"]["schemas"]
+                                      if s["status"] == "provisional"]), 1)
+                resumed = CoProMemAppWorldAdapter(api_key="")
+                v4.complete_copro_task(resumed, "task-x", [1, 2], [7, 8])
+                self.assertEqual(updated, resumed.export_state())
+            finally:
+                v4.RUN = previous
 
 if __name__ == "__main__": unittest.main()

@@ -22,6 +22,7 @@ from .contracts import Contract
 from .decomposition import HierarchicalExecutionPlan, RecursiveTaskDecomposer
 from .pattern_separation import PatternSeparationEngine, token_jaccard_similarity
 from .schema import DecompositionSchema
+from .learning import ActionObservation, LearningCore, ReplayEvaluator, ValidationTask
 from .types import (
     CreditAssignmentResult,
     DependencyEdge,
@@ -46,6 +47,10 @@ class MemoryInjectionResult:
     should_veto: bool = False
     alternative_schema: DecompositionSchema | None = None
     should_explore: bool = False
+    selected_memory_id: str | None = None
+    candidate_scores: dict[str, float] = field(default_factory=dict)
+    selected_schema_id: str | None = None
+    injected_procedure_ids: tuple[str, ...] = ()
 
 
 @dataclass
@@ -105,9 +110,15 @@ def extract_intent_constraints(intent: str) -> dict[str, str]:
         intent_lower,
     )
     intent_no_mod = re.sub(r'\s+', ' ', intent_no_mod)
+    m_explicit_target = re.search(
+        r'\b(?:find|show|tell)(?:\s+me)?\s+(?:the\s+)?(customers?|reviews?|orders?|products?)\b',
+        intent_no_mod,
+    )
+    if m_explicit_target:
+        constraints["target_type"] = m_explicit_target.group(1)
 
     m_count = re.search(r'\b(?:how many|number of|count of|total)\s+([a-zA-Z_\-]+(?:\s+[a-zA-Z_\-]+)?)\b', intent_no_mod)
-    if m_count:
+    if m_count and "target_type" not in constraints:
         val = m_count.group(1).strip()
         val = re.sub(r'\s+(?:have|has|had|are|is|were|was|in|with|that)$', '', val)
         if val:
@@ -153,12 +164,12 @@ def extract_intent_constraints(intent: str) -> dict[str, str]:
         constraints["filter_term"] = m_term.group(1).strip()
 
     # 5. Identifier Extraction
-    m_id = re.search(r'\b(?:id|code|number|sku|ref)\s*[:#]?\s*([0-9a-zA-Z_\-]+)', intent_lower)
+    m_id = re.search(r'\b(?:id|code|sku|ref)\s*[:#]?\s*([0-9a-zA-Z_\-]+)|\bnumber\s*[:#]\s*([0-9a-zA-Z_\-]+)|\bnumber\s+(\d[\d_\-]*)\b', intent_lower)
     if m_id:
-        constraints["entity_id"] = m_id.group(1).strip()
+        constraints["entity_id"] = next(group for group in m_id.groups() if group).strip()
 
     # 6. Sentiment Extraction
-    if any(w in intent_lower for w in ("don't like", "dont like", "dislike", "dissatisfied", "negative", "hate", "problem", "issue", "not like", "complaint", "poor", "bad")):
+    if any(w in intent_lower for w in ("don't like", "dont like", "dislike", "dissatisfied", "dissatisfaction", "negative", "hate", "problem", "issue", "not like", "complaint", "poor", "bad")):
         constraints["sentiment"] = "negative"
     elif any(w in intent_lower for w in ("like", "satisfied", "positive", "love", "good", "recommend", "great", "excellent")):
         constraints["sentiment"] = "positive"
@@ -203,6 +214,7 @@ class COPROMEMMemoryModule:
         llm_json_call: Callable[..., dict[str, Any] | None] | None = None,
     ) -> None:
         self.bank = schema_bank or StructuralSchemaBank()
+        self.learning = LearningCore()
         self.fast_buffer = self.bank.fast_buffer
         self.pattern_engine = PatternSeparationEngine(semantic_threshold=0.40, causal_threshold=0.35)
         # Library use is offline unless a caller explicitly opts into LLM calls.
@@ -279,30 +291,34 @@ class COPROMEMMemoryModule:
 
     def add_memory(self, item: ProceduralMemoryItem, *, defer_until_admitted: bool = False) -> None:
         """Keep unreviewed procedures out of slow retrieval until replay admits them."""
-        if defer_until_admitted:
-            self.pending_memories.append(item)
-        else:
-            self.memories.append(item)
+        target = self.pending_memories if defer_until_admitted else self.memories
+        for previous in (*self.memories, *self.pending_memories):
+            if previous.memory_id != item.memory_id:
+                continue
+            if previous != item:
+                raise ValueError(f"memory ID {item.memory_id!r} has different content")
+            return
+        target.append(item)
 
     def consolidate_offline(self, min_priority: float = 0.20) -> int:
-        consolidated = self.bank.consolidate_offline(min_priority=min_priority)
-        admitted_ids = {schema.schema_id for schema in self.bank.schemas if schema.status == "admitted"}
-        ready = [item for item in self.pending_memories if item.schema_id in admitted_ids]
-        self.memories.extend(ready)
-        self.pending_memories = [
-            item for item in self.pending_memories if item.schema_id not in admitted_ids
-        ]
-        return consolidated
+        # Outcome frequency alone is not replay evidence. Admission is performed
+        # exclusively by admit_from_replay with independent, paired tasks.
+        return 0
 
     def export_state(self) -> dict[str, Any]:
         """Snapshot the complete continual-learning state for benchmark resume."""
         return {
+            "version": 5,
+            "learning": self.learning.export_state(),
             "memories": [asdict(item) for item in self.memories],
             "pending_memories": [asdict(item) for item in self.pending_memories],
             "schema_bank": self.bank.as_dict(),
         }
 
     def load_state(self, state: dict[str, Any]) -> None:
+        if state.get("version") != 5 or "learning" not in state:
+            raise ValueError("legacy CoProMem state is audit-only; start a version 5 state")
+        self.learning = LearningCore.from_state(state["learning"])
         self.memories = [ProceduralMemoryItem(**item) for item in state["memories"]]
         self.pending_memories = [
             ProceduralMemoryItem(**item) for item in state.get("pending_memories", ())
@@ -319,6 +335,7 @@ class COPROMEMMemoryModule:
         sites: tuple[str, ...] | list[str] = (),
         start_url: str = "",
         agent_prompt_wrapper: str = "",
+        structural_events: tuple[ActionObservation, ...] | None = None,
     ) -> MemoryInjectionResult:
         """Retrieve memory guidance based on the active arm."""
         if arm == "no_memory":
@@ -331,6 +348,16 @@ class COPROMEMMemoryModule:
             return self._retrieve_semantic_rag(intent, domain)
 
         if arm == "copromem_v2":
+            retrieved = self.learning.retrieve(domain, structural_events)
+            schema = self.learning.schemas.get(retrieved.schema_id) if retrieved.schema_id else None
+            return MemoryInjectionResult(
+                arm=arm, injected_text=retrieved.text, schema=schema,
+                separated=retrieved.compatibility == "conflict",
+                should_veto=retrieved.compatibility == "conflict",
+                should_explore=retrieved.compatibility != "compatible",
+                selected_schema_id=retrieved.schema_id,
+                injected_procedure_ids=retrieved.procedure_ids,
+            )
             result = self._retrieve_copromem_v2(
                 task_id, intent, domain, sites, start_url, agent_prompt_wrapper
             )
@@ -367,6 +394,24 @@ class COPROMEMMemoryModule:
             return result
 
         return MemoryInjectionResult(arm=arm, injected_text="")
+
+    def observe_events(self, episode_id: str, task_id: str,
+                       events: tuple[ActionObservation, ...], success: bool,
+                       family: str = "general") -> str | None:
+        """Acquire only public adapter observations; keep insufficient evidence pending."""
+        return self.learning.observe(episode_id, task_id, events, success, family)
+
+    def promote_episode(self, episode_id: str) -> bool:
+        return self.learning.promote_episode(episode_id)
+
+    def record_feedback(self, schema_id: str | None, task_id: str, seed: int,
+                        score: float, no_memory_score: float) -> None:
+        self.learning.record_feedback(schema_id, task_id, seed, score, no_memory_score)
+
+    def admit_from_replay(self, schema_id: str, tasks: tuple[ValidationTask, ...],
+                          evaluator: ReplayEvaluator | None, budget: float) -> bool:
+        """Compatibility API for offline diagnostics; does not promote memory."""
+        return self.learning.validate(schema_id, tasks, evaluator, budget)
 
     def _retrieve_reasoningbank(self, intent: str, domain: str) -> MemoryInjectionResult:
         """ReasoningBank format: Top retrieved memory item formatted as markdown."""
@@ -474,6 +519,7 @@ class COPROMEMMemoryModule:
         # Step 1: Candidate Memory Retrieval & Pattern Separation Evaluation
         candidate_mem = None
         top_sim = 0.0
+        candidate_scores: dict[str, float] = {}
         sep_decision = None
         conflict_schema: DecompositionSchema | None = None
         selected_schema: DecompositionSchema | None = None
@@ -489,6 +535,7 @@ class COPROMEMMemoryModule:
                     continue
                 mem_tokens = tuple(mem.intent.lower().split())
                 sim = token_jaccard_similarity(task_cues, mem_tokens)
+                candidate_scores[mem.memory_id] = sim
                 scored.append((sim, mem))
             scored.sort(key=lambda x: x[0], reverse=True)
             if scored:
@@ -648,16 +695,20 @@ class COPROMEMMemoryModule:
                 injected_parts.append(contract_text)
             if decomp_plan.injected_prompt_text:
                 injected_parts.append(decomp_plan.injected_prompt_text)
+            guidance = "\n\n".join(injected_parts).strip()
 
             return MemoryInjectionResult(
                 arm="copromem_v2",
-                injected_text="\n\n".join(injected_parts).strip(),
+                injected_text=guidance,
                 schema=schema,
                 contract=contract,
                 separated=should_veto,
                 should_veto=should_veto,
                 alternative_schema=alternative_schema,
                 should_explore=should_explore,
+                selected_memory_id=(candidate_mem.memory_id if candidate_mem and
+                    candidate_mem.procedure in guidance else None),
+                candidate_scores=candidate_scores,
             )
 
         # Step 4: Atomic Tasks
@@ -756,6 +807,8 @@ class COPROMEMMemoryModule:
             contract=contract,
             separated=False,
             should_veto=False,
+            selected_memory_id=candidate_mem.memory_id,
+            candidate_scores=candidate_scores,
         )
 
     def _get_or_create_default_schema(
@@ -873,6 +926,17 @@ class COPROMEMMemoryModule:
             surprise=1.0 if not success else 0.0,
             uncertainty=round(max(0.0, 1.0 - rel), 3),
         )
+        from .types import as_jsonable
+        for previous in self.fast_buffer.traces:
+            if previous.trace_id != trace.trace_id:
+                continue
+            old = as_jsonable(previous)
+            new = as_jsonable(trace)
+            old.pop("replay_priority", None)
+            new.pop("replay_priority", None)
+            if old != new:
+                raise ValueError(f"episode ID {trace.trace_id!r} has different content")
+            return credit_result
         self.fast_buffer.add_trace(trace)
 
         return credit_result

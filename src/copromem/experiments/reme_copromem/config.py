@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Restart-safe five-arm AppWorld runner configured entirely by frozen inputs.
+"""Restart-safe four-arm AppWorld runner with continuous CoProMem memory.
 
 The runner deliberately contains no historical acquisition, task, result, or
 report path.  A user supplies a run directory and a frozen acquisition export
@@ -17,18 +17,21 @@ import subprocess
 import sys
 import time
 from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor
+from dataclasses import asdict
+from multiprocessing import get_context
 from typing import Any
 
 ROOT = pathlib.Path(os.environ.get("COPROMEM_ROOT", pathlib.Path(__file__).resolve().parents[4]))
 sys.path.insert(0, str(ROOT))
 from ...integrations.reme.lifecycle import dynamic_post_trial_update
-from .runner import append, digest, execute_trajectory, official_post, services, write_json
+from .runner import append, decomposition_json_call, digest, execute_trajectory, official_post, services, write_json
 from ...integrations.reme.transport import AppendOnlyLedger
 from ...integrations.reme.bank import construct_once, load_clone
 from ...benchmarks.appworld.adapter import CoProMemAppWorldAdapter, TrialInput
 
 RUN = pathlib.Path(os.environ.get(
-    "COPROMEM_RUN_DIR", ROOT / "artifacts/research/official_reme_copromem_pilot/fixed_dynamic"
+    "COPROMEM_RUN_DIR", ROOT / "artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v5"
 ))
 MANIFEST, MANIFEST_SHA = RUN / "manifest.json", RUN / "manifest.sha256"
 PROGRESS, LEDGER, STATUS, SUMMARY = (RUN / "progress.jsonl", RUN / "ledger.jsonl",
@@ -40,7 +43,7 @@ def file_sha(path: pathlib.Path) -> str:
 
 
 def c_free_gb() -> float:
-    stat = os.statvfs("/mnt/c")
+    stat = os.statvfs(os.environ.get("COPROMEM_DISK_FLOOR_PATH", str(RUN)))
     return stat.f_bavail * stat.f_frsize / 1024 ** 3
 
 
@@ -53,7 +56,7 @@ def env_value(name: str) -> str:
     raise RuntimeError(f"required credential {name} is absent")
 
 
-def frozen_acquisition_pool() -> list[dict[str, Any]]:
+def frozen_acquisition_pool(value: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """Load an explicitly supplied, already-frozen acquisition export.
 
     This keeps raw trajectories outside source control and prevents the
@@ -62,6 +65,8 @@ def frozen_acquisition_pool() -> list[dict[str, Any]]:
     source = os.environ.get("COPROMEM_ACQUISITION_POOL")
     if not source:
         raise RuntimeError("COPROMEM_ACQUISITION_POOL must name a frozen acquisition export")
+    if value is not None and file_sha(pathlib.Path(source)) != value["acquisition"]["export_sha256"]:
+        raise RuntimeError("frozen acquisition export hash mismatch")
     raw = json.loads(pathlib.Path(source).read_text(encoding="utf-8"))
     rows = raw.get("trajectories") if isinstance(raw, dict) else raw
     if not isinstance(rows, list) or not rows:
@@ -69,6 +74,10 @@ def frozen_acquisition_pool() -> list[dict[str, Any]]:
     required = {"acquisition_identity", "task_id", "history", "after_score"}
     if any(not isinstance(row, dict) or not required.issubset(row) for row in rows):
         raise RuntimeError("frozen acquisition export lacks required provenance fields")
+    if len({row["acquisition_identity"] for row in rows}) != len(rows):
+        raise RuntimeError("duplicate acquisition trajectory identity")
+    if value is not None and set(row["task_id"] for row in rows) & set(value["evaluation"]["task_ids"]):
+        raise RuntimeError("acquisition and evaluation task IDs overlap")
     return rows
 
 
@@ -80,15 +89,61 @@ def reme_input(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def spec() -> dict[str, Any]:
     value = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    raw = json.dumps(value, sort_keys=True, indent=2).encode("utf-8") + b"\n"
+    raw = json.dumps(value, sort_keys=True, indent=2, ensure_ascii=False).encode("utf-8") + b"\n"
     if file_sha(MANIFEST) != MANIFEST_SHA.read_text().strip() or hashlib.sha256(raw).hexdigest() != file_sha(MANIFEST):
-        raise RuntimeError("v4 frozen manifest hash mismatch")
-    if (not value.get("protocol") or value.get("status") != "frozen_pre_payload"
-            or not value.get("evaluation", {}).get("task_ids") or len(value.get("arms", [])) != 5
+        raise RuntimeError("v5 frozen manifest hash mismatch")
+    if (value.get("protocol") != "continuous_copromem_v5" or value.get("status") != "frozen_pre_payload"
+            or not value.get("evaluation", {}).get("task_ids")
+            or value.get("arms") != ["no_memory", "official_upstream_reme_fixed",
+                                     "official_upstream_reme_dynamic", "copromem_dynamic"]
             or not value.get("budget", {}).get("fits_hard_cap")
             or float(value["budget"].get("hard_cap_usd", 0)) <= 0):
         raise RuntimeError("frozen protocol invariant failed")
+    evaluation = value["evaluation"]
+    if (len(evaluation.get("trial_ids", ())) != len(evaluation.get("seeds", ()))
+            or evaluation.get("expected_trajectories") !=
+            4 * len(evaluation["task_ids"]) * len(evaluation.get("trial_ids", ()))):
+        raise RuntimeError("continuous run task, trial, seed, or arm count mismatch")
+    source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    if source_commit != value.get("git_commit"):
+        raise RuntimeError("running source commit differs from frozen manifest")
+    changed = subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no", "--", "src", "scripts"],
+        cwd=ROOT, text=True).strip()
+    if changed:
+        raise RuntimeError("tracked runtime source differs from frozen commit")
+    dependencies = value.get("dependency_files_sha256")
+    if not isinstance(dependencies, dict) or not dependencies:
+        raise RuntimeError("v5 manifest must pin external dependency files")
+    for path, expected in dependencies.items():
+        if file_sha(pathlib.Path(path)) != expected:
+            raise RuntimeError(f"dependency file hash mismatch: {path}")
     return value
+
+
+def task_descriptor(value: dict[str, Any], task_id: str):
+    """Only manifest-pinned, pre-execution structure may drive retrieval."""
+    from ...learning import ActionObservation
+    raw = value.get("evaluation", {}).get("descriptors", {}).get(task_id)
+    if not isinstance(raw, list):
+        raise RuntimeError(f"missing public structural descriptor for {task_id}")
+    events = tuple(ActionObservation(**item) for item in raw)
+    if any(event.check or event.parameters or not event.observed for event in events):
+        raise RuntimeError("task descriptor contains post-execution evidence")
+    return events
+
+
+def descriptor_audit(value: dict[str, Any], state: dict[str, Any]) -> dict[str, str]:
+    """Make initial exact-signature coverage explicit before paid evaluation."""
+    adapter = CoProMemAppWorldAdapter(api_key="")
+    adapter.clone_from_state(state)
+    result = {}
+    expectations = value.get("evaluation", {}).get("expected_initial_compatibility", {})
+    for task_id in value["evaluation"]["task_ids"]:
+        compatibility = adapter.module.learning.retrieve("appworld", task_descriptor(value, task_id)).compatibility
+        result[task_id] = compatibility
+        if task_id in expectations and compatibility != expectations[task_id]:
+            raise RuntimeError(f"initial descriptor compatibility mismatch for {task_id}: {compatibility}")
+    return result
 
 
 def status(state: str, **extra: Any) -> None:
@@ -154,13 +209,107 @@ def marker(arm: str, task_id: str, trial: int) -> pathlib.Path:
     return RUN / "evaluation_updates" / arm / task_id / f"trial-{trial}.json"
 
 
-def copro_retrieval(arm: str, adapter: CoProMemAppWorldAdapter, task_id: str, trial: int):
+def verify_update_marker(path: pathlib.Path, result: dict[str, Any], scored_path: pathlib.Path) -> None:
+    record = json.loads(path.read_text(encoding="utf-8"))
+    if (record.get("trajectory_id") != result["trajectory_id"]
+            or record.get("scored_artifact_sha256") != file_sha(scored_path)):
+        raise RuntimeError("dynamic update marker does not match scored trajectory")
+
+
+def _trajectory_cost(role: str) -> float:
+    """Read settled provider cost for one registered executor trajectory."""
+    if not LEDGER.exists():
+        return 0.0
+    roles, settled = {}, {}
+    for line in LEDGER.read_text(encoding="utf-8").splitlines():
+        row = json.loads(line)
+        if row.get("event") == "reserve":
+            roles[row["id"]] = row.get("role")
+        elif row.get("event") == "settle":
+            settled[row["id"]] = float(row["usd"])
+    outstanding = {call_id for call_id, owner in roles.items()
+                   if owner == role and call_id not in settled}
+    if outstanding:
+        raise RuntimeError(f"trajectory {role} has unsettled cost reservations")
+    return sum(cost for call_id, cost in settled.items() if roles.get(call_id) == role)
+
+
+def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
+                        trials: list[int], seeds: list[int]) -> None:
+    """Merge one scored winner after every trial of a task has completed."""
+    from ...benchmarks.appworld.adapter import AcquisitionIdentity, RawAcquisitionTrajectory, normalize_appworld_history
+    from ...online import ScoredCandidate, apply_task_batch
+    pre_path = RUN / "copromem/task_pre_states" / f"{task_id}.json"
+    pre = json.loads(pre_path.read_text(encoding="utf-8"))
+    marker_path = RUN / "copromem/task_updates" / f"{task_id}.json"
+    if marker_path.exists():
+        marker_row = json.loads(marker_path.read_text(encoding="utf-8"))
+        if marker_row["before_state_sha256"] != digest(pre):
+            raise RuntimeError("CoProMem task merge pre-state changed")
+        if marker_row["scored_artifact_sha256"] != {
+            str(trial): file_sha(artifact("copromem_dynamic", task_id, trial))
+            for trial in trials
+        }:
+            raise RuntimeError("CoProMem scored artifact changed after task merge")
+        if marker_row["retrieval_artifact_sha256"] != {
+            str(trial): file_sha(RUN / "retrieval/copromem_dynamic" / task_id / f"trial-{trial}.json")
+            for trial in trials
+        }:
+            raise RuntimeError("CoProMem retrieval provenance changed after task merge")
+        saved = json.loads((RUN / "copromem/task_states" / f"{task_id}.json").read_text(encoding="utf-8"))
+        if marker_row["after_state_sha256"] != digest(saved):
+            raise RuntimeError("CoProMem task merge marker changed")
+        adapter.clone_from_state(saved)
+        return
+    adapter.clone_from_state(pre)
+    candidates = []
+    artifact_hashes = {}
+    retrieval_hashes = {}
+    for trial, seed in zip(trials, seeds):
+        scored_path = artifact("copromem_dynamic", task_id, trial)
+        row = verify_existing_artifact(scored_path, "copromem_dynamic", task_id, trial)
+        baseline = verify_existing_artifact(artifact("no_memory", task_id, trial), "no_memory", task_id, trial)
+        retrieval_path = RUN / "retrieval/copromem_dynamic" / task_id / f"trial-{trial}.json"
+        provenance = json.loads(retrieval_path.read_text(encoding="utf-8"))["provenance"]
+        if provenance["pre_state_sha256"] != digest(pre):
+            raise RuntimeError("parallel CoProMem trials used different task snapshots")
+        intent = next(x["content"] for x in row["history"] if x["role"] == "user")
+        actions = tuple(x["content"] for x in row["history"] if x["role"] == "assistant")
+        success = float(row["after_score"]) == 1.0
+        trajectory = RawAcquisitionTrajectory(
+            AcquisitionIdentity(task_id, seed, trial), intent, "appworld", success,
+            actions, {"evaluation": True, "scored_artifact_sha256": file_sha(scored_path)},
+            events=normalize_appworld_history(row["history"], success))
+        role = f"executor:copromem_dynamic:{task_id}:trial={trial}:seed={seed}"
+        candidates.append(ScoredCandidate(
+            trajectory, float(row["after_score"]), _trajectory_cost(role), int(row["actions"]),
+            provenance.get("selected_schema_id"), float(baseline["after_score"])))
+        artifact_hashes[str(trial)] = file_sha(scored_path)
+        retrieval_hashes[str(trial)] = file_sha(retrieval_path)
+    winner = apply_task_batch(adapter, candidates)
+    updated = adapter.export_state()
+    write_json(RUN / "copromem/task_states" / f"{task_id}.json", updated)
+    write_json(RUN / "copromem/shared-state.json", updated)
+    write_json(marker_path, {"task_id": task_id, "before_state_sha256": digest(pre),
+                             "after_state_sha256": digest(updated),
+                             "scored_artifact_sha256": artifact_hashes,
+                             "retrieval_artifact_sha256": retrieval_hashes,
+                             "winner_episode_id": winner})
+
+
+def copro_retrieval(arm: str, adapter: CoProMemAppWorldAdapter, task_id: str,
+                   trial: int, descriptor=()):
     path = RUN / "retrieval" / arm / task_id / f"trial-{trial}.json"
     def call(intent: str, domain: str, _: dict[str, Any]) -> str:
         if path.exists():
             record = json.loads(path.read_text(encoding="utf-8"))
             provenance = record.get("provenance")
+            expected_input = {"task_id": task_id, "trial_stream": trial, "intent": intent,
+                              "domain": domain, "sites": [], "start_url": "", "base_prompt": intent,
+                              "structural_events": [asdict(event) for event in descriptor]}
             if (not isinstance(provenance, dict) or not isinstance(provenance.get("task_input"), dict) or
+                    record.get("arm") != arm or record.get("task_id") != task_id or record.get("trial") != trial or
+                    provenance["task_input"] != expected_input or
                     CoProMemAppWorldAdapter._digest(provenance["task_input"]) != provenance.get("task_input_sha256")):
                 raise RuntimeError("persisted CoProMem retrieval provenance is invalid")
             if adapter.semantic_state_hash() != provenance.get("pre_state_sha256"):
@@ -170,7 +319,9 @@ def copro_retrieval(arm: str, adapter: CoProMemAppWorldAdapter, task_id: str, tr
                 raise RuntimeError("persisted CoProMem guidance hash mismatch")
             return guidance
         before = adapter.semantic_state_hash()
-        guidance, provenance = adapter.retrieve_with_provenance(TrialInput(task_id, intent, domain, base_prompt=intent), trial)
+        guidance, provenance = adapter.retrieve_with_provenance(
+            TrialInput(task_id, intent, domain, base_prompt=intent,
+                       structural_events=tuple(descriptor)), trial)
         reproduced = CoProMemAppWorldAdapter.reproduce_retrieval(provenance["pre_state"], provenance["task_input"], provenance)
         if guidance != reproduced or hashlib.sha256(guidance.encode("utf-8")).hexdigest() != provenance["guidance_sha256"]:
             raise RuntimeError("CoProMem guidance cannot be reproduced offline")
@@ -181,22 +332,32 @@ def copro_retrieval(arm: str, adapter: CoProMemAppWorldAdapter, task_id: str, tr
     return call
 
 
-def preflight(value: dict[str, Any]) -> None:
-    if c_free_gb() < 5.0: raise RuntimeError("C-drive is below frozen 5 GiB floor")
-    gate = json.loads((RUN / "copromem/acquisition-retrieval-gate.json").read_text())
+def preflight(value: dict[str, Any]) -> dict[str, str]:
+    if c_free_gb() < 5.0:
+        raise RuntimeError("configured disk is below frozen 5 GiB floor")
+    for name in ("COPROMEM_REME_PYTHON", "COPROMEM_REME_SOURCE",
+                 "COPROMEM_APPWORLD_PYTHON", "COPROMEM_APPWORLD_ROOT"):
+        configured = os.environ.get(name)
+        if not configured or not pathlib.Path(configured).exists():
+            raise RuntimeError(f"required v5 runtime path {name} is not configured or absent")
+    acquisition = frozen_acquisition_pool(value)
+    gate_path = RUN / "copromem/acquisition-retrieval-gate.json"
+    if file_sha(gate_path) != value["acquisition"]["retrieval_gate_sha256"]:
+        raise RuntimeError("warm-start audit hash mismatch")
+    gate = json.loads(gate_path.read_text())
     state = json.loads((RUN / "copromem/initial-state.json").read_text())
-    if not gate.get("passed") or digest(state) != value["acquisition"]["copromem_bank_sha256"]:
-        raise RuntimeError("passed acquisition retrieval gate/bank hash mismatch")
-    # The stored gate records are a complete zero-call proof of byte-stable replay.
-    for record in gate["records"]:
-        provenance = record["provenance"]
-        if CoProMemAppWorldAdapter.reproduce_retrieval(state, provenance["task_input"], provenance).encode() != provenance["guidance_bytes"].encode():
-            raise RuntimeError("acquisition retrieval reproduction mismatch")
-    for trial in value["evaluation"]["trial_ids"]:
-        if digest(state) != value["acquisition"]["copromem_bank_sha256"]:
-            raise RuntimeError(f"CoProMem clone mismatch for trial {trial}")
-    append(PROGRESS, {"event": "zero_cost_preflight_passed", "manifest_sha256": MANIFEST_SHA.read_text().strip(),
-                      "bank_sha256": digest(state), "provider_calls": 0, "c_free_gb": c_free_gb()})
+    from .gate import build_gate
+    expected = build_gate(state, acquisition)
+    if (gate != expected or not expected["passed"]
+            or digest(state) != value["acquisition"]["copromem_bank_sha256"]):
+        raise RuntimeError("warm-start audit or bank hash mismatch")
+    coverage = descriptor_audit(value, state)
+    write_json(RUN / "copromem/descriptor-audit.json", coverage)
+    append(PROGRESS, {"event": "warm_start_preflight_passed",
+                      "manifest_sha256": MANIFEST_SHA.read_text().strip(),
+                      "bank_sha256": digest(state), "c_free_gb": c_free_gb(),
+                      "descriptor_compatibility": coverage})
+    return coverage
 
 
 def summary(value: dict[str, Any], stage: str) -> None:
@@ -211,13 +372,37 @@ def summary(value: dict[str, Any], stage: str) -> None:
         "c_free_gb": c_free_gb(), "manifest_sha256": MANIFEST_SHA.read_text().strip()})
 
 
+def run_copro_trial(task_id: str, trial: int, seed: int, descriptor_raw: list[dict[str, Any]],
+                    pre_state: dict[str, Any], all_ids: list[str], key: str,
+                    cap: float) -> dict[str, Any]:
+    """One process per trial: upstream agent construction mutates module globals."""
+    from ...learning import ActionObservation
+    adapter = CoProMemAppWorldAdapter(api_key="")
+    adapter.clone_from_state(pre_state)
+    scored_path = artifact("copromem_dynamic", task_id, trial)
+    if scored_path.exists():
+        return verify_existing_artifact(scored_path, "copromem_dynamic", task_id, trial)
+    ledger = AppendOnlyLedger(LEDGER, cap)
+    return execute_trajectory(
+        run=RUN, progress=PROGRESS, ledger=ledger, api_key=key,
+        all_task_ids=all_ids, arm="copromem_dynamic", task_id=task_id,
+        trial_id=trial, seed=seed, max_actions=30, temperature=0.7,
+        phase="evaluation", artifact_path=scored_path,
+        memory_for_instruction=copro_retrieval(
+            "copromem_dynamic", adapter, task_id, trial,
+            tuple(ActionObservation(**item) for item in descriptor_raw)))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(); parser.add_argument("--preflight", action="store_true"); args = parser.parse_args()
     value = spec(); RUN.mkdir(parents=True, exist_ok=True); acquire_lock(); ledger = bootstrap_ledger(value)
-    preflight(value); status("preflight_passed", c_free_gb=c_free_gb(), budget=value["budget"]); summary(value, "preflight_passed")
+    coverage = preflight(value)
+    status("preflight_passed", c_free_gb=c_free_gb(), budget=value["budget"],
+           descriptor_compatibility=coverage)
+    summary(value, "preflight_passed")
     if args.preflight: return
     key = env_value("OPENROUTER_API_KEY")
-    combined = frozen_acquisition_pool()
+    combined = frozen_acquisition_pool(value)
     expected_acquisition = int(value.get("acquisition", {}).get("expected_trajectories", len(combined)))
     if len(combined) != expected_acquisition:
         raise RuntimeError("frozen acquisition source count does not match manifest")
@@ -236,51 +421,77 @@ def main() -> None:
             if load_clone(official_post, service.base_url, snapshot, reme_hash) != reme_hash: raise RuntimeError("ReMe dynamic clone mismatch")
             saved = RUN / "reme" / f"dynamic-trial-{trial}.jsonl"
             if saved.exists(): official_post(service.base_url, "load_memory", {"load_file_path": str(saved), "clear_existing": True})
-        fixed = CoProMemAppWorldAdapter(api_key=""); fixed.clone_from_state(state)
-        dynamic = {}
-        for trial in value["evaluation"]["trial_ids"]:
-            instance = CoProMemAppWorldAdapter(api_key=""); saved = RUN / "copromem" / f"dynamic-trial-{trial}.json"
-            instance.clone_from_state(json.loads(saved.read_text()) if saved.exists() else state); dynamic[trial] = instance
+        shared = CoProMemAppWorldAdapter(api_key="")
+        shared.clone_from_state(state)
         all_ids = value["evaluation"]["task_ids"]
+        trials = list(value["evaluation"]["trial_ids"])
+        seeds = list(value["evaluation"]["seeds"])
+        if len(trials) != len(seeds):
+            raise RuntimeError("trial and seed counts differ")
         for task_id in all_ids:
-            for trial, seed in zip(value["evaluation"]["trial_ids"], value["evaluation"]["seeds"]):
-                base = dict(run=RUN, progress=PROGRESS, ledger=ledger, api_key=key, all_task_ids=all_ids, task_id=task_id,
-                            trial_id=trial, seed=seed, max_actions=30, temperature=0.7, phase="evaluation")
-                jobs = [("no_memory", {}), ("official_upstream_reme_fixed", {"memory_base_url": svc["reme-fixed"].base_url}),
-                        ("official_upstream_reme_dynamic", {"memory_base_url": svc[f"reme-dynamic-{trial}"].base_url}),
-                        ("copromem_fixed", {"memory_for_instruction": copro_retrieval("copromem_fixed", fixed, task_id, trial)}),
-                        ("copromem_dynamic", {"memory_for_instruction": copro_retrieval("copromem_dynamic", dynamic[trial], task_id, trial)})]
+            descriptor = task_descriptor(value, task_id)
+            pre_path = RUN / "copromem/task_pre_states" / f"{task_id}.json"
+            before_task = shared.export_state()
+            if pre_path.exists():
+                if json.loads(pre_path.read_text(encoding="utf-8")) != before_task:
+                    raise RuntimeError("CoProMem task snapshot changed on resume")
+            else:
+                write_json(pre_path, before_task)
+            for trial, seed in zip(trials, seeds):
+                base = dict(run=RUN, progress=PROGRESS, ledger=ledger, api_key=key,
+                            all_task_ids=all_ids, task_id=task_id, trial_id=trial,
+                            seed=seed, max_actions=30, temperature=0.7, phase="evaluation")
+                jobs = [("no_memory", {}),
+                        ("official_upstream_reme_fixed", {"memory_base_url": svc["reme-fixed"].base_url}),
+                        ("official_upstream_reme_dynamic", {"memory_base_url": svc[f"reme-dynamic-{trial}"].base_url})]
                 for arm, kwargs in jobs:
                     out = artifact(arm, task_id, trial)
                     if out.exists():
-                        verify_existing_artifact(out, arm, task_id, trial)
-                        if arm in {"official_upstream_reme_dynamic", "copromem_dynamic"} and not marker(arm, task_id, trial).exists():
-                            raise RuntimeError("completed dynamic trajectory lacks durable update marker; replay is forbidden")
+                        prior = verify_existing_artifact(out, arm, task_id, trial)
+                        if arm == "official_upstream_reme_dynamic":
+                            if not marker(arm, task_id, trial).exists():
+                                raise RuntimeError(f"ReMe update side effect uncertain for {prior['trajectory_id']}")
+                            verify_update_marker(marker(arm, task_id, trial), prior, out)
                         continue
-                    if c_free_gb() < 5.0: raise RuntimeError("C-drive floor would be breached before dispatch")
+                    if c_free_gb() < 5.0:
+                        raise RuntimeError("configured disk floor would be breached before dispatch")
                     if arm == "official_upstream_reme_dynamic":
                         service = svc[f"reme-dynamic-{trial}"]
-                        def update_reme(agent: Any, result: dict[str, Any], *, _service=service, _trial=trial) -> None:
+                        def update_reme(agent: Any, result: dict[str, Any], *, _service=service,
+                                        _trial=trial, _out=out) -> None:
+                            pre_snapshot = RUN / "update_pre_states/official_upstream_reme_dynamic" / task_id / f"trial-{_trial}.jsonl"
+                            pre_snapshot.parent.mkdir(parents=True, exist_ok=True)
+                            official_post(_service.base_url, "dump_memory", {"dump_file_path": str(pre_snapshot)})
+                            write_json(pre_snapshot.with_suffix(".json"),
+                                {"trajectory_id": result["trajectory_id"],
+                                 "scored_artifact_sha256": file_sha(_out),
+                                 "pre_snapshot_sha256": file_sha(pre_snapshot), "state": "prepared"})
                             outcome = dynamic_post_trial_update(agent, result["after_score"],
                                 lambda event: append(PROGRESS, {**event, "trajectory_id": result["trajectory_id"]}))
                             saved = RUN / "reme" / f"dynamic-trial-{_trial}.jsonl"
                             official_post(_service.base_url, "dump_memory", {"dump_file_path": str(saved)})
                             write_json(marker("official_upstream_reme_dynamic", task_id, _trial),
-                                {"trajectory_id": result["trajectory_id"], "outcome": outcome, "snapshot_sha256": file_sha(saved)})
+                                {"trajectory_id": result["trajectory_id"],
+                                 "scored_artifact_sha256": file_sha(_out),
+                                 "outcome": outcome, "snapshot_sha256": file_sha(saved)})
                         kwargs = {**kwargs, "post_score_update": update_reme}
-                    result = execute_trajectory(**base, arm=arm, artifact_path=out, **kwargs)
-                    if arm == "official_upstream_reme_dynamic":
-                        if not marker(arm, task_id, trial).exists():
-                            raise RuntimeError("scored ReMe dynamic trajectory lacks durable update marker")
-                    elif arm == "copromem_dynamic":
-                        intent = next(x["content"] for x in result["history"] if x["role"] == "user")
-                        before = dynamic[trial].semantic_state_hash(); actions = [x["content"] for x in result["history"] if x["role"] == "assistant"]
-                        dynamic[trial].record_scored_trial(TrialInput(task_id, intent, "appworld", base_prompt=intent), trial,
-                            success=result["after_score"] == 1.0, actions=actions, state_hash=before, seed=seed)
-                        write_json(RUN / "copromem" / f"dynamic-trial-{trial}.json", dynamic[trial].export_state())
-                        write_json(marker(arm, task_id, trial), {"trajectory_id": result["trajectory_id"], "before_state_sha256": before,
-                            "after_state_sha256": dynamic[trial].semantic_state_hash()})
+                    execute_trajectory(**base, arm=arm, artifact_path=out, **kwargs)
+                    if arm == "official_upstream_reme_dynamic" and not marker(arm, task_id, trial).exists():
+                        raise RuntimeError("scored ReMe dynamic trajectory lacks durable update marker")
                     summary(value, "evaluation")
+            missing = [(trial, seed) for trial, seed in zip(trials, seeds)
+                       if not artifact("copromem_dynamic", task_id, trial).exists()]
+            if missing:
+                if c_free_gb() < 5.0:
+                    raise RuntimeError("configured disk floor would be breached before parallel dispatch")
+                with ProcessPoolExecutor(max_workers=len(missing), mp_context=get_context("spawn")) as pool:
+                    futures = [pool.submit(run_copro_trial, task_id, trial, seed,
+                                           [asdict(event) for event in descriptor], before_task,
+                                           all_ids, key, cap) for trial, seed in missing]
+                    for future in futures:
+                        future.result()
+            complete_copro_task(shared, task_id, trials, seeds)
+            summary(value, "evaluation")
     from .reporting import build_report
     final = build_report(RUN)
     if not final.is_file(): raise RuntimeError("final report was not durably created")

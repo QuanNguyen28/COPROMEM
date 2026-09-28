@@ -133,8 +133,6 @@ class COPROMEMReasoningBankAdapter:
         consolidate: bool = False,
     ) -> None:
         """Persist observed episode evidence and replay after a paired batch."""
-        from copromem.benchmarks.webarena.benchmark import induce_from_trajectory
-
         state_path = Path(memories_jsonl_path).with_name("copromem_state.json")
         state = json.loads(state_path.read_text(encoding="utf-8"))
         if state.get("active_task_id") != str(task_id):
@@ -142,16 +140,11 @@ class COPROMEMReasoningBankAdapter:
         self.memory_module.load_state(state)
         schema_id = state.get("active_schema_id")
         schema = next((s for s in self.memory_module.bank.schemas if s.schema_id == schema_id), None)
-        induced = induce_from_trajectory(
-            task_id=task_id,
-            goal=intent,
-            actions=actions,
-            success=success,
-            schema_id=schema_id,
-            domain="web_shopping_admin",
-        ) if actions else None
-        if induced is not None:
-            self.memory_module.add_memory(induced, defer_until_admitted=True)
+        # Action strings have no slot flow or verified observation. Preserve the
+        # episode as pending until the harness supplies normalized events.
+        self.memory_module.observe_events(
+            f"reasoningbank:{task_id}", str(task_id), (), success,
+            "web_shopping_admin")
         self.memory_module.record_episode(
             task_id=str(task_id),
             arm="copromem_v2",
