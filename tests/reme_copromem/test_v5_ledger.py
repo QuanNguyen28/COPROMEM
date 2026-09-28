@@ -41,3 +41,12 @@ def test_registered_role_call_limits_are_fail_closed(tmp_path):
         ledger.reserve("second", 0.10, {"role": "executor:no_memory:a:trial=1:seed=2"})
     with pytest.raises(DispatchFailure, match="unregistered"):
         ledger.reserve("other", 0.10, {"role": "unknown"})
+
+
+def test_usd_100_engineering_cap_rejects_exposure_before_dispatch(tmp_path):
+    ledger = AppendOnlyLedger(tmp_path / "ledger.jsonl", 100.0,
+                              {"executor": 720, "reme_lifecycle": 512,
+                               "reme_embedding": 4096, "copromem_decomposition": 0})
+    ledger.reserve("first", 99.99, {"role": "executor:no_memory:a:trial=0:seed=1"})
+    with pytest.raises(DispatchFailure, match="USD cap"):
+        ledger.reserve("over-cap", 0.02, {"role": "executor:no_memory:a:trial=1:seed=2"})

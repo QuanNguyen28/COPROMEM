@@ -119,3 +119,13 @@ def test_reme_service_preserves_src_import_root_for_split_environment(tmp_path, 
         assert captured["command"][-2:] == ["-m", "copromem.integrations.reme.corrected_service"]
     finally:
         service._log.close()
+
+
+def test_same_run_directory_refuses_a_duplicate_runner_lock(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "RUN", tmp_path)
+    monkeypatch.setattr(config, "MANIFEST_SHA", tmp_path / "manifest.sha256")
+    (tmp_path / "manifest.sha256").write_text("frozen\n", encoding="utf-8")
+    config.acquire_lock()
+    with pytest.raises(RuntimeError, match="already active"):
+        config.acquire_lock()
+    (tmp_path / "runner.lock").unlink()

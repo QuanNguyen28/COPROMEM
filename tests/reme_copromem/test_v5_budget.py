@@ -14,3 +14,12 @@ def test_v5_registered_budget_covers_every_provider_role_and_contingency():
     assert bound["dispatchable_usd"] == pytest.approx(11.01824)
     assert bound["non_dispatchable_contingency_usd"] == pytest.approx(1.652736)
     assert bound["all_in_usd"] == pytest.approx(12.670976)
+
+
+def test_v5_generous_engineering_ceiling_is_frozen_under_usd_100():
+    bound = v5_budget_bound(call_limits={"executor": 720, "reme_lifecycle": 512,
+                                         "reme_embedding": 4096, "copromem_decomposition": 0},
+                            historical_usd=0.04670692)
+    assert bound["reme_lifecycle_calls"] == 512
+    assert bound["embedding_calls"] == 4096
+    assert bound["all_in_usd"] < 100.0

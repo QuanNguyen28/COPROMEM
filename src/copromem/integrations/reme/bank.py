@@ -29,6 +29,38 @@ def file_hash(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _complete_marker_path(dump_file: pathlib.Path) -> pathlib.Path:
+    return dump_file.with_name(f"{dump_file.stem}.complete.json")
+
+
+def _write_complete_marker(dump_file: pathlib.Path, snapshot_hash: str, count: int) -> None:
+    """Atomically attest that every frozen input reached the dumped bank."""
+    marker = _complete_marker_path(dump_file)
+    payload = {"version": 1, "snapshot_sha256": snapshot_hash,
+               "snapshot_file_sha256": file_hash(dump_file), "construction_count": count}
+    temporary = marker.with_suffix(marker.suffix + ".tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, sort_keys=True, separators=(",", ":"))
+        handle.write("\n"); handle.flush(); os.fsync(handle.fileno())
+    os.replace(temporary, marker)
+
+
+def _require_complete_marker(dump_file: pathlib.Path, expected_snapshot_hash: str | None = None,
+                             expected_count: int | None = None) -> dict[str, Any]:
+    marker = _complete_marker_path(dump_file)
+    if not marker.is_file():
+        raise RuntimeError("official ReMe shared-bank completion marker is absent")
+    value = json.loads(marker.read_text(encoding="utf-8"))
+    if (value.get("version") != 1 or value.get("snapshot_file_sha256") != file_hash(dump_file)
+            or value.get("snapshot_sha256") != semantic_bank_hash(dump_file)):
+        raise RuntimeError("official ReMe shared-bank completion marker is inconsistent")
+    if expected_snapshot_hash is not None and value["snapshot_sha256"] != expected_snapshot_hash:
+        raise RuntimeError("official ReMe shared-bank completion marker has the wrong snapshot")
+    if expected_count is not None and value.get("construction_count") != expected_count:
+        raise RuntimeError("official ReMe shared-bank completion marker has the wrong input count")
+    return value
+
+
 VECTOR_FLOAT32_TOLERANCE = 2.0e-8
 
 
@@ -99,6 +131,7 @@ def construct_once(post: Post, base_url: str, trajectories: list[dict[str, Any]]
     # not silently create an empty in-memory builder bank.
     if dump_file.exists() and all(states.get(str(item["trajectory_id"])) == "persisted" for item in trajectories):
         snapshot_hash = semantic_bank_hash(dump_file)
+        _require_complete_marker(dump_file, snapshot_hash, len(trajectories))
         event({"event": "reme_initial_bank_reused", "snapshot_sha256": snapshot_hash,
                "construction_count": len(trajectories), "snapshot_file_sha256": file_hash(dump_file)})
         return snapshot_hash, len(trajectories)
@@ -140,6 +173,7 @@ def construct_once(post: Post, base_url: str, trajectories: list[dict[str, Any]]
     dumped = post(base_url, "dump_memory", {"dump_file_path": str(dump_file)})
     snapshot_file_hash = file_hash(dump_file)
     snapshot_hash = semantic_bank_hash(dump_file)
+    _write_complete_marker(dump_file, snapshot_hash, len(trajectories))
     event({"event": "reme_initial_bank_frozen", "snapshot_sha256": snapshot_hash,
            "snapshot_file_sha256": snapshot_file_hash, "construction_count": len(trajectories),
            "dump_response_sha256": canonical_hash(dumped)})
@@ -149,6 +183,7 @@ def construct_once(post: Post, base_url: str, trajectories: list[dict[str, Any]]
 def load_clone(post: Post, base_url: str, dump_file: pathlib.Path,
                expected_snapshot_hash: str) -> str:
     """Load an exact snapshot into an isolated legacy service."""
+    _require_complete_marker(dump_file, expected_snapshot_hash)
     if semantic_bank_hash(dump_file) != expected_snapshot_hash:
         raise RuntimeError("ReMe initial-bank snapshot hash changed before clone")
     post(base_url, "load_memory", {"load_file_path": str(dump_file), "clear_existing": True})

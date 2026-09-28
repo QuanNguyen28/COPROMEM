@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import pathlib
 import json
+import pathlib
+
+import pytest
 
 from copromem.integrations.reme.bank import construct_once, load_clone
 from copromem.experiments.reme_copromem.config import progress_event_callback
@@ -41,13 +43,24 @@ def test_progress_callback_is_unary_and_persisted_restart_skips_provider_work(tm
     callback = progress_event_callback(progress)
     callback({"event": "reme_initial_bank_item", "trajectory_id": "a"})
     assert json.loads(progress.read_text(encoding="utf-8")) == {"event": "reme_initial_bank_item", "trajectory_id": "a"}
-    dump = tmp_path / "snapshot.jsonl"
-    dump.write_text('{"memory_id":"m","content":"x"}\n', encoding="utf-8")
-    checkpoint = tmp_path / "construction.jsonl"
-    checkpoint.write_text('{"trajectory_id":"a","state":"persisted"}\n', encoding="utf-8")
+    dump, checkpoint = tmp_path / "snapshot.jsonl", tmp_path / "construction.jsonl"
     provider_calls: list[str] = []
-    result, count = construct_once(lambda _base, endpoint, _payload: provider_calls.append(endpoint) or {}, "builder",
-                                   [{"trajectory_id":"a", "task_id":"a", "task_history":[], "after_score":1.0}],
-                                   checkpoint, dump, callback)
+    def post(_base, endpoint, payload):
+        provider_calls.append(endpoint)
+        if endpoint == "summary_task_memory": return {"metadata": {"memory_list": []}}
+        if endpoint == "dump_memory":
+            pathlib.Path(payload["dump_file_path"]).write_text("", encoding="utf-8")
+        return {"metadata": {"ok": True}}
+    rows = [{"trajectory_id":"a", "task_id":"a", "task_history":[], "after_score":1.0}]
+    construct_once(post, "builder", rows, checkpoint, dump, callback)
+    provider_calls.clear()
+    result, count = construct_once(post, "builder", rows, checkpoint, dump, callback)
     assert count == 1 and provider_calls == []
     assert result
+
+
+def test_incomplete_reme_dump_cannot_be_loaded_as_complete(tmp_path: pathlib.Path) -> None:
+    dump = tmp_path / "partial.jsonl"
+    dump.write_text('{"memory_id":"m","content":"x"}\n', encoding="utf-8")
+    with pytest.raises(RuntimeError, match="completion marker is absent"):
+        load_clone(lambda *_: {}, "fixed", dump, "anything")
