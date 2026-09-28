@@ -19,3 +19,7 @@ def test_v6_has_no_reme_or_v53_lifecycle():
 def test_v6_execution_evidence_configuration_has_worker_required_path():
  source=(Path(__file__).parents[2]/'scripts'/'run_contrastive_v6.py').read_text()
  assert "'registry_path':str(REGISTRY)" in source and "execution_evidence=evidence" in source
+def test_v6_registry_projection_retains_frozen_callable_identity(tmp_path, monkeypatch):
+ registry=tmp_path/'registry.json';registry.write_text('{"registry_sha256":"full","operations":[],"dependency_edges":[]}')
+ monkeypatch.setattr(MOD,'REGISTRY',registry)
+ assert MOD._registry()['registry_sha256']=='full'

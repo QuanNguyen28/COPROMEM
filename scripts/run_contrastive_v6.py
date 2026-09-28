@@ -55,7 +55,9 @@ def _registry()->dict[str,Any]:
                     'access_mode':item.get('access_mode','read'),'required_parameters':item.get('required_parameters',[]),
                     'output_slots':item.get('output_slots',[])})
  value={'operations':sorted(ops,key=lambda x:x['operation']),'dependency_edges':raw.get('dependency_edges',[])}
- value['registry_sha256']=digest(value);return value
+ # Telemetry validates the complete frozen callable-registry identity.  The v6
+ # graph consumes this public projection but must retain that same identity.
+ value['registry_sha256']=str(raw['registry_sha256']);return value
 def select()->tuple[dict[str,Any]|None,list[dict[str,Any]],dict[str,Any]]:
  inv=json.loads(INVENTORY.read_text(encoding='utf-8')); excluded=executed_ids(); rows=inv['unseen_train_tasks']
  groups=defaultdict(list)
