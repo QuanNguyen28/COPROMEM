@@ -119,6 +119,37 @@ def services(run: pathlib.Path, ledger: pathlib.Path, progress: pathlib.Path, ca
         for service in instances.values(): service.close()
 
 
+def v5_budget_bound(*, call_limits: dict[str, int], historical_usd: float = 0.0,
+                    lifecycle_input_ceiling: int = 131072) -> dict[str, float | int]:
+    """Compute the complete registered v5 ceiling from frozen transport limits."""
+    from ...integrations.reme.transport import (
+        INPUT_PRICE, OUTPUT_PRICE, INPUT_TOKEN_CEILING, MAX_OUTPUT_TOKENS,
+        LockedEmbeddings,
+    )
+    required = {"executor", "reme_lifecycle", "reme_embedding", "copromem_decomposition"}
+    if set(call_limits) != required or any(int(value) < 0 for value in call_limits.values()):
+        raise ValueError("v5 budget must register exactly the four provider-call roles")
+    executor_per_call = INPUT_TOKEN_CEILING * INPUT_PRICE + MAX_OUTPUT_TOKENS * OUTPUT_PRICE
+    lifecycle_per_call = lifecycle_input_ceiling * INPUT_PRICE + MAX_OUTPUT_TOKENS * OUTPUT_PRICE
+    embedding_per_call = 10 * LockedEmbeddings.MAX_TOKENS_PER_ITEM * (0.02 / 1_000_000)
+    decomposition_per_call = lifecycle_per_call
+    contributions = {
+        "executor_usd": int(call_limits["executor"]) * executor_per_call,
+        "reme_lifecycle_usd": int(call_limits["reme_lifecycle"]) * lifecycle_per_call,
+        "embedding_usd": int(call_limits["reme_embedding"]) * embedding_per_call,
+        "copromem_decomposition_usd": int(call_limits["copromem_decomposition"]) * decomposition_per_call,
+    }
+    dispatchable = sum(contributions.values()) + float(historical_usd)
+    contingency = dispatchable * 0.15
+    return {**contributions, "executor_calls": int(call_limits["executor"]),
+            "reme_lifecycle_calls": int(call_limits["reme_lifecycle"]),
+            "embedding_calls": int(call_limits["reme_embedding"]),
+            "copromem_decomposition_calls": int(call_limits["copromem_decomposition"]),
+            "historical_charged_or_reserved_usd": float(historical_usd),
+            "dispatchable_usd": dispatchable, "non_dispatchable_contingency_usd": contingency,
+            "all_in_usd": dispatchable + contingency}
+
+
 def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: AppendOnlyLedger,
                        api_key: str, all_task_ids: list[str], arm: str, task_id: str,
                        trial_id: int, seed: int, max_actions: int, temperature: float,

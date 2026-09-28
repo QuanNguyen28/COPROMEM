@@ -98,9 +98,32 @@ class ModelDumpNamespace(types.SimpleNamespace):
 
 
 class AppendOnlyLedger:
-    def __init__(self, path: pathlib.Path, cap_usd: float) -> None:
+    def __init__(self, path: pathlib.Path, cap_usd: float,
+                 call_limits: dict[str, int] | None = None) -> None:
         self.path, self.cap_usd = path, cap_usd
+        raw_limits = call_limits
+        if raw_limits is None and os.environ.get("OFFICIAL_PILOT_CALL_LIMITS"):
+            try:
+                raw_limits = json.loads(os.environ["OFFICIAL_PILOT_CALL_LIMITS"])
+            except json.JSONDecodeError as exc:
+                raise DispatchFailure("registered provider call limits are malformed") from exc
+        self.call_limits = {str(key): int(value) for key, value in (raw_limits or {}).items()}
+        if any(value < 0 for value in self.call_limits.values()):
+            raise DispatchFailure("registered provider call limits must be nonnegative")
         path.parent.mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def _role_bucket(role: Any) -> str | None:
+        text = str(role or "")
+        if text.startswith("executor:"):
+            return "executor"
+        if text.startswith("reme_lifecycle:"):
+            return "reme_lifecycle"
+        if text.startswith("reme_embedding:"):
+            return "reme_embedding"
+        if text.startswith("copromem_decomposition:"):
+            return "copromem_decomposition"
+        return None
 
     def _append(self, record: dict[str, Any]) -> None:
         line = json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
@@ -159,6 +182,20 @@ class AppendOnlyLedger:
             reserved, _ = self._call_state()
             if call_id in reserved:
                 raise DispatchFailure("duplicate provider call ID")
+            bucket = self._role_bucket(metadata.get("role"))
+            if self.call_limits:
+                historical = metadata.get("role") == "historical_carry_forward"
+                if not historical and (bucket is None or bucket not in self.call_limits):
+                    raise DispatchFailure("unregistered provider call role")
+                if not historical:
+                    used = 0
+                    if self.path.exists():
+                        for line in self.path.read_text(encoding="utf-8").splitlines():
+                            row = json.loads(line)
+                            if row.get("event") == "reserve" and self._role_bucket(row.get("role")) == bucket:
+                                used += 1
+                    if used >= self.call_limits[bucket]:
+                        raise DispatchFailure(f"registered {bucket} call limit would be exceeded")
             if upper_usd < 0 or self._exposure() + upper_usd > self.cap_usd:
                 raise DispatchFailure("USD cap would be exceeded")
             self._append({"event": "reserve", "id": call_id, "usd": upper_usd, **metadata})

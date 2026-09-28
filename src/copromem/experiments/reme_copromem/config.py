@@ -25,7 +25,7 @@ from typing import Any
 ROOT = pathlib.Path(os.environ.get("COPROMEM_ROOT", pathlib.Path(__file__).resolve().parents[4]))
 sys.path.insert(0, str(ROOT))
 from ...integrations.reme.lifecycle import dynamic_post_trial_update
-from .runner import append, decomposition_json_call, digest, execute_trajectory, official_post, services, write_json
+from .runner import append, decomposition_json_call, digest, execute_trajectory, official_post, services, v5_budget_bound, write_json
 from ...integrations.reme.transport import AppendOnlyLedger
 from ...integrations.reme.bank import construct_once, load_clone
 from ...benchmarks.appworld.adapter import CoProMemAppWorldAdapter, TrialInput
@@ -99,6 +99,15 @@ def spec() -> dict[str, Any]:
             or not value.get("budget", {}).get("fits_hard_cap")
             or float(value["budget"].get("hard_cap_usd", 0)) <= 0):
         raise RuntimeError("frozen protocol invariant failed")
+    budget = value["budget"]
+    bound = v5_budget_bound(call_limits=budget.get("call_limits", {}),
+                            historical_usd=float(budget.get("historical_charged_or_reserved_usd", 0.0)))
+    for key, expected in bound.items():
+        if key not in budget or abs(float(budget[key]) - float(expected)) > 1e-12:
+            raise RuntimeError(f"frozen v5 budget field is inconsistent: {key}")
+    if (float(budget["ledger_dispatch_cap_usd"]) != float(bound["dispatchable_usd"])
+            or bool(budget["fits_hard_cap"]) != (float(bound["all_in_usd"]) <= float(budget["hard_cap_usd"]))):
+        raise RuntimeError("frozen v5 budget or non-dispatchable contingency is inconsistent")
     evaluation = value["evaluation"]
     if (len(evaluation.get("trial_ids", ())) != len(evaluation.get("seeds", ()))
             or evaluation.get("expected_trajectories") !=
@@ -175,7 +184,9 @@ def acquire_lock() -> None:
 
 
 def bootstrap_ledger(value: dict[str, Any]) -> AppendOnlyLedger:
-    ledger = AppendOnlyLedger(LEDGER, float(value["budget"]["ledger_dispatch_cap_usd"]))
+    call_limits = value["budget"]["call_limits"]
+    os.environ["OFFICIAL_PILOT_CALL_LIMITS"] = json.dumps(call_limits, sort_keys=True, separators=(",", ":"))
+    ledger = AppendOnlyLedger(LEDGER, float(value["budget"]["ledger_dispatch_cap_usd"]), call_limits)
     carry = float(value["budget"]["historical_charged_or_reserved_usd"])
     identifier = f"historical-carry-forward-usd-{carry:.12f}"
     known = LEDGER.read_text(encoding="utf-8") if LEDGER.exists() else ""

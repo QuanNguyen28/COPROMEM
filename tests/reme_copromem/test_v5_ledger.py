@@ -30,3 +30,14 @@ def test_append_only_ledger_rejects_double_or_unbounded_settlement(tmp_path):
     ledger.settle("call-a", 0.49, {"role": "executor"})
     with pytest.raises(DispatchFailure, match="unknown"):
         ledger.settle("call-a", 0.49, {"role": "executor"})
+
+
+def test_registered_role_call_limits_are_fail_closed(tmp_path):
+    ledger = AppendOnlyLedger(tmp_path / "ledger.jsonl", 1.0,
+                              {"executor": 1, "reme_lifecycle": 0,
+                               "reme_embedding": 0, "copromem_decomposition": 0})
+    ledger.reserve("first", 0.10, {"role": "executor:no_memory:a:trial=0:seed=1"})
+    with pytest.raises(DispatchFailure, match="executor call limit"):
+        ledger.reserve("second", 0.10, {"role": "executor:no_memory:a:trial=1:seed=2"})
+    with pytest.raises(DispatchFailure, match="unregistered"):
+        ledger.reserve("other", 0.10, {"role": "unknown"})
