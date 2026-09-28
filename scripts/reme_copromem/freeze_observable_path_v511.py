@@ -40,9 +40,12 @@ def main() -> int:
     if manifest_path.exists() or hash_path.exists():
         raise RuntimeError("v5.2 manifest is already frozen")
     source = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, env=git_env()).strip()
-    changed = subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no", "--", "src", "scripts"],
-                                      cwd=ROOT, text=True, env=git_env()).strip()
-    if changed: raise RuntimeError("commit tracked runtime source before freezing v5.2")
+    # Native Windows Git records this worktree clean.  WSL may expose only
+    # CRLF-at-EOL differences, so compare tracked source while ignoring that
+    # transport-only representation difference but no content differences.
+    clean = subprocess.run(["git", "diff", "--ignore-space-at-eol", "--exit-code", "HEAD", "--", "src", "scripts"],
+                           cwd=ROOT, env=git_env(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+    if not clean: raise RuntimeError("commit tracked runtime source before freezing v5.2")
     value = json.loads((run / "template.json").read_text(encoding="utf-8"))
     if value.get("protocol") != "v5_2_engineering_011_observable_path" or value.get("git_commit") != source:
         raise RuntimeError("v5.2 template source identity mismatch")

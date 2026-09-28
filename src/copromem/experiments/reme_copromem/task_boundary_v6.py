@@ -88,7 +88,8 @@ def _load() -> dict[str, Any]:
         raise RuntimeError("006 seed/trial count mismatch")
     if value.get("git_commit") != subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, env=_git_env()).strip():
         raise RuntimeError("running source differs from frozen manifest")
-    changed = subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no", "--", "src", "scripts"], cwd=ROOT, text=True, env=_git_env()).strip()
+    changed = subprocess.run(["git", "diff", "--ignore-space-at-eol", "--exit-code", "HEAD", "--", "src", "scripts"],
+                             cwd=ROOT, env=_git_env(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
     if changed:
         raise RuntimeError("tracked runtime source differs from frozen commit")
     expected = v5_budget_bound(call_limits=value["budget"]["call_limits"],
