@@ -39,7 +39,12 @@ def prior_ids() -> set[str]:
             manifest = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        result.update(str(item) for item in manifest.get("evaluation", {}).get("task_ids", ()) if item)
+        # A frozen but preflight-only manifest never opens its task payloads.
+        # Count evaluation IDs only once an immutable evaluation artifact
+        # exists; acquisition IDs are always historical evidence and remain
+        # excluded regardless of later evaluation state.
+        if any((path.parent / "evaluation").glob("**/trial-*.json")):
+            result.update(str(item) for item in manifest.get("evaluation", {}).get("task_ids", ()) if item)
         result.update(str(item) for item in manifest.get("acquisition", {}).get("task_ids", ()) if item)
     return result
 
