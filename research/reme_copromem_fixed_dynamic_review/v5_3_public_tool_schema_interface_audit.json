@@ -1,0 +1,2514 @@
+{
+  "audit_sha256": "3e919771a681b6c37954d71de9f302a861beeef3a7b9f524b46b8a72e268fcb4",
+  "audit_version": "v5_3_public_tool_schema_interface_audit_v1",
+  "matching_policy": {
+    "aliases": "only frozen function-name to operation maps",
+    "invocation_values": "hash-only evidence; excluded from memory",
+    "required": "all frozen public_required fields must occur",
+    "superset": "public_optional and runtime_context fields may occur",
+    "unknown": "undeclared fields fail closed"
+  },
+  "mismatch_count": 398,
+  "mismatches": [
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.add_address",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.add_gift_wrapping_to_product",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.add_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.add_product_to_cart",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.add_product_to_wish_list",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.apply_promo_code_to_cart",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.clear_cart",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.clear_wish_list",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.delete_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.delete_address",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.delete_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.delete_product_from_cart",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.delete_product_from_wish_list",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.delete_product_question",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.delete_product_question_answer",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.delete_product_review",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.download_order_receipt",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.download_prime_subscription_receipt",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.initiate_return",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_id",
+      "operation": "apis.amazon.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_secret",
+      "operation": "apis.amazon.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "grant_type",
+      "operation": "apis.amazon.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "scope",
+      "operation": "apis.amazon.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.logout",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.move_product_from_cart_to_wish_list",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.move_product_from_wish_list_to_cart",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.place_order",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.remove_gift_wrapping_from_product",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.remove_promo_code_from_cart",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_addresses",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_cart",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_order",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_orders",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_payment_cards",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_prime_subscriptions",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_return",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_returns",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.show_wish_list",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.subscribe_prime",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.update_account_name",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.update_address",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.update_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.update_product_quantity_in_cart",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.update_product_quantity_in_wish_list",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.update_product_question",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.update_product_question_answer",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.update_product_review",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.write_product_question",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.write_product_question_answer",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.amazon.write_product_review",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.compress_directory",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.copy_directory",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.copy_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.create_directory",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.create_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.decompress_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.delete_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.delete_directory",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.delete_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.directory_exists",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.file_exists",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_id",
+      "operation": "apis.file_system.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_secret",
+      "operation": "apis.file_system.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "grant_type",
+      "operation": "apis.file_system.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "scope",
+      "operation": "apis.file_system.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.logout",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.move_directory",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.move_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.show_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.show_directory",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.show_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.update_account_name",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.file_system.update_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.create_draft",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.delete_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.delete_draft",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.delete_email_in_thread",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.delete_thread",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.download_attachment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.forward_email_from_thread",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.forward_email_thread",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.label_thread",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_id",
+      "operation": "apis.gmail.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_secret",
+      "operation": "apis.gmail.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "grant_type",
+      "operation": "apis.gmail.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "scope",
+      "operation": "apis.gmail.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.logout",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.mark_thread_archived",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.mark_thread_not_spam",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.mark_thread_read",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.mark_thread_spam",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.mark_thread_starred",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.mark_thread_unarchived",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.mark_thread_unread",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.mark_thread_unstarred",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.remove_attachment_from_draft",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.reply_to_email",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.send_email",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.send_email_from_draft",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.show_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.show_archived_threads",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.show_category_sizes",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.show_draft",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.show_drafts",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.show_email",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.show_inbox_threads",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.show_outbox_threads",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.show_spam_threads",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.show_thread",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.unlabel_thread",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.update_account_name",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.update_draft",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.gmail.upload_attachments_to_draft",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.add_contact",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.create_alarm",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.delete_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.delete_alarm",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.delete_contact",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.delete_text_message",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.delete_voice_message",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_id",
+      "operation": "apis.phone.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_secret",
+      "operation": "apis.phone.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "grant_type",
+      "operation": "apis.phone.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "scope",
+      "operation": "apis.phone.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.logout",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.search_contacts",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.search_text_messages",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.search_voice_messages",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.send_text_message",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.send_voice_message",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.show_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.show_alarm",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.show_alarms",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.show_contact_relationships",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.show_text_message",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.show_text_message_window",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.show_voice_message",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.show_voice_message_window",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.update_account_name",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.update_alarm",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.phone.update_contact",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.simple_note.add_content_to_note",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.simple_note.create_note",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.simple_note.delete_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.simple_note.delete_note",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_id",
+      "operation": "apis.simple_note.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_secret",
+      "operation": "apis.simple_note.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "grant_type",
+      "operation": "apis.simple_note.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "scope",
+      "operation": "apis.simple_note.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.simple_note.logout",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.simple_note.search_notes",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.simple_note.show_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.simple_note.show_note",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.simple_note.update_account_name",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.simple_note.update_note",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.accept_group_invitation",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.add_member_to_group",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.attach_expense_receipt_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.attach_payment_receipt_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.create_group",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.delete_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.delete_expense",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.delete_expense_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.delete_expense_receipt_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.delete_group",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.delete_notification",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.delete_notifications",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.delete_payment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.delete_payment_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.delete_payment_receipt_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.download_expense_receipt_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.download_payment_receipt_file",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.exit_group",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_id",
+      "operation": "apis.splitwise.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_secret",
+      "operation": "apis.splitwise.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "grant_type",
+      "operation": "apis.splitwise.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "scope",
+      "operation": "apis.splitwise.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.logout",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.mark_notification",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.mark_notifications",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.post_expense_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.post_payment_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.record_expense",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.record_payment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.regenerate_invitation_code",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.remove_member_from_group",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.search_users",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.settle_up",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_activity",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_expense",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_expense_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_expense_comments",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_group",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_group_balance",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_group_expenses",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_group_payments",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_groups",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_groups_balance",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_no_group_expenses",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_no_group_payments",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_notifications",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_notifications_count",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_payment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_payment_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_payment_comments",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_people_balance",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.show_person_balance",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.undelete_expense",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.undelete_group",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.undelete_payment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.update_account_name",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.update_expense",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.update_expense_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.update_group",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.update_payment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.splitwise.update_payment_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.add_album_to_library",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.add_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.add_song_to_library",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.add_song_to_playlist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.add_to_queue",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.clear_song_queue",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.create_playlist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.delete_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.delete_album_review",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.delete_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.delete_playlist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.delete_playlist_review",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.delete_song_review",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.download_premium_subscription_receipt",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.download_song",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.follow_artist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.like_album",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.like_playlist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.like_song",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_id",
+      "operation": "apis.spotify.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_secret",
+      "operation": "apis.spotify.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "grant_type",
+      "operation": "apis.spotify.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "scope",
+      "operation": "apis.spotify.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.logout",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.loop_song",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.move_song_in_queue",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.next_song",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.pause_music",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.play_music",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.previous_song",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.remove_album_from_library",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.remove_downloaded_song",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.remove_song_from_library",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.remove_song_from_playlist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.remove_song_from_queue",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.review_album",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.review_playlist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.review_song",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.search_playlists",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.seek_song",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.set_volume",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_album_library",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_album_privates",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_artist_following",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_current_song",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_downloaded_songs",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_following_artists",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_liked_albums",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_liked_playlists",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_liked_songs",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_payment_cards",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_playlist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_playlist_library",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_playlist_privates",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_playlist_review",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_playlist_reviews",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_premium_subscriptions",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_recommendations",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_song_library",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_song_privates",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_song_queue",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.show_volume",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.shuffle_song_queue",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.subscribe_premium",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.unfollow_artist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.unlike_album",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.unlike_playlist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.unlike_song",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.update_account_name",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.update_album_review",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.update_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.update_playlist",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.update_playlist_review",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.spotify.update_song_review",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.accept_project_invite",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.add_label_to_task",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.assign_or_unassign_task",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.create_label",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.create_project",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.create_section",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.create_sub_task",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.create_task",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_attachment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_label",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_notification",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_notifications",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_project",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_project_invite",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_section",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_sub_task",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_task",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.delete_task_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.download_attachment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_id",
+      "operation": "apis.todoist.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_secret",
+      "operation": "apis.todoist.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "grant_type",
+      "operation": "apis.todoist.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "scope",
+      "operation": "apis.todoist.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.logout",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.mark_notification",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.mark_notifications",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.post_task_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.remove_collaborator_from_project",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.remove_label_from_task",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.search_labels",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.send_project_invite",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_notifications",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_notifications_count",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_project",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_projects",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_sections",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_sub_tasks",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_task",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_task_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_task_comments",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.show_tasks",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.update_account_name",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.update_label",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.update_project",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.update_section",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.update_sub_task",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.update_task",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.update_task_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.todoist.upload_attachment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.add_friend",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.add_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.add_to_venmo_balance",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.approve_payment_request",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.create_payment_request",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.create_transaction",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.create_transaction_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.delete_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.delete_notification",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.delete_notifications",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.delete_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.delete_payment_request",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.delete_transaction_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.deny_payment_request",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.download_bank_transfer_receipt",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.download_transaction_receipt",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.like_transaction",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.like_transaction_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_id",
+      "operation": "apis.venmo.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "client_secret",
+      "operation": "apis.venmo.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "grant_type",
+      "operation": "apis.venmo.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "not_callable_from_public_executor_schema",
+      "field": "scope",
+      "operation": "apis.venmo.login",
+      "source": "public_openapi_only"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.logout",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.mark_notification",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.mark_notifications",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.remind_payment_request",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.remove_friend",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.search_friends",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.search_users",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_account",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_bank_transfer_history",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_notifications",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_notifications_count",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_payment_cards",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_profile",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_received_payment_requests",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_sent_payment_requests",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_social_feed",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_transaction",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_transaction_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_transaction_comments",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_transactions",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.show_venmo_balance",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.unlike_transaction",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.unlike_transaction_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.update_account_name",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.update_payment_card",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.update_payment_request",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.update_transaction",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.update_transaction_comment",
+      "source": "public_function_calling_schema"
+    },
+    {
+      "classification": "runtime_context",
+      "field": "access_token",
+      "operation": "apis.venmo.withdraw_from_venmo_balance",
+      "source": "public_function_calling_schema"
+    }
+  ],
+  "normalizer": {
+    "path": "src/copromem/benchmarks/appworld/adapter.py",
+    "public_behavior": {
+      "concrete_values": "never retained by normalizer or learned procedure",
+      "local_bindings": "var_N stripped by frozen rule",
+      "operation_form": "executor AST public callable path"
+    },
+    "sha256": "cc7491c3533ac90456725bd1e3d0bd3c5efaf2ca91c541db703c80aef9390792"
+  },
+  "provider_calls": 0,
+  "registry_sha256": "68afaec3f57a802f321c2f1a1176e44b19cfa91b88cc86aa3f5e16e12fe3be61",
+  "source_metadata": {
+    "function_calling": [
+      {
+        "name": "amazon.json",
+        "sha256": "641103cdbfa64da0832bf73b7db4e846bcf99f649bf10641d508d2e006a67f5b"
+      },
+      {
+        "name": "api_docs.json",
+        "sha256": "5b08688dd5b4dec208f4251b5c33269b3049517c7c4451fd98d49c67477e291e"
+      },
+      {
+        "name": "file_system.json",
+        "sha256": "68b087cb4c15677e87e772448a28eca85e01ebf4fdfeec313696d0778f068ad5"
+      },
+      {
+        "name": "gmail.json",
+        "sha256": "4a0ee65205fb5e5363d24f7e9e5ba8884063b23f2a28e5d7b7da4829e3974553"
+      },
+      {
+        "name": "phone.json",
+        "sha256": "afd6a33ebf9ea91aeb738f840bc607e5af57b86c944f96c9d871467ef6d225a9"
+      },
+      {
+        "name": "simple_note.json",
+        "sha256": "53414bc70fbece5ba2ce5f1e6f5a50a41084704a410ce45597130350ab773a3f"
+      },
+      {
+        "name": "splitwise.json",
+        "sha256": "d52b852f982c9a4ccd1eb453a5cb035af8128875eab9fa85b0fbbe8606cc16b2"
+      },
+      {
+        "name": "spotify.json",
+        "sha256": "7194c0cc18a48e479f65192ba732e098174498ccc904cdb2dfa4d371e365d9c3"
+      },
+      {
+        "name": "supervisor.json",
+        "sha256": "e9b6c983f7b92686d530349e7d4d7afb8a3332e24ff2219789e6380d8c136ce9"
+      },
+      {
+        "name": "todoist.json",
+        "sha256": "88b67e50dec1f6ae8dc3ac82a5a1a0d9ec91e11ea004fe9bdeeca0572de90086"
+      },
+      {
+        "name": "venmo.json",
+        "sha256": "dc69706b9c8ccc59fa8e28740abe36c35d3fc2cf3dca37cdd501ad413f37f615"
+      }
+    ],
+    "openapi": [
+      {
+        "name": "amazon.json",
+        "sha256": "1306d4ac5c1f021114b6d9ba5e43a9358524b04b690a6d92ca7a0cd9fe37f70d"
+      },
+      {
+        "name": "api_docs.json",
+        "sha256": "1f95a3d7a2fda10f63167617c5131759c801539445c302919f553da639428b6b"
+      },
+      {
+        "name": "file_system.json",
+        "sha256": "cf8917b210b44ed248d98eaef8af94f01e48c7df0c6f23773159499536407865"
+      },
+      {
+        "name": "gmail.json",
+        "sha256": "b8ed212f5a28942f70bfb6adeef9b5f2af7da5901e553fa9831bf30e951e569f"
+      },
+      {
+        "name": "phone.json",
+        "sha256": "aa9257f59d8fc3f6912f2ba1f43cf7a03282d8b4c85aeb12bd89b8bcab78e37d"
+      },
+      {
+        "name": "simple_note.json",
+        "sha256": "d4cb920e5b171fdcb746127efa316246862f28badeb086be5fe28e4a91872126"
+      },
+      {
+        "name": "splitwise.json",
+        "sha256": "e9ba3b09a9ef030898961e088972c09a838038dd479361603a136aa498bcf62c"
+      },
+      {
+        "name": "spotify.json",
+        "sha256": "20715cca82ca18c304661f70a0ea33650b44e5355f77c0603c4287baf372ed13"
+      },
+      {
+        "name": "supervisor.json",
+        "sha256": "63e4df8f36e56197ed73d51a34eb3b9b946da9d00ac86409797088095ea64ac3"
+      },
+      {
+        "name": "todoist.json",
+        "sha256": "751fbd692b343131d1a25eed3a90f8dd01673090116fe2f20f84d9a5ca2e1ada"
+      },
+      {
+        "name": "venmo.json",
+        "sha256": "cc5b8460f92f867e9ab247c863bfba41804291d4f111ed7b7b71b70fb5b4cd12"
+      }
+    ]
+  },
+  "user_email_finding": {
+    "classification": "public_optional",
+    "conclusion": "declared public optional callable field; not runtime injection or normalizer artifact",
+    "field": "user_email",
+    "operation": "apis.venmo.show_transactions",
+    "source": "public_function_calling_schema_and_public_openapi_metadata"
+  }
+}

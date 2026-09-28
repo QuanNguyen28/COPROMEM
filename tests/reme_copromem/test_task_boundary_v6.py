@@ -27,7 +27,9 @@ def test_flat_public_descriptor_is_valid_and_unknown_on_empty_bank():
 def test_task_boundary_module_does_not_initialize_reme(monkeypatch, tmp_path):
     monkeypatch.setenv("COPROMEM_RUN_DIR", str(tmp_path))
     monkeypatch.delenv("COPROMEM_REME_SERVICE_STARTED", raising=False)
+    import importlib
     import copromem.experiments.reme_copromem.task_boundary_v6 as module
+    module = importlib.reload(module)
     assert module.RUN == tmp_path
     assert "ReMeService" not in module.__dict__
 

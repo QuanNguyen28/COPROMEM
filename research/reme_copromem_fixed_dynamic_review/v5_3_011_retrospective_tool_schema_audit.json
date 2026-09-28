@@ -1,0 +1,496 @@
+{
+  "all_artifacts_recognized": true,
+  "artifact_count": 2,
+  "artifacts": [
+    {
+      "artifact_sha256": "5e78e4029f133542fb56dc7f6e3893b176041645e069d708d90846ac913dfd4c",
+      "candidate_paths": [
+        {
+          "event_indices": [
+            0,
+            19
+          ],
+          "operations": [
+            "apis.supervisor.show_account_passwords",
+            "apis.supervisor.complete_task"
+          ],
+          "path_sha256": "f88a1676c9240af5109795361db3c50f09037c2a377d889ea31838a7c02cc327"
+        },
+        {
+          "event_indices": [
+            12,
+            19
+          ],
+          "operations": [
+            "apis.phone.get_current_date_and_time",
+            "apis.supervisor.complete_task"
+          ],
+          "path_sha256": "d14611cf575417be6f19a91b8c970610dfdf2498247ce13c4082e66fb4b45762"
+        }
+      ],
+      "history_sha256": "f2bee57c4c778ee10f55c1946cc8dd1a9db8f90dd2c1b9a173dbe9a9fda99223",
+      "normalized_event_count": 20,
+      "public_signatures": [
+        {
+          "index": 0,
+          "observed": true,
+          "operation": "apis.supervisor.show_account_passwords",
+          "public_optional_present": [],
+          "public_required": [],
+          "runtime_context_present": []
+        },
+        {
+          "index": 1,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_descriptions",
+          "public_optional_present": [],
+          "public_required": [
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 2,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 3,
+          "observed": true,
+          "operation": "apis.venmo.login",
+          "public_optional_present": [],
+          "public_required": [
+            "password",
+            "username"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 4,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_descriptions",
+          "public_optional_present": [],
+          "public_required": [
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 5,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_descriptions",
+          "public_optional_present": [],
+          "public_required": [
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 6,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 7,
+          "observed": true,
+          "operation": "apis.phone.login",
+          "public_optional_present": [],
+          "public_required": [
+            "password",
+            "username"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 8,
+          "observed": false,
+          "operation": "apis.phone.search_contacts",
+          "public_optional_present": [
+            "page_index",
+            "relationship"
+          ],
+          "public_required": [],
+          "runtime_context_present": [
+            "access_token"
+          ]
+        },
+        {
+          "index": 10,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 11,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 12,
+          "observed": true,
+          "operation": "apis.phone.get_current_date_and_time",
+          "public_optional_present": [],
+          "public_required": [],
+          "runtime_context_present": []
+        },
+        {
+          "index": 13,
+          "observed": false,
+          "operation": "apis.venmo.show_transactions",
+          "public_optional_present": [
+            "max_created_at",
+            "min_created_at",
+            "page_index",
+            "user_email"
+          ],
+          "public_required": [],
+          "runtime_context_present": [
+            "access_token"
+          ]
+        },
+        {
+          "index": 15,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 16,
+          "observed": false,
+          "operation": "apis.venmo.like_transaction",
+          "public_optional_present": [],
+          "public_required": [
+            "transaction_id"
+          ],
+          "runtime_context_present": [
+            "access_token"
+          ]
+        },
+        {
+          "index": 17,
+          "observed": false,
+          "operation": "apis.venmo.show_transactions",
+          "public_optional_present": [
+            "max_created_at",
+            "min_created_at",
+            "page_index",
+            "user_email"
+          ],
+          "public_required": [],
+          "runtime_context_present": [
+            "access_token"
+          ]
+        },
+        {
+          "index": 19,
+          "observed": true,
+          "operation": "apis.supervisor.complete_task",
+          "public_optional_present": [],
+          "public_required": [],
+          "runtime_context_present": []
+        }
+      ],
+      "recognized": true,
+      "rejected_operations": [
+        {
+          "index": 9,
+          "operation": "contacts.extend",
+          "reason": "unknown public callable operation"
+        },
+        {
+          "index": 14,
+          "operation": "roommate_transactions.extend",
+          "reason": "unknown public callable operation"
+        },
+        {
+          "index": 18,
+          "operation": "verify.extend",
+          "reason": "unknown public callable operation"
+        }
+      ]
+    },
+    {
+      "artifact_sha256": "650a74bcfb618167bc059152e9eeadf584f818669eb125dda6733aaed5a70d95",
+      "candidate_paths": [
+        {
+          "event_indices": [
+            2,
+            19
+          ],
+          "operations": [
+            "apis.supervisor.show_account_passwords",
+            "apis.supervisor.complete_task"
+          ],
+          "path_sha256": "f88a1676c9240af5109795361db3c50f09037c2a377d889ea31838a7c02cc327"
+        },
+        {
+          "event_indices": [
+            8,
+            19
+          ],
+          "operations": [
+            "apis.phone.show_contact_relationships",
+            "apis.supervisor.complete_task"
+          ],
+          "path_sha256": "2f2f8e332c117aeec3ef2603a6155d5579f6cd29e0d0200e69d6152ce7ba204d"
+        },
+        {
+          "event_indices": [
+            14,
+            19
+          ],
+          "operations": [
+            "apis.phone.get_current_date_and_time",
+            "apis.supervisor.complete_task"
+          ],
+          "path_sha256": "d14611cf575417be6f19a91b8c970610dfdf2498247ce13c4082e66fb4b45762"
+        }
+      ],
+      "history_sha256": "2e74800663766f6acae4b98f4d18fe019f31e30a710c1a6332d16f48cbfcb94a",
+      "normalized_event_count": 20,
+      "public_signatures": [
+        {
+          "index": 0,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_descriptions",
+          "public_optional_present": [],
+          "public_required": [
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 1,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_descriptions",
+          "public_optional_present": [],
+          "public_required": [
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 2,
+          "observed": true,
+          "operation": "apis.supervisor.show_account_passwords",
+          "public_optional_present": [],
+          "public_required": [],
+          "runtime_context_present": []
+        },
+        {
+          "index": 3,
+          "observed": true,
+          "operation": "apis.venmo.login",
+          "public_optional_present": [],
+          "public_required": [
+            "password",
+            "username"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 4,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 5,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_descriptions",
+          "public_optional_present": [],
+          "public_required": [
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 6,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 7,
+          "observed": true,
+          "operation": "apis.phone.login",
+          "public_optional_present": [],
+          "public_required": [
+            "password",
+            "username"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 8,
+          "observed": true,
+          "operation": "apis.phone.show_contact_relationships",
+          "public_optional_present": [],
+          "public_required": [],
+          "runtime_context_present": [
+            "access_token"
+          ]
+        },
+        {
+          "index": 9,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 10,
+          "observed": false,
+          "operation": "apis.phone.search_contacts",
+          "public_optional_present": [
+            "page_index",
+            "page_limit",
+            "relationship"
+          ],
+          "public_required": [],
+          "runtime_context_present": [
+            "access_token"
+          ]
+        },
+        {
+          "index": 12,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 13,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 14,
+          "observed": true,
+          "operation": "apis.phone.get_current_date_and_time",
+          "public_optional_present": [],
+          "public_required": [],
+          "runtime_context_present": []
+        },
+        {
+          "index": 15,
+          "observed": false,
+          "operation": "apis.venmo.show_transactions",
+          "public_optional_present": [
+            "max_created_at",
+            "min_created_at",
+            "page_index",
+            "page_limit",
+            "user_email"
+          ],
+          "public_required": [],
+          "runtime_context_present": [
+            "access_token"
+          ]
+        },
+        {
+          "index": 17,
+          "observed": true,
+          "operation": "apis.api_docs.show_api_doc",
+          "public_optional_present": [],
+          "public_required": [
+            "api_name",
+            "app_name"
+          ],
+          "runtime_context_present": []
+        },
+        {
+          "index": 18,
+          "observed": false,
+          "operation": "apis.venmo.like_transaction",
+          "public_optional_present": [],
+          "public_required": [
+            "transaction_id"
+          ],
+          "runtime_context_present": [
+            "access_token"
+          ]
+        },
+        {
+          "index": 19,
+          "observed": true,
+          "operation": "apis.supervisor.complete_task",
+          "public_optional_present": [],
+          "public_required": [],
+          "runtime_context_present": []
+        }
+      ],
+      "recognized": true,
+      "rejected_operations": [
+        {
+          "index": 11,
+          "operation": "roommates.extend",
+          "reason": "unknown public callable operation"
+        },
+        {
+          "index": 16,
+          "operation": "all_transactions.extend",
+          "reason": "unknown public callable operation"
+        }
+      ]
+    }
+  ],
+  "audit_sha256": "53c97d0fe0adbdec7f5e8dca9ffe8d23f46133a3f8326645260e2148cd749e54",
+  "audit_version": "v5_3_tool_schema_retrospective_v1",
+  "provider_calls": 0,
+  "registry_frozen_before_history_read": true,
+  "registry_sha256": "68afaec3f57a802f321c2f1a1176e44b19cfa91b88cc86aa3f5e16e12fe3be61",
+  "run_label": "v5_2_engineering_011_observable_path"
+}

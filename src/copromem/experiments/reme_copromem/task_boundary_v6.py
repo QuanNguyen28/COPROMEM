@@ -22,6 +22,7 @@ from ...integrations.reme.transport import AppendOnlyLedger
 from ...learning import ActionObservation, LearningCore
 from .runner import append, construct_copromem, digest, execute_trajectory, raw_acquisition_trajectories, write_json, v5_budget_bound
 from .public_path_registry import verify_public_registry
+from .public_tool_schema_registry import build_public_tool_schema_registry, verify_public_tool_schema_registry
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[4]
@@ -77,12 +78,19 @@ def _status(state: str, **extra: Any) -> None:
                         "manifest_sha256": MANIFEST_SHA.read_text(encoding="utf-8").strip(), **extra})
 
 
+def verify_runtime_tool_schema(registry: dict[str, Any], runtime: dict[str, Any]) -> None:
+    """Fail closed when the live public executor schema differs from freeze."""
+    rebuilt = build_public_tool_schema_registry(runtime.get("openapi_root", ""), runtime.get("function_calling_root", ""))
+    if rebuilt["registry_sha256"] != registry["registry_sha256"]:
+        raise RuntimeError("v5.3 runtime callable schema differs from frozen registry")
+
+
 def _load() -> dict[str, Any]:
     raw = MANIFEST.read_bytes()
     if sha(MANIFEST) != MANIFEST_SHA.read_text(encoding="utf-8").strip():
         raise RuntimeError("006 manifest checksum mismatch")
     value = json.loads(raw)
-    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary", "v5_engineering_008_task_boundary", "v5_1_engineering_009_observable_subgraph", "v5_2_engineering_011_observable_path"}:
+    if value.get("protocol") not in {"v5_engineering_006_task_boundary", "v5_engineering_007_task_boundary", "v5_engineering_008_task_boundary", "v5_1_engineering_009_observable_subgraph", "v5_2_engineering_011_observable_path", "v5_3_engineering_012_tool_schema"}:
         raise RuntimeError("wrong protocol")
     if value.get("arms") != ["no_memory", "copromem_dynamic"]:
         raise RuntimeError("task-boundary run must have exactly the two registered arms")
@@ -111,6 +119,14 @@ def _load() -> dict[str, Any]:
         registry = json.loads(registry_path.read_text(encoding="utf-8")); verify_public_registry(registry)
         if registry["registry_sha256"] != value["evaluation"].get("public_registry_sha256"):
             raise RuntimeError("v5.2 public registry content mismatch")
+    if value.get("task_boundary_policy") == "observable_tool_schema_path_v5_3":
+        registry_path = ROOT / value["evaluation"]["public_registry_relative_path"]
+        if not registry_path.is_file() or sha(registry_path) != value["evaluation"].get("public_registry_file_sha256"):
+            raise RuntimeError("v5.3 public callable registry file mismatch")
+        registry = json.loads(registry_path.read_text(encoding="utf-8")); verify_public_tool_schema_registry(registry)
+        if registry["registry_sha256"] != value["evaluation"].get("public_registry_sha256"):
+            raise RuntimeError("v5.3 public callable registry content mismatch")
+        verify_runtime_tool_schema(registry, value["evaluation"].get("runtime_public_schema", {}))
     return value
 
 
@@ -249,7 +265,7 @@ def _a_gate(value: dict[str, Any], initial: dict[str, Any], marker: dict[str, An
     schema = state.get("learning", {}).get("episode_schemas", {}).get(winner) if winner else None
     if value.get("task_boundary_policy") == "observable_supported_subgraph_v5_1":
         observed = [bool(validation.get("projection_valid"))]
-    elif value.get("task_boundary_policy") == "observable_supported_path_v5_2":
+    elif value.get("task_boundary_policy") in {"observable_supported_path_v5_2", "observable_tool_schema_path_v5_3"}:
         observed = [bool(validation.get("path_complete") and validation.get("path_reproduced"))]
     result = {"task_id": task_id, "official_scores": [float(row["after_score"]) for row in rows],
               "full_success": any(float(row["after_score"]) == 1.0 for row in rows),
@@ -351,6 +367,9 @@ def run(preflight_only: bool = False) -> None:
     if value.get("task_boundary_policy") == "observable_supported_path_v5_2":
         registry = json.loads((ROOT / value["evaluation"]["public_registry_relative_path"]).read_text(encoding="utf-8"))
         verify_public_registry(registry)
+    elif value.get("task_boundary_policy") == "observable_tool_schema_path_v5_3":
+        registry = json.loads((ROOT / value["evaluation"]["public_registry_relative_path"]).read_text(encoding="utf-8"))
+        verify_public_tool_schema_registry(registry)
     a, b = value["evaluation"]["task_ids"]
     a_marker = _run_task(value, ledger, initial, a, registry)
     gate = _a_gate(value, initial, a_marker)

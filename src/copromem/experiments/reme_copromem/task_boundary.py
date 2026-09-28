@@ -17,10 +17,13 @@ from ...benchmarks.appworld.adapter import AcquisitionIdentity, CoProMemAppWorld
 from ...learning import ActionObservation, LearningCore
 from ...online import ScoredCandidate, apply_task_batch
 from .public_path_registry import observed_public_operation_matches, public_path_audit, verify_public_registry
+from .public_tool_schema_registry import (canonical_operation_signature, invocation_evidence,
+                                          public_tool_path_audit, verify_public_tool_schema_registry)
 
 POLICY_VERSION = "v5-task-boundary-transaction-v1"
 OBSERVABLE_SUBGRAPH_POLICY_VERSION = "observable_supported_subgraph_v5_1"
 OBSERVABLE_PATH_POLICY_VERSION = "observable_supported_path_v5_2"
+TOOL_SCHEMA_PATH_POLICY_VERSION = "observable_tool_schema_path_v5_3"
 STRICT_POLICY_VERSION = "strict_exact_v5"
 HELPER_REGISTRY_VERSION = "public-helper-registry-v1"
 
@@ -162,6 +165,61 @@ def project_observable_registry_path(registry: dict[str, Any], descriptor: Seque
     return tuple(selected), audit
 
 
+def project_observable_tool_schema_path(registry: dict[str, Any], descriptor: Sequence[ActionObservation],
+                                        events: Sequence[ActionObservation], *, raw_evidence_digest: str) -> tuple[tuple[ActionObservation, ...], dict[str, Any]]:
+    """Project direct calls through the frozen v5.3 callable interface.
+
+    Invocation values are not retained.  The only raw execution reference is
+    an aggregate digest separated from the procedure-bearing projection.
+    """
+    verify_public_tool_schema_registry(registry)
+    desc, raw = tuple(descriptor), tuple(events)
+    cursor = 0; selected: list[ActionObservation] = []; evidence: list[dict[str, Any]] = []; records: list[dict[str, Any]] = []
+    for index, event in enumerate(raw):
+        if cursor >= len(desc):
+            records.append({"index": index, "category": _helper_category(event) or "excluded_non_path_operation", "operation": event.operation})
+            continue
+        expected = desc[cursor]
+        try:
+            signature = canonical_operation_signature(registry, event.operation, event.input_slots)
+        except ValueError as exc:
+            records.append({"index": index, "category": "nonmatching_or_undeclared_call", "operation": event.operation,
+                            "reason": str(exc)})
+            continue
+        if signature["operation"] != expected.operation or not event.observed or not event.check:
+            records.append({"index": index, "category": "nonmatching_or_unobserved_path_step", "operation": event.operation})
+            continue
+        # The descriptor itself is derived from the frozen registry.  This
+        # guard prevents a hand-written signature from silently widening it.
+        if (list(expected.input_slots) != signature["public_required"] or
+                list(expected.output_slots) != signature["output_slots"]):
+            records.append({"index": index, "category": "descriptor_callable_schema_mismatch", "operation": event.operation})
+            continue
+        selected.append(ActionObservation(operation=expected.operation, input_slots=tuple(expected.input_slots),
+                                           output_slots=tuple(expected.output_slots), check="direct_public_observation",
+                                           observed=True))
+        evidence.append(invocation_evidence(signature, raw_event_digest=canonical_digest(
+            {"trajectory": raw_evidence_digest, "index": index, "operation": event.operation,
+             "input_slots": sorted(event.input_slots), "output_slots": sorted(event.output_slots)}),
+            concrete_value_digest=raw_evidence_digest))
+        records.append({"index": index, "category": "included_tool_schema_path_step", "operation": event.operation,
+                        "invocation_evidence_sha256": evidence[-1]["invocation_evidence_sha256"]})
+        cursor += 1
+    signatures = [item["operation_signature"] for item in evidence]
+    path = public_tool_path_audit(registry, signatures) if signatures else {
+        "registry_sha256": registry["registry_sha256"], "path": [], "path_sha256": canonical_digest([]),
+        "passed": False, "rejections": [{"reason": "empty_or_incomplete_path"}],
+        "first_rejection": {"reason": "empty_or_incomplete_path"}}
+    missing = [item.operation for item in desc[cursor:]]
+    audit = {"registry_version": registry["registry_version"], "registry_sha256": registry["registry_sha256"],
+             "required_count": len(desc), "included_count": len(selected), "missing_operations": missing,
+             "records": records, "invocation_evidence": evidence,
+             "invocation_evidence_sha256": canonical_digest(evidence), "path_audit": path,
+             "path_audit_sha256": canonical_digest(path),
+             "valid": bool(desc) and len(selected) == len(desc) and not missing and bool(path["passed"])}
+    return tuple(selected), audit
+
+
 def _trial_candidate(item: dict[str, Any]) -> ScoredCandidate:
     required = {"task_id", "seed", "trajectory_index", "intent", "score", "no_memory_score", "actions", "cost_usd", "events"}
     if not required <= set(item):
@@ -229,6 +287,19 @@ def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descripto
             projected, audit = project_observable_registry_path(public_registry, descriptor_events, _events(item["events"]))
             item["events"] = [asdict(event) for event in projected]
             projections.append({"trajectory_index": item["trajectory_index"], "audit": audit})
+    elif policy_version == TOOL_SCHEMA_PATH_POLICY_VERSION:
+        if public_registry is None: raise ValueError("v5.3 task-boundary plan requires frozen tool schema registry")
+        verify_public_tool_schema_registry(public_registry)
+        descriptor_events = _events(descriptor); projections = []
+        for item in trials:
+            raw_digest = canonical_digest({"intent": item.get("intent", ""), "actions": item.get("actions_text", ())})
+            projected, audit = project_observable_tool_schema_path(public_registry, descriptor_events, _events(item["events"]), raw_evidence_digest=raw_digest)
+            # A learned procedure sees only registry signatures, never task
+            # instruction text, action code, or concrete invocation values.
+            item["events"] = [asdict(event) for event in projected]
+            item["intent"] = f"public_tool_path:{canonical_digest(descriptor)}"
+            item["actions_text"] = [event.operation for event in projected]
+            projections.append({"trajectory_index": item["trajectory_index"], "audit": audit})
     elif policy_version in {POLICY_VERSION, STRICT_POLICY_VERSION}:
         projections = []
     else:
@@ -254,7 +325,7 @@ def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descripto
         "descriptor_signature_sha256": canonical_digest(descriptor_signature) if descriptor_signature else None,
         "candidate_traces": traces, "candidate_audit_state": adapter.export_state(),
         "candidate_audit_state_sha256": canonical_digest(adapter.export_state())}
-    if policy_version == OBSERVABLE_PATH_POLICY_VERSION:
+    if policy_version in {OBSERVABLE_PATH_POLICY_VERSION, TOOL_SCHEMA_PATH_POLICY_VERSION}:
         plan["public_registry"] = _clone(public_registry)
         plan["public_registry_sha256"] = str(public_registry["registry_sha256"])
     plan["plan_sha256"] = canonical_digest({key: value for key, value in plan.items() if key != "plan_sha256"})
@@ -265,15 +336,15 @@ def _verify_plan(plan: dict[str, Any]) -> None:
     expected = canonical_digest({key: value for key, value in plan.items() if key != "plan_sha256"})
     if plan.get("plan_sha256") != expected:
         raise ValueError("task-boundary plan digest mismatch")
-    if plan.get("version") != POLICY_VERSION or plan.get("policy_version") not in {POLICY_VERSION, STRICT_POLICY_VERSION, OBSERVABLE_SUBGRAPH_POLICY_VERSION, OBSERVABLE_PATH_POLICY_VERSION}:
+    if plan.get("version") != POLICY_VERSION or plan.get("policy_version") not in {POLICY_VERSION, STRICT_POLICY_VERSION, OBSERVABLE_SUBGRAPH_POLICY_VERSION, OBSERVABLE_PATH_POLICY_VERSION, TOOL_SCHEMA_PATH_POLICY_VERSION}:
         raise ValueError("task-boundary policy mismatch")
     if canonical_digest(plan.get("pre_state")) != plan.get("pre_state_sha256") or canonical_digest(plan.get("trials")) != plan.get("trials_sha256"):
         raise ValueError("task-boundary frozen input mismatch")
     if canonical_digest(plan.get("projection_audit", [])) != plan.get("projection_audit_sha256"):
         raise ValueError("task-boundary projection audit mismatch")
-    if plan.get("policy_version") == OBSERVABLE_PATH_POLICY_VERSION:
+    if plan.get("policy_version") in {OBSERVABLE_PATH_POLICY_VERSION, TOOL_SCHEMA_PATH_POLICY_VERSION}:
         registry = plan.get("public_registry")
-        verify_public_registry(registry)
+        (verify_public_registry if plan.get("policy_version") == OBSERVABLE_PATH_POLICY_VERSION else verify_public_tool_schema_registry)(registry)
         if plan.get("public_registry_sha256") != registry.get("registry_sha256"):
             raise ValueError("task-boundary public registry digest mismatch")
 
@@ -372,6 +443,32 @@ def validate_observable_path_v5_2(plan: dict[str, Any]) -> dict[str, Any]:
             "winner_episode_id": winner if reason is None else None, "passed": reason is None, "rejection_reason": reason}
 
 
+def validate_tool_schema_path_v5_3(plan: dict[str, Any]) -> dict[str, Any]:
+    """v5.3 validator: one complete, value-free callable-schema path."""
+    _verify_plan(plan)
+    traces, projections = plan.get("candidate_traces", []), plan.get("projection_audit", [])
+    audits = {int(item["trajectory_index"]): item["audit"] for item in projections}; eligible = []
+    for trace in traces:
+        audit = audits.get(int(trace["tie_break"][-1]), {}); predicates = trace["predicates"]
+        direct = all((predicates["structural_signature"], predicates["observable_procedure"],
+                      predicates["has_extracted_procedure"], predicates["schema_is_grounded"]))
+        exact = trace["signature_sha256"] == plan.get("descriptor_signature_sha256")
+        if predicates["official_full_success"] and audit.get("valid") and direct and exact:
+            eligible.append(trace)
+    winner = min(eligible, key=lambda item: tuple(item["tie_break"]))["episode_id"] if eligible else None
+    successful = any(item["predicates"]["official_full_success"] for item in traces)
+    complete = bool(projections) and all(item["audit"].get("valid") for item in projections)
+    procedures = any(item["predicates"]["has_extracted_procedure"] for item in traces)
+    exact = bool(traces) and all(item["signature_sha256"] == plan.get("descriptor_signature_sha256") for item in traces)
+    reproduced_paths = bool(projections) and all(item["audit"].get("path_audit", {}).get("passed") for item in projections)
+    reason = (None if successful and complete and procedures and exact and winner else
+              "v5_3_tool_schema_path_incomplete" if successful else "v5_3_no_successful_observed_path")
+    return {"plan_sha256": plan["plan_sha256"], "task_id": plan["task_id"], "registry_sha256": plan["public_registry_sha256"],
+            "full_success": successful, "path_complete": complete, "path_reproduced": reproduced_paths, "descriptor_exact_match": exact,
+            "procedure_eligible": procedures, "eligible_episode_ids": [item["episode_id"] for item in eligible],
+            "winner_episode_id": winner if reason is None else None, "passed": reason is None, "rejection_reason": reason}
+
+
 def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
     """Dispatch to an explicitly versioned, fail-closed policy validator."""
     policy = plan.get("policy_version")
@@ -379,6 +476,8 @@ def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
         return validate_observable_subgraph_v5_1(plan)
     if policy == OBSERVABLE_PATH_POLICY_VERSION:
         return validate_observable_path_v5_2(plan)
+    if policy == TOOL_SCHEMA_PATH_POLICY_VERSION:
+        return validate_tool_schema_path_v5_3(plan)
     if policy in {POLICY_VERSION, STRICT_POLICY_VERSION}:
         return validate_strict_v5(plan)
     raise ValueError("unknown task-boundary policy")
