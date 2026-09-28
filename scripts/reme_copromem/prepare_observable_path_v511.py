@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import subprocess
 
@@ -54,6 +55,13 @@ def historical_settled_usd() -> float:
             if item.get("event") == "settle":
                 total += float(item["usd"])
     return total
+
+
+def source_commit() -> str:
+    """Ignore cross-OS worktree variables inherited by launcher shells."""
+    env = dict(os.environ)
+    env.pop("GIT_DIR", None); env.pop("GIT_WORK_TREE", None); env.pop("GIT_INDEX_FILE", None)
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, env=env).strip()
 
 
 def descriptor(registry: dict) -> list[dict]:
@@ -106,8 +114,7 @@ def main() -> None:
                    "ledger_dispatch_cap_usd": budget["dispatchable_usd"]})
     manifest = {
         "protocol": "v5_2_engineering_011_observable_path", "engineering_only_exposed": True,
-        "method_amendment": "observable_supported_path_v5_2", "git_commit": subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+        "method_amendment": "observable_supported_path_v5_2", "git_commit": source_commit(),
         "acquisition": {"source_export": str(acquisition.resolve()), "export_sha256": sha(acquisition),
                         "expected_trajectories": 32, "fresh_state_required": True},
         "arms": ["no_memory", "copromem_dynamic"],
