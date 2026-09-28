@@ -45,6 +45,17 @@ def test_valid_plan_commits_one_deterministic_winner_and_reconstructs_exactly():
     assert canonical_digest(pre) == canonical_digest(CoProMemAppWorldAdapter(api_key="").export_state())
 
 
+def test_strict_descriptor_mismatch_rejects_before_promotion():
+    pre = CoProMemAppWorldAdapter(api_key="").export_state()
+    descriptor = [{"operation": "apis.notes.create", "input_slots": ["text"], "output_slots": ["id"]}]
+    plan = plan_task_boundary_update(pre, descriptor, [trial(11, 1)])
+    post, validation = commit_task_boundary_plan(pre, plan)
+    assert not validation["passed"]
+    assert not validation["descriptor_exact_match"]
+    assert validation["winner_episode_id"] is None
+    assert post == pre
+
+
 def test_trial_and_mapping_order_do_not_change_content_addressed_plan():
     pre = CoProMemAppWorldAdapter(api_key="").export_state(); rows = [trial(12, 2), trial(11, 1)]
     left = plan_task_boundary_update(pre, [], rows)

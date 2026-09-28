@@ -111,11 +111,12 @@ def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descripto
                                        candidate.trajectory.identity.seed, candidate.score, candidate.no_memory_score)
     traces = [_candidate_trace(candidate, adapter) for candidate in candidates]
     descriptor_events = _events(descriptor)
+    descriptor_signature = LearningCore.signature(descriptor_events)
     plan = {"version": POLICY_VERSION, "policy_version": str(policy_version),
         "task_id": str(trials[0]["task_id"]), "pre_state": pre, "pre_state_sha256": canonical_digest(pre),
         "descriptor": descriptor, "descriptor_sha256": canonical_digest(descriptor),
         "trials": trials, "trials_sha256": canonical_digest(trials),
-        "descriptor_signature_sha256": canonical_digest(LearningCore.signature(descriptor_events)) if LearningCore.signature(descriptor_events) else None,
+        "descriptor_signature_sha256": canonical_digest(descriptor_signature) if descriptor_signature else None,
         "candidate_traces": traces, "candidate_audit_state": adapter.export_state(),
         "candidate_audit_state_sha256": canonical_digest(adapter.export_state())}
     plan["plan_sha256"] = canonical_digest({key: value for key, value in plan.items() if key != "plan_sha256"})
@@ -135,13 +136,21 @@ def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
     full_success = any(item["predicates"]["official_full_success"] for item in traces)
     fully_observed = bool(traces) and all(item["predicates"]["all_executor_operations_observed"] for item in traces)
     structural = bool(traces) and all(item["predicates"]["structural_signature"] for item in traces)
+    # A strict-v5 task boundary is only transferable when the public descriptor
+    # used at retrieval is the exact signature learned from every scored trace.
+    # Empty descriptors are retained solely for pre-v5 compatibility callers;
+    # the strict task-boundary runner always supplies one.
+    descriptor_signature = plan.get("descriptor_signature_sha256")
+    descriptor_exact = (True if descriptor_signature is None else bool(traces) and all(
+        item.get("signature_sha256") == descriptor_signature for item in traces))
     procedure = any(item["predicates"]["has_extracted_procedure"] for item in traces)
     eligible = [item for item in traces if all(item["predicates"][key] for key in
                 ("official_full_success", "all_executor_operations_observed", "structural_signature", "observable_procedure", "has_extracted_procedure", "schema_is_grounded"))]
     winner = min(eligible, key=lambda item: tuple(item["tie_break"]))["episode_id"] if eligible else None
-    valid = bool(full_success and fully_observed and structural and procedure and winner)
+    valid = bool(full_success and fully_observed and structural and descriptor_exact and procedure and winner)
     return {"plan_sha256": plan["plan_sha256"], "task_id": plan["task_id"], "full_success": full_success,
             "fully_observed": fully_observed, "structural_evidence": structural,
+            "descriptor_exact_match": descriptor_exact,
             "procedure_eligible": procedure, "eligible_episode_ids": [item["episode_id"] for item in eligible],
             "winner_episode_id": winner if valid else None, "passed": valid,
             "rejection_reason": None if valid else "strict_v5_structural_grounding_failed"}

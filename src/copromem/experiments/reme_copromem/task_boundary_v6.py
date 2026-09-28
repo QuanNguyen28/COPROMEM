@@ -147,12 +147,13 @@ def _task_state_path(task_id: str) -> pathlib.Path:
     return RUN / "copromem" / "task_states" / f"{task_id}.json"
 
 
-def _complete_task(adapter: CoProMemAppWorldAdapter, task_id: str, trials: list[int], seeds: list[int]) -> dict[str, Any]:
+def _complete_task(adapter: CoProMemAppWorldAdapter, task_id: str, trials: list[int], seeds: list[int],
+                   descriptor: list[dict[str, Any]]) -> dict[str, Any]:
     """Use the maintained task-boundary implementation without ReMe imports."""
     # The maintained helper is parameterized entirely by COPROMEM_RUN_DIR; it
     # does not initialize any ReMe service or transport.
     from . import config as maintained
-    maintained.complete_copro_task(adapter, task_id, trials, seeds)
+    maintained.complete_copro_task(adapter, task_id, trials, seeds, descriptor=descriptor)
     marker = RUN / "copromem" / "task_updates" / f"{task_id}.json"
     if not marker.exists():
         raise RuntimeError("task-boundary merge marker is not durable")
@@ -177,7 +178,8 @@ def _run_task(value: dict[str, Any], ledger: AppendOnlyLedger, initial: dict[str
     ev = value["evaluation"]; trials, seeds = list(ev["trial_ids"]), list(ev["seeds"])
     pre_file = RUN / "copromem" / "task_pre_states" / f"{task_id}.json"
     _snapshot(pre_file, initial)
-    descriptor = tuple(ActionObservation(**item) for item in ev["descriptors"][task_id])
+    raw_descriptor = ev["descriptors"][task_id]
+    descriptor = tuple(ActionObservation(**item) for item in raw_descriptor)
     key = _env("OPENROUTER_API_KEY")
     for arm in value["arms"]:
         for trial, seed in zip(trials, seeds):
@@ -193,7 +195,7 @@ def _run_task(value: dict[str, Any], ledger: AppendOnlyLedger, initial: dict[str
                 max_actions=int(value["execution"]["max_actions"]), temperature=float(value["execution"]["temperature"]),
                 phase="evaluation", artifact_path=target, memory_for_instruction=callback)
     merged = CoProMemAppWorldAdapter(api_key=""); merged.clone_from_state(initial)
-    marker = _complete_task(merged, task_id, trials, seeds)
+    marker = _complete_task(merged, task_id, trials, seeds, raw_descriptor)
     return marker
 
 
