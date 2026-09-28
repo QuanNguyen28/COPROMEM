@@ -216,6 +216,8 @@ def _a_gate(value: dict[str, Any], initial: dict[str, Any], marker: dict[str, An
     state = json.loads(_task_state_path(task_id).read_text(encoding="utf-8")) if marker.get("state") == "committed" else initial
     procedures = state.get("learning", {}).get("episode_procedures", {}).get(winner, []) if winner else []
     schema = state.get("learning", {}).get("episode_schemas", {}).get(winner) if winner else None
+    if value.get("task_boundary_policy") == "observable_supported_subgraph_v5_1":
+        observed = [bool(validation.get("projection_valid"))]
     result = {"task_id": task_id, "official_scores": [float(row["after_score"]) for row in rows],
               "full_success": any(float(row["after_score"]) == 1.0 for row in rows),
               "fully_observed": all(observed), "winner_episode_id": winner, "winner_schema_id": schema,

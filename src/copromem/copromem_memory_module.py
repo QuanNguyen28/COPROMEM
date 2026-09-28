@@ -357,6 +357,7 @@ class COPROMEMMemoryModule:
                 should_explore=retrieved.compatibility != "compatible",
                 selected_schema_id=retrieved.schema_id,
                 injected_procedure_ids=retrieved.procedure_ids,
+                candidate_scores=({retrieved.schema_id: 1.0} if retrieved.schema_id else {}),
             )
             result = self._retrieve_copromem_v2(
                 task_id, intent, domain, sites, start_url, agent_prompt_wrapper
