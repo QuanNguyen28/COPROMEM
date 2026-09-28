@@ -154,6 +154,13 @@ def v5_budget_bound(*, call_limits: dict[str, int], historical_usd: float = 0.0,
             "all_in_usd": dispatchable + contingency}
 
 
+def configure_memory_transport(agent: Any,
+                               memory_for_instruction: Callable[[str, str, dict[str, Any]], str] | None) -> None:
+    """Disable only the upstream ReMe fallback for a CoProMem-backed arm."""
+    if memory_for_instruction is not None:
+        agent.get_memory = lambda _query: None
+
+
 def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: AppendOnlyLedger,
                        api_key: str, all_task_ids: list[str], arm: str, task_id: str,
                        trial_id: int, seed: int, max_actions: int, temperature: float,
@@ -185,6 +192,12 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                       max_interactions=max_actions, num_trials=1, use_memory=use_memory,
                       memory_base_url=(memory_base_url or "http://127.0.0.1:9/"),
                       use_memory_addition=False, use_memory_deletion=False)
+        # CoProMem supplies its retrieval through ``memory_for_instruction``.
+        # The upstream executor otherwise tries its own ReMe HTTP endpoint
+        # whenever that callback legitimately yields empty guidance.  Empty
+        # CoProMem guidance is a valid, provenance-recorded outcome, not a
+        # reason to make an unregistered ReMe retrieval request.
+        configure_memory_transport(agent, memory_for_instruction)
         # Fixed must remain read-only even though the source agent normally
         # records retrieval metadata. Dynamic post-score updates are handled
         # separately, only after this durable result record exists.
