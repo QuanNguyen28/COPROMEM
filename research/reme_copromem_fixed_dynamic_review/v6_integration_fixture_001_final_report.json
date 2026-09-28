@@ -1,0 +1,37 @@
+{
+  "a_scores": [1.0, 1.0, 0.0],
+  "b_retrieval": {
+    "fallback_category": "learned",
+    "guidance_sha256": "c789866b9c4a438911675bb83c82e42102ca82b505a7c3037264d4aba8208b51",
+    "same_pre_state": true,
+    "selected_promoted_schema": true
+  },
+  "classification": "ENGINEERING-VALIDATED: v6 contrastive schema induction, transactional commit, restart recovery, and A→B retrieval work end-to-end under deterministic evidence.",
+  "evidence_checksums": {
+    "plan_sha256": "10b1bea74da59abcac764cd9d0ea748ebf395596873c7b59b090feb78f73bc2c",
+    "post_state_sha256": "1eae3da172a4421784d373677d3554f38e7bc097aa9b9af448c742157c41756f",
+    "pre_state_sha256": "2e441db9f793daff7dc4ee4fb3f1546bd069068d422c292a1d2d05e4640a10d1",
+    "registry_sha256": "c46927b015cc2e3a4ce7f5c6625e89b16064bde5cf3bac7967ac7dd57af8ea75",
+    "schema_id": "schema_e5b2f96d56fa1fac",
+    "schema_sha256": "e5b2f96d56fa1fac42298324f953c6723583ea4f4407cf7ed6f6afbe2d7c65c5"
+  },
+  "fixture_id": "v6_integration_fixture_001_contrastive_graph",
+  "ledger": {"provider_calls": 0, "unresolved_reservations": 0},
+  "mocked_boundary": "deterministic local executor/scorer; no AppWorld benchmark payload or official scorer was opened",
+  "negative_controls": {
+    "audit_only_excluded": true,
+    "callable_error_excluded": true,
+    "concrete_value_leakage_rejected": true,
+    "incompatible_query_guidance": "",
+    "insufficient_support_rejected": true,
+    "malformed_telemetry_rejected": true,
+    "missing_terminal_rejected": true,
+    "tampered_retrieval_rejected": true
+  },
+  "restart_matrix": {
+    "all_external_action_or_scorer_replays": 0,
+    "checkpoints": ["after_telemetry", "after_score", "batch_ready", "plan_persisted", "validation_persisted", "commit_persisted", "after_one_b_retrieval"],
+    "duplicate_commit_idempotent": true,
+    "fixed_state_unchanged": true
+  }
+}

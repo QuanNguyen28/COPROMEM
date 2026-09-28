@@ -33,12 +33,16 @@ class SharedTrajectoryExecutor:
     max_actions: int
     temperature: float
     execution_evidence: dict[str, Any]
+    # Kept injectable solely for deterministic boundary fixtures.  The live
+    # default remains the maintained common executor; constructing this class
+    # never reaches a provider or a task runtime.
+    dispatch: Callable[..., dict[str, Any]] | None = None
 
     def __call__(self, *, task: str, pre_state: Mapping[str, Any], retrieval: Mapping[str, Any],
                  arm: str, trial: int, seed: int, **_: Any) -> dict[str, Any]:
         artifact_path = self.run / "trajectory-artifacts" / task / f"{arm}-{trial}.json"
         guidance = str(retrieval["guidance"])
-        result = execute_trajectory(
+        result = (self.dispatch or execute_trajectory)(
             run=self.run, progress=self.progress, ledger=self.ledger, api_key=self.api_key,
             all_task_ids=self.all_task_ids, arm=arm, task_id=task, trial_id=trial, seed=seed,
             max_actions=self.max_actions, temperature=self.temperature, phase="evaluation",
@@ -67,10 +71,12 @@ class ContrastiveV6Dispatcher:
     def __init__(self, run: Path, registry: Mapping[str, Any], executor: Callable[..., dict[str, Any]], *, policy_sha256: str,
                  planner: Callable[..., tuple[dict[str, Any], dict[str, Any]]] = plan_task_batch_from_artifacts,
                  validator: Callable[[Mapping[str, Any]], dict[str, Any]] = validate_task_batch,
-                 committer: Callable[[Mapping[str, Any], Mapping[str, Any]], tuple[dict[str, Any], dict[str, Any]]] = commit_task_batch):
+                 committer: Callable[[Mapping[str, Any], Mapping[str, Any]], tuple[dict[str, Any], dict[str, Any]]] = commit_task_batch,
+                 checkpoint_hook: Callable[[str, Mapping[str, Any]], None] | None = None):
         self.run,self.registry,self.executor,self.policy_sha256=run,dict(registry),executor,policy_sha256
         if not self.registry.get("registry_sha256"): raise ValueError("frozen registry required")
         self.planner,self.validator,self.committer=planner,validator,committer
+        self.checkpoint_hook=checkpoint_hook
     def _record(self, task: str, transition: str, **body: Any) -> dict[str, Any]:
         if transition not in TRANSITIONS: raise ValueError("unknown transition")
         row={"version":VERSION,"task":task,"transition":transition,"policy_sha256":self.policy_sha256,**body}; row["record_sha256"]=digest(row)
@@ -79,12 +85,19 @@ class ContrastiveV6Dispatcher:
             existing=_read(path)
             if existing != row: raise ValueError(f"immutable transition conflict: {transition}")
             return existing
-        _write(path,row); return row
+        _write(path,row)
+        if self.checkpoint_hook is not None:
+            self.checkpoint_hook(transition, row)
+        return row
     def _existing(self, task: str, transition: str) -> dict[str, Any]|None:
         p=self.run/"state-machine"/task/f"{transition}.json"; return _read(p) if p.exists() else None
     def prepare(self, task: str, pre_state: Mapping[str,Any], queries: list[list[str]]) -> list[dict[str,Any]]:
-        self._record(task,"initialized",state_format=STATE_FORMAT,registry_sha256=self.registry["registry_sha256"])
-        if len(queries) != 2: raise ValueError("v6 requires exactly two same-task retrievals")
+        initialized = self._existing(task, "initialized")
+        if initialized is None:
+            initialized = self._record(task,"initialized",state_format=STATE_FORMAT,registry_sha256=self.registry["registry_sha256"])
+        if initialized.get("registry_sha256") != self.registry["registry_sha256"]:
+            raise ValueError("initialized task registry mismatch")
+        if len(queries) < 2: raise ValueError("v6 requires at least two same-task retrievals")
         frozen=self._existing(task,"task_pre_state_frozen") or self._record(task,"task_pre_state_frozen",state=dict(pre_state),state_sha256=digest(pre_state))
         if frozen["state_sha256"]!=digest(pre_state): raise ValueError("task pre-state mismatch")
         result=[]
@@ -94,6 +107,8 @@ class ContrastiveV6Dispatcher:
             else:
                 guidance,prov=retrieval_record(state=pre_state,query_operations=query,registry_sha256=self.registry["registry_sha256"])
                 row={"version":VERSION,"task":task,"trial":trial,"pre_state_sha256":digest(pre_state),"query":query,"guidance":guidance,"provenance":prov};row["record_sha256"]=digest(row);_write(p,row)
+                if self.checkpoint_hook is not None:
+                    self.checkpoint_hook("retrieval_persisted", row)
             if row["pre_state_sha256"]!=digest(pre_state) or reproduce_retrieval(pre_state,row["query"],row["provenance"])!=row["guidance"]: raise ValueError("retrieval reconciliation failure")
             result.append(row)
         if len({r["pre_state_sha256"] for r in result}) != 1: raise ValueError("same-task retrieval state split")
@@ -101,6 +116,8 @@ class ContrastiveV6Dispatcher:
         return result
     def execute_batch(self, task:str, pre_state:Mapping[str,Any], queries:list[list[str]], trials:list[dict[str,Any]])->tuple[dict[str,Any],dict[str,Any]]:
         retrievals=self.prepare(task,pre_state,queries); artifacts=[]
+        if len(trials) != len(retrievals):
+            raise ValueError("registered trials and same-task retrievals differ")
         for trial,retrieval in zip(trials,retrievals):
             path=self.run/"trajectories"/task/f"{trial['arm']}-{trial['trial']}.json"
             if path.exists(): artifact=_read(path)
@@ -116,6 +133,14 @@ class ContrastiveV6Dispatcher:
             marker = committed.get("marker")
             if digest(post) != committed.get("post_state_sha256") or not isinstance(marker, Mapping):
                 raise ValueError("invalid persisted commit")
+            # A power loss after the semantic transaction is not permission to
+            # repeat lifecycle work.  Finish only the remaining durable state
+            # transitions from the exact committed payload.
+            if self._existing(task, "next_task_authorized") is None:
+                self._record(task, "next_task_authorized", post_state_sha256=digest(post))
+            if self._existing(task, "finalized") is None:
+                self._record(task, "finalized", terminal_artifact_hashes=[a["record_sha256"] for a in artifacts],
+                             post_state_sha256=digest(post), reconciliation="complete")
             return dict(post), dict(marker)
         rejected = self._existing(task, "finalized")
         if rejected:
@@ -124,12 +149,26 @@ class ContrastiveV6Dispatcher:
                 raise ValueError("invalid persisted rejection")
             return dict(pre_state), dict(marker)
         copro=[a for a in artifacts if a["arm"]=="copromem_v6_dynamic"]
-        if len(copro) != 2: raise ValueError("complete two-trajectory CoProMem batch required")
-        plan,audit=self.planner(artifacts=copro,registry=self.registry,pre_state=pre_state,evidence_paths=[a["evidence_path"] for a in copro])
-        self._record(task,"batch_ready",audit=audit)
-        self._record(task,"plan_persisted",plan=plan,plan_sha256=plan["plan_sha256"])
-        validation=self.validator(plan)
-        self._record(task,"validation_persisted",validation=validation)
+        if len(copro) < 2: raise ValueError("at least two complete CoProMem trajectories required")
+        persisted_plan = self._existing(task, "plan_persisted")
+        if persisted_plan is None:
+            plan,audit=self.planner(artifacts=copro,registry=self.registry,pre_state=pre_state,evidence_paths=[a["evidence_path"] for a in copro])
+            self._record(task,"batch_ready",audit=audit)
+            self._record(task,"plan_persisted",plan=plan,plan_sha256=plan["plan_sha256"])
+        else:
+            plan = persisted_plan.get("plan")
+            if not isinstance(plan, Mapping) or persisted_plan.get("plan_sha256") != plan.get("plan_sha256"):
+                raise ValueError("invalid persisted v6 plan")
+            if self._existing(task, "batch_ready") is None:
+                raise ValueError("persisted v6 plan lacks batch-ready audit")
+        persisted_validation = self._existing(task, "validation_persisted")
+        if persisted_validation is None:
+            validation=self.validator(plan)
+            self._record(task,"validation_persisted",validation=validation)
+        else:
+            validation = persisted_validation.get("validation")
+            if not isinstance(validation, Mapping) or validation.get("plan_sha256") != plan.get("plan_sha256"):
+                raise ValueError("invalid persisted v6 validation")
         post,marker=self.committer(pre_state,plan)
         if marker.get("validation") != validation: raise ValueError("commit validation mismatch")
         if marker["state"]=="committed":
