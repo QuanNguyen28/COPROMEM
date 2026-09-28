@@ -66,7 +66,11 @@ def select()->tuple[dict[str,Any]|None,list[dict[str,Any]],dict[str,Any]]:
  for (family,template),values in groups.items():
   for i,a in enumerate(sorted(values,key=lambda x:x['task_id'])):
    for b in sorted(values,key=lambda x:x['task_id'])[i+1:]:
-    descriptor={'family':family,'public_instruction_template':template,'public_callable_set_sha256':sha(REGISTRY)}
+    apps=sorted({name for name in ('amazon','file_system','gmail','phone','simple_note','spotify','splitwise','todoist','venmo') if name.replace('_',' ') in template or name in template})
+    # The public descriptor may request only one application. Its query set is
+    # therefore the complete public callable set for those named applications,
+    # never a post-execution operation guess.
+    descriptor={'family':family,'public_instruction_template':template,'public_apps':apps,'public_callable_set_sha256':sha(REGISTRY)}
     candidates.append({'a_task_id':a['task_id'],'b_task_id':b['task_id'],'family':family,'descriptor':descriptor,'descriptor_sha256':digest(descriptor)})
  candidates.sort(key=lambda x:(x['descriptor_sha256'],x['a_task_id'],x['b_task_id']))
  return (candidates[0] if candidates else None),candidates,{'inventory_count':len(rows),'executed_exclusion_count':len(excluded),'executed_exclusion_sha256':digest(sorted(excluded))}
@@ -114,7 +118,9 @@ def run(run:pathlib.Path,preflight:bool=False)->None:
  if lock.exists():raise RuntimeError('runner lock exists')
  write_json(lock,{'pid':os.getpid()});ledger=AppendOnlyLedger(run/'ledger.jsonl',100.,value['budget']['call_limits']);key=_cred()
  registry=value['registry'];dispatcher=ContrastiveV6Dispatcher(run,registry,SharedTrajectoryExecutor(run,progress,ledger,key,value['evaluation']['task_ids'],30,.7,{'registry_sha256':registry['registry_sha256']}),policy_sha256=digest({'policy':POLICY_VERSION,'registry':registry['registry_sha256']}))
- a,b=value['evaluation']['task_ids'];query=[x['operation'] for x in registry['operations']]
+ a,b=value['evaluation']['task_ids']; apps=set(value['evaluation']['descriptor']['public_apps'])
+ query=[x['operation'] for x in registry['operations'] if x.get('app') in apps]
+ if not query:raise RuntimeError('public descriptor has no callable retrieval query')
  def no_memory(task:str,trial:int,seed:int)->None:
   target=run/'no-memory'/task/f'trial-{trial}.json'
   if not target.exists():execute_trajectory(run=run,progress=progress,ledger=ledger,api_key=key,all_task_ids=[a,b],arm='no_memory',task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=target,execution_evidence={'registry_sha256':registry['registry_sha256']})
