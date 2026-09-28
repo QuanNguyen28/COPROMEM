@@ -7,6 +7,12 @@ def test_v6_selection_is_stable_and_execution_only_exclusions(monkeypatch):
  monkeypatch.setattr(MOD,'executed_ids',lambda:{'aaa0000_1'})
  monkeypatch.setattr(MOD,'INVENTORY',Path(__file__))
  assert MOD._norm('Send 12 to "Lee"')=='send <value> to <value>'
+def test_v6_git_helper_accepts_windows_worktree_pointer(monkeypatch, tmp_path):
+ monkeypatch.setattr(MOD,'ROOT',tmp_path)
+ (tmp_path/'.git').write_text('gitdir: E:/Project/AAMAS/COPROMEM/.git/worktrees/COPROMEM-review\n')
+ seen={}
+ monkeypatch.setattr(MOD.subprocess,'check_output',lambda *_a,**kw: seen.update(kw.get('env',{})) or 'abc\n')
+ assert MOD.git()=='abc' and seen['GIT_DIR'].startswith('/mnt/e/')
 def test_v6_has_no_reme_or_v53_lifecycle():
  source=(Path(__file__).parents[2]/'scripts'/'run_contrastive_v6.py').read_text()
  assert 'ReMe' not in source and 'task_boundary' not in source and 'embedding' not in source
