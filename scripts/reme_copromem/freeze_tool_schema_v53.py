@@ -22,7 +22,7 @@ def main() -> int:
                            cwd=ROOT, env=_git_env(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
     if not clean: raise RuntimeError("commit tracked runtime source before freezing v5.3")
     value = json.loads((run / "template.json").read_text(encoding="utf-8"))
-    if value.get("protocol") != "v5_3_engineering_012_tool_schema" or value.get("git_commit") != source:
+    if value.get("protocol") not in {"v5_3_engineering_012_tool_schema", "v5_3_engineering_013_execution_evidence", "v5_3_engineering_013R_replay_continuation"} or value.get("git_commit") != source:
         raise RuntimeError("v5.3 template source identity mismatch")
     if value.get("arms") != ["no_memory", "copromem_dynamic"] or value["evaluation"].get("expected_trajectories") != 8:
         raise RuntimeError("v5.3 registered arms or trajectory count mismatch")
@@ -34,6 +34,16 @@ def main() -> int:
             registry["registry_sha256"] != value["evaluation"]["public_registry_sha256"] or
             rebuilt["registry_sha256"] != registry["registry_sha256"]):
         raise RuntimeError("v5.3 public callable schema freeze mismatch")
+    evidence = value["evaluation"].get("execution_evidence")
+    if evidence is not None:
+        implementation = ROOT / evidence.get("implementation_relative_path", "")
+        if (not implementation.is_file() or evidence.get("registry_sha256") != registry["registry_sha256"] or
+                sha(implementation) != evidence.get("implementation_sha256")):
+            raise RuntimeError("execution-evidence freeze mismatch")
+    if value.get("protocol") == "v5_3_engineering_013R_replay_continuation":
+        custody = json.loads((run / "custody-audit.json").read_text(encoding="utf-8"))
+        if not custody.get("passed"):
+            raise RuntimeError("013R custody audit did not prove B was withheld")
     acquisition = pathlib.Path(value["acquisition"]["source_export"])
     rows = json.loads(acquisition.read_text(encoding="utf-8")); rows = rows.get("trajectories", rows)
     if sha(acquisition) != value["acquisition"]["export_sha256"] or len(rows) != 32 or set(row["task_id"] for row in rows) & set(value["evaluation"]["task_ids"]):
