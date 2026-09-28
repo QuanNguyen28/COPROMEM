@@ -24,6 +24,9 @@ POLICY_VERSION = "v5-task-boundary-transaction-v1"
 OBSERVABLE_SUBGRAPH_POLICY_VERSION = "observable_supported_subgraph_v5_1"
 OBSERVABLE_PATH_POLICY_VERSION = "observable_supported_path_v5_2"
 TOOL_SCHEMA_PATH_POLICY_VERSION = "observable_tool_schema_path_v5_3"
+# Same v5.3 public callable predicate, but the observed calls originate from
+# AppWorld's shared dispatcher rather than a Python-source approximation.
+EXECUTION_EVIDENCE_POLICY_VERSION = "observable_tool_schema_execution_evidence_v1"
 STRICT_POLICY_VERSION = "strict_exact_v5"
 HELPER_REGISTRY_VERSION = "public-helper-registry-v1"
 
@@ -287,13 +290,25 @@ def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descripto
             projected, audit = project_observable_registry_path(public_registry, descriptor_events, _events(item["events"]))
             item["events"] = [asdict(event) for event in projected]
             projections.append({"trajectory_index": item["trajectory_index"], "audit": audit})
-    elif policy_version == TOOL_SCHEMA_PATH_POLICY_VERSION:
+    elif policy_version in {TOOL_SCHEMA_PATH_POLICY_VERSION, EXECUTION_EVIDENCE_POLICY_VERSION}:
         if public_registry is None: raise ValueError("v5.3 task-boundary plan requires frozen tool schema registry")
         verify_public_tool_schema_registry(public_registry)
         descriptor_events = _events(descriptor); projections = []
         for item in trials:
-            raw_digest = canonical_digest({"intent": item.get("intent", ""), "actions": item.get("actions_text", ())})
-            projected, audit = project_observable_tool_schema_path(public_registry, descriptor_events, _events(item["events"]), raw_evidence_digest=raw_digest)
+            evidence_audit = item.get("task_state", {}).get("execution_evidence_audit")
+            if policy_version == EXECUTION_EVIDENCE_POLICY_VERSION:
+                if not isinstance(evidence_audit, dict) or not evidence_audit.get("valid"):
+                    projected, audit = (), {"valid": False, "path_audit": {"passed": False},
+                                            "first_rejection": {"reason": "execution_evidence_invalid"},
+                                            "execution_evidence_audit": evidence_audit}
+                else:
+                    projected, audit = project_observable_tool_schema_path(
+                        public_registry, descriptor_events, _events(item["events"]),
+                        raw_evidence_digest=str(evidence_audit["records_sha256"]))
+                    audit["execution_evidence_audit_sha256"] = canonical_digest(evidence_audit)
+            else:
+                raw_digest = canonical_digest({"intent": item.get("intent", ""), "actions": item.get("actions_text", ())})
+                projected, audit = project_observable_tool_schema_path(public_registry, descriptor_events, _events(item["events"]), raw_evidence_digest=raw_digest)
             # A learned procedure sees only registry signatures, never task
             # instruction text, action code, or concrete invocation values.
             item["events"] = [asdict(event) for event in projected]
@@ -325,7 +340,7 @@ def plan_task_boundary_update(frozen_pre_state: dict[str, Any], frozen_descripto
         "descriptor_signature_sha256": canonical_digest(descriptor_signature) if descriptor_signature else None,
         "candidate_traces": traces, "candidate_audit_state": adapter.export_state(),
         "candidate_audit_state_sha256": canonical_digest(adapter.export_state())}
-    if policy_version in {OBSERVABLE_PATH_POLICY_VERSION, TOOL_SCHEMA_PATH_POLICY_VERSION}:
+    if policy_version in {OBSERVABLE_PATH_POLICY_VERSION, TOOL_SCHEMA_PATH_POLICY_VERSION, EXECUTION_EVIDENCE_POLICY_VERSION}:
         plan["public_registry"] = _clone(public_registry)
         plan["public_registry_sha256"] = str(public_registry["registry_sha256"])
     plan["plan_sha256"] = canonical_digest({key: value for key, value in plan.items() if key != "plan_sha256"})
@@ -336,13 +351,13 @@ def _verify_plan(plan: dict[str, Any]) -> None:
     expected = canonical_digest({key: value for key, value in plan.items() if key != "plan_sha256"})
     if plan.get("plan_sha256") != expected:
         raise ValueError("task-boundary plan digest mismatch")
-    if plan.get("version") != POLICY_VERSION or plan.get("policy_version") not in {POLICY_VERSION, STRICT_POLICY_VERSION, OBSERVABLE_SUBGRAPH_POLICY_VERSION, OBSERVABLE_PATH_POLICY_VERSION, TOOL_SCHEMA_PATH_POLICY_VERSION}:
+    if plan.get("version") != POLICY_VERSION or plan.get("policy_version") not in {POLICY_VERSION, STRICT_POLICY_VERSION, OBSERVABLE_SUBGRAPH_POLICY_VERSION, OBSERVABLE_PATH_POLICY_VERSION, TOOL_SCHEMA_PATH_POLICY_VERSION, EXECUTION_EVIDENCE_POLICY_VERSION}:
         raise ValueError("task-boundary policy mismatch")
     if canonical_digest(plan.get("pre_state")) != plan.get("pre_state_sha256") or canonical_digest(plan.get("trials")) != plan.get("trials_sha256"):
         raise ValueError("task-boundary frozen input mismatch")
     if canonical_digest(plan.get("projection_audit", [])) != plan.get("projection_audit_sha256"):
         raise ValueError("task-boundary projection audit mismatch")
-    if plan.get("policy_version") in {OBSERVABLE_PATH_POLICY_VERSION, TOOL_SCHEMA_PATH_POLICY_VERSION}:
+    if plan.get("policy_version") in {OBSERVABLE_PATH_POLICY_VERSION, TOOL_SCHEMA_PATH_POLICY_VERSION, EXECUTION_EVIDENCE_POLICY_VERSION}:
         registry = plan.get("public_registry")
         (verify_public_registry if plan.get("policy_version") == OBSERVABLE_PATH_POLICY_VERSION else verify_public_tool_schema_registry)(registry)
         if plan.get("public_registry_sha256") != registry.get("registry_sha256"):
@@ -476,7 +491,7 @@ def validate_task_boundary_plan(plan: dict[str, Any]) -> dict[str, Any]:
         return validate_observable_subgraph_v5_1(plan)
     if policy == OBSERVABLE_PATH_POLICY_VERSION:
         return validate_observable_path_v5_2(plan)
-    if policy == TOOL_SCHEMA_PATH_POLICY_VERSION:
+    if policy in {TOOL_SCHEMA_PATH_POLICY_VERSION, EXECUTION_EVIDENCE_POLICY_VERSION}:
         return validate_tool_schema_path_v5_3(plan)
     if policy in {POLICY_VERSION, STRICT_POLICY_VERSION}:
         return validate_strict_v5(plan)

@@ -167,7 +167,8 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                        memory_base_url: str | None = None,
                        memory_for_instruction: Callable[[str, str, dict[str, Any]], str] | None = None,
                        phase: str = "evaluation", artifact_path: pathlib.Path | None = None,
-                       post_score_update: Callable[[Any, dict[str, Any]], None] | None = None) -> dict[str, Any]:
+                       post_score_update: Callable[[Any, dict[str, Any]], None] | None = None,
+                       execution_evidence: dict[str, Any] | None = None) -> dict[str, Any]:
     """Run one arm/task/trial without changing the source agent's decisions.
 
     ``memory_for_instruction`` is invoked exactly once after the worker exposes
@@ -182,7 +183,8 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
     token = CALL_ROLE.set(f"executor:{arm}:{task_id}:trial={trial_id}:seed={seed}")
     try:
         Agent = load_official_agent(allowed_tasks=all_task_ids, api_key=api_key, ledger=ledger,
-                                    progress=progress, journal_path=journal, trajectory_id=key)
+                                    progress=progress, journal_path=journal, trajectory_id=key,
+                                    execution_evidence=execution_evidence)
         # Shared acquisition is deliberately generated once without either
         # method's memory.  It is the common raw evidence source, not a sixth
         # memory arm.
@@ -239,7 +241,8 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                       "actions": sum(m["role"] == "assistant" for m in agent.history[0][0]),
                       "termination": termination, "history": agent.history[0][0],
                       "history_sha256": digest(agent.history[0][0]), "injected_memory_sha256": digest(injected),
-                      "injected_memory_nonempty": bool(injected)}
+                      "injected_memory_nonempty": bool(injected),
+                      "execution_evidence_path": str(journal.with_suffix(".execution-evidence.jsonl")) if execution_evidence else None}
             if artifact_path is not None:
                 write_json(artifact_path, result)
             append(progress, {"event": "trajectory_scored", "phase": phase, "trajectory_id": key, "arm": arm,

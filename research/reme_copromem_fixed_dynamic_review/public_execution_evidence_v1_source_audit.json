@@ -1,0 +1,36 @@
+{
+  "appworld_version": "0.1.3.post1",
+  "audit_version": "public-execution-evidence-v1",
+  "official_trace_interface": {
+    "available": false,
+    "result": "No official response-attested per-call hook or transaction proxy was exposed by the pinned runtime."
+  },
+  "narrowest_shared_public_dispatch": {
+    "callable": "appworld.requester.Requester._request",
+    "source_sha256": "9660a3ab9bf222c64d4f265a6551d375368faf652b783e3ab0996389e5137bec",
+    "reason": "Every public ApiCollection wrapper calls Requester.request, which calls this method exactly once per dispatched public API request."
+  },
+  "official_request_tracker": {
+    "source_sha256": "9660a3ab9bf222c64d4f265a6551d375368faf652b783e3ab0996389e5137bec",
+    "records": ["method", "url", "data"],
+    "missing": ["per-call response status", "response outcome hook", "transaction callback"]
+  },
+  "native_telemetry_failure_diagnosis": {
+    "fixture": "82e2fac_1",
+    "failing_operation": "journal write during Requester._request while AppWorld executes submitted code",
+    "sanitized_exception": "UnsupportedOperation errno=null",
+    "path_classification": "explicit absolute /mnt/e path; parent and zero-content fsync/read preflight succeeded",
+    "root_cause": "AppWorld safety_guard temporarily replaces builtins.open and io.open with read-only functions during native program execution",
+    "repair": "queue value-redacted events in the dispatcher; restore the native dispatcher after execution; append/flush/fsync before the worker acknowledges the action"
+  },
+  "related_sources": {
+    "api_collection_sha256": "597aa608dd2447b8e77805490baa0289d549fb79c6d3d2b382637713e5a4eefe",
+    "environment_sha256": "ad650588158727c4ebe72a080638ec0174c33af8a8b9e9b81f3d9bfda55d3fd9"
+  },
+  "prohibited": [
+    "python_source_call_inference",
+    "scorer_or_hidden_state_access",
+    "task_or_response_value_retention",
+    "telemetry_in_executor_prompt_or_memory"
+  ]
+}

@@ -12,7 +12,7 @@ from copromem.benchmarks.appworld.adapter import CoProMemAppWorldAdapter
 from copromem.experiments.reme_copromem.task_boundary import (
     POLICY_VERSION, canonical_digest, commit_task_boundary_plan,
     OBSERVABLE_PATH_POLICY_VERSION, OBSERVABLE_SUBGRAPH_POLICY_VERSION, fully_observed, plan_task_boundary_update,
-    TOOL_SCHEMA_PATH_POLICY_VERSION, project_observable_registry_path, project_observable_supported_subgraph,
+    TOOL_SCHEMA_PATH_POLICY_VERSION, EXECUTION_EVIDENCE_POLICY_VERSION, project_observable_registry_path, project_observable_supported_subgraph,
     project_observable_tool_schema_path, validate_task_boundary_plan,
 )
 from copromem.experiments.reme_copromem.public_path_registry import canonical_digest as registry_digest
@@ -266,3 +266,40 @@ def test_v53_tool_schema_unknown_field_rejects_without_mutating_state():
     post, validation = commit_task_boundary_plan(pre, plan)
     assert not validation["passed"] and post == pre
     assert plan["projection_audit"][0]["audit"]["records"][0]["category"] == "nonmatching_or_undeclared_call"
+
+
+def test_execution_evidence_policy_reuses_v53_predicate_without_source_parsing():
+    registry = _v53_registry()
+    descriptor = [
+        {"operation": "apis.notes.show_items", "input_slots": [], "output_slots": ["item_id"]},
+        {"operation": "apis.notes.archive_item", "input_slots": ["item_id"], "output_slots": ["message"]},
+    ]
+    # These are dispatcher-derived public events.  No action/program text is
+    # supplied to the policy, so nested execution cannot be inferred from AST.
+    item = trial(11, 1)
+    item["intent"] = "not retained"
+    item["actions_text"] = []
+    item["task_state"] = {"execution_evidence_audit": {"valid": True, "records_sha256": "a" * 64}}
+    item["events"] = [
+        {"operation": "apis.notes.show_items", "input_slots": [], "output_slots": ["item_id"],
+         "check": "native_public_response_attested", "observed": True},
+        {"operation": "apis.notes.archive_item", "input_slots": ["item_id"], "output_slots": ["message"],
+         "check": "native_public_response_attested", "observed": True},
+    ]
+    pre = CoProMemAppWorldAdapter(api_key="").export_state()
+    plan = plan_task_boundary_update(pre, descriptor, [item], EXECUTION_EVIDENCE_POLICY_VERSION, registry)
+    post, validation = commit_task_boundary_plan(pre, plan)
+    assert validation["passed"] and post != pre
+    assert "not retained" not in json.dumps(plan)
+
+
+def test_execution_evidence_policy_rejects_invalid_dispatch_audit_without_mutation():
+    registry = _v53_registry()
+    descriptor = [{"operation": "apis.notes.show_items", "input_slots": [], "output_slots": ["item_id"]}]
+    item = trial(11, 1)
+    item["task_state"] = {"execution_evidence_audit": {"valid": False, "records_sha256": "b" * 64}}
+    pre = CoProMemAppWorldAdapter(api_key="").export_state()
+    plan = plan_task_boundary_update(pre, descriptor, [item], EXECUTION_EVIDENCE_POLICY_VERSION, registry)
+    post, validation = commit_task_boundary_plan(pre, plan)
+    assert not validation["passed"] and post == pre
+    assert plan["projection_audit"][0]["audit"]["first_rejection"]["reason"] == "execution_evidence_invalid"

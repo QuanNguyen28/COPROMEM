@@ -251,8 +251,11 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
                         policy_version: str = POLICY_VERSION, public_registry: dict[str, Any] | None = None) -> None:
     """Transactionally merge one scored winner after every trial is durable."""
     from ...benchmarks.appworld.adapter import AcquisitionIdentity, RawAcquisitionTrajectory, normalize_appworld_history
+    from ...learning import ActionObservation
+    from ...benchmarks.appworld.execution_evidence import journal_records, learning_events
     from .task_boundary import (POLICY_VERSION, commit_task_boundary_plan,
-                                plan_task_boundary_update, validate_task_boundary_plan)
+                                plan_task_boundary_update, validate_task_boundary_plan,
+                                EXECUTION_EVIDENCE_POLICY_VERSION)
     pre_path = RUN / "copromem/task_pre_states" / f"{task_id}.json"
     pre = json.loads(pre_path.read_text(encoding="utf-8"))
     marker_path = RUN / "copromem/task_updates" / f"{task_id}.json"
@@ -301,15 +304,30 @@ def complete_copro_task(adapter: CoProMemAppWorldAdapter, task_id: str,
         intent = next(x["content"] for x in row["history"] if x["role"] == "user")
         actions = tuple(x["content"] for x in row["history"] if x["role"] == "assistant")
         success = float(row["after_score"]) == 1.0
+        evidence_audit: dict[str, Any] | None = None
+        if policy_version == EXECUTION_EVIDENCE_POLICY_VERSION:
+            evidence_name = row.get("execution_evidence_path")
+            if not isinstance(evidence_name, str) or not evidence_name:
+                raise RuntimeError("execution-evidence task merge lacks durable telemetry path")
+            records = journal_records(evidence_name)
+            evidence_rows, evidence_audit = learning_events(records, str(public_registry["registry_sha256"]))
+            events = tuple(ActionObservation(
+                operation=str(event["operation"]), input_slots=tuple(event["input_slots"]),
+                output_slots=tuple(event["output_slots"]), precondition=str(event.get("precondition", "")),
+                check=str(event["check"]), parameters={}, observed=bool(event["observed"]))
+                for event in evidence_rows)
+        else:
+            events = normalize_appworld_history(row["history"], success)
         trajectory = RawAcquisitionTrajectory(
             AcquisitionIdentity(task_id, seed, trial), intent, "appworld", success,
             actions, {"evaluation": True, "scored_artifact_sha256": file_sha(scored_path)},
-            events=normalize_appworld_history(row["history"], success))
+            events=events)
         role = f"executor:copromem_dynamic:{task_id}:trial={trial}:seed={seed}"
         trial_inputs.append({"task_id": task_id, "seed": seed, "trajectory_index": trial,
             "intent": intent, "score": float(row["after_score"]), "no_memory_score": float(baseline["after_score"]),
             "cost_usd": _trajectory_cost(role), "actions": int(row["actions"]), "actions_text": list(actions),
-            "task_state": {"evaluation": True, "scored_artifact_sha256": file_sha(scored_path)},
+            "task_state": {"evaluation": True, "scored_artifact_sha256": file_sha(scored_path),
+                           **({"execution_evidence_audit": evidence_audit} if evidence_audit is not None else {})},
             "events": [asdict(event) for event in trajectory.events],
             "scored_artifact_sha256": file_sha(scored_path), "retrieval_artifact_sha256": file_sha(retrieval_path)})
         artifact_hashes[str(trial)] = file_sha(scored_path)

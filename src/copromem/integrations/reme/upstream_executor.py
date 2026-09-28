@@ -35,12 +35,22 @@ class AppWorldProxy:
     allowed_tasks: str = ""
     journal_path: pathlib.Path | None = None
     journal_trajectory_id: str = ""
+    execution_evidence: dict[str, Any] | None = None
     def __init__(self, task_id: str, experiment_name: str, **_: Any) -> None:
         self._proc = subprocess.Popen([NATIVE_PYTHON, str(WORKER)], stdin=subprocess.PIPE,
             stdout=subprocess.PIPE, text=True, cwd=NATIVE_ROOT,
             env={**__import__("os").environ, "APPWORLD_ALLOWED_TASKS": self.allowed_tasks})
         self.task_id = task_id
-        start = self._send({"op": "start", "task_id": task_id, "experiment_name": experiment_name})
+        start_request: dict[str, Any] = {"op": "start", "task_id": task_id, "experiment_name": experiment_name}
+        if self.execution_evidence is not None:
+            if self.journal_path is None:
+                raise RuntimeError("execution evidence requires a durable trajectory journal")
+            start_request["execution_evidence"] = {
+                "registry_path": self.execution_evidence["registry_path"],
+                "registry_sha256": self.execution_evidence["registry_sha256"],
+                "journal_path": str(self.journal_path.with_suffix(".execution-evidence.jsonl")),
+            }
+        start = self._send(start_request)
         self.task = types.SimpleNamespace(instruction=start["instruction"], supervisor=start["supervisor"],
             app_descriptions=start["app_descriptions"])
         self._completed = False
@@ -80,7 +90,8 @@ class AppWorldProxy:
             with self.journal_path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(record, sort_keys=True) + "\n")
                 handle.flush(); os.fsync(handle.fileno())
-        response = self._send({"op": "action", "code": code})
+        response = self._send({"op": "action", "code": code,
+                               "program_id": f"{self.journal_trajectory_id}:action={self._action_index}"})
         self._completed = bool(response["completed"])
         if self.journal_path is not None:
             record = {"event": "action_applied", "task_id": self.task_id,
@@ -88,6 +99,7 @@ class AppWorldProxy:
                       "index": self._action_index, "completed": self._completed,
                       "output_sha256": __import__("hashlib").sha256(
                           str(response["output"]).encode("utf-8")).hexdigest(),
+                      "execution_evidence_path": response.get("execution_evidence_path"),
                       "time_ns": time.time_ns()}
             self.journal_path.parent.mkdir(parents=True, exist_ok=True)
             with self.journal_path.open("a", encoding="utf-8") as handle:
@@ -114,10 +126,12 @@ class AppWorldProxy:
 
 def load_official_agent(*, allowed_tasks: list[str], api_key: str, ledger: AppendOnlyLedger,
                         progress: pathlib.Path, journal_path: pathlib.Path | None = None,
-                        trajectory_id: str = "") -> type:
+                        trajectory_id: str = "",
+                        execution_evidence: dict[str, Any] | None = None) -> type:
     AppWorldProxy.allowed_tasks = ",".join(allowed_tasks)
     AppWorldProxy.journal_path = journal_path
     AppWorldProxy.journal_trajectory_id = trajectory_id
+    AppWorldProxy.execution_evidence = execution_evidence
     stub = types.ModuleType("appworld")
     stub.AppWorld = AppWorldProxy
     stub.load_task_ids = lambda _: list(allowed_tasks)

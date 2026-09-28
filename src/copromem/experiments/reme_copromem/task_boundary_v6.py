@@ -23,6 +23,7 @@ from ...learning import ActionObservation, LearningCore
 from .runner import append, construct_copromem, digest, execute_trajectory, raw_acquisition_trajectories, write_json, v5_budget_bound
 from .public_path_registry import verify_public_registry
 from .public_tool_schema_registry import build_public_tool_schema_registry, verify_public_tool_schema_registry
+from .task_boundary import EXECUTION_EVIDENCE_POLICY_VERSION
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[4]
@@ -119,7 +120,7 @@ def _load() -> dict[str, Any]:
         registry = json.loads(registry_path.read_text(encoding="utf-8")); verify_public_registry(registry)
         if registry["registry_sha256"] != value["evaluation"].get("public_registry_sha256"):
             raise RuntimeError("v5.2 public registry content mismatch")
-    if value.get("task_boundary_policy") == "observable_tool_schema_path_v5_3":
+    if value.get("task_boundary_policy") in {"observable_tool_schema_path_v5_3", EXECUTION_EVIDENCE_POLICY_VERSION}:
         registry_path = ROOT / value["evaluation"]["public_registry_relative_path"]
         if not registry_path.is_file() or sha(registry_path) != value["evaluation"].get("public_registry_file_sha256"):
             raise RuntimeError("v5.3 public callable registry file mismatch")
@@ -127,6 +128,10 @@ def _load() -> dict[str, Any]:
         if registry["registry_sha256"] != value["evaluation"].get("public_registry_sha256"):
             raise RuntimeError("v5.3 public callable registry content mismatch")
         verify_runtime_tool_schema(registry, value["evaluation"].get("runtime_public_schema", {}))
+        if value.get("task_boundary_policy") == EXECUTION_EVIDENCE_POLICY_VERSION:
+            evidence = value["evaluation"].get("execution_evidence")
+            if not isinstance(evidence, dict) or evidence.get("registry_sha256") != registry["registry_sha256"]:
+                raise RuntimeError("execution-evidence registry is not frozen with v5.3 manifest")
     return value
 
 
@@ -228,6 +233,11 @@ def _run_task(value: dict[str, Any], ledger: AppendOnlyLedger, initial: dict[str
     raw_descriptor = ev["descriptors"][task_id]
     descriptor = tuple(ActionObservation(**item) for item in raw_descriptor)
     key = _env("OPENROUTER_API_KEY")
+    evidence_config = None
+    if value.get("task_boundary_policy") == EXECUTION_EVIDENCE_POLICY_VERSION:
+        entry = value["evaluation"]["execution_evidence"]
+        evidence_config = {"registry_path": str(ROOT / entry["registry_relative_path"]),
+                           "registry_sha256": entry["registry_sha256"]}
     for arm in value["arms"]:
         for trial, seed in zip(trials, seeds):
             target = _artifact(arm, task_id, trial)
@@ -240,7 +250,8 @@ def _run_task(value: dict[str, Any], ledger: AppendOnlyLedger, initial: dict[str
             execute_trajectory(run=RUN, progress=PROGRESS, ledger=ledger, api_key=key,
                 all_task_ids=list(ev["task_ids"]), arm=arm, task_id=task_id, trial_id=trial, seed=seed,
                 max_actions=int(value["execution"]["max_actions"]), temperature=float(value["execution"]["temperature"]),
-                phase="evaluation", artifact_path=target, memory_for_instruction=callback)
+                phase="evaluation", artifact_path=target, memory_for_instruction=callback,
+                execution_evidence=evidence_config)
     merged = CoProMemAppWorldAdapter(api_key=""); merged.clone_from_state(initial)
     marker = _complete_task(merged, task_id, trials, seeds, raw_descriptor,
                             value.get("task_boundary_policy", "strict_exact_v5"), public_registry)
@@ -265,7 +276,7 @@ def _a_gate(value: dict[str, Any], initial: dict[str, Any], marker: dict[str, An
     schema = state.get("learning", {}).get("episode_schemas", {}).get(winner) if winner else None
     if value.get("task_boundary_policy") == "observable_supported_subgraph_v5_1":
         observed = [bool(validation.get("projection_valid"))]
-    elif value.get("task_boundary_policy") in {"observable_supported_path_v5_2", "observable_tool_schema_path_v5_3"}:
+    elif value.get("task_boundary_policy") in {"observable_supported_path_v5_2", "observable_tool_schema_path_v5_3", EXECUTION_EVIDENCE_POLICY_VERSION}:
         observed = [bool(validation.get("path_complete") and validation.get("path_reproduced"))]
     result = {"task_id": task_id, "official_scores": [float(row["after_score"]) for row in rows],
               "full_success": any(float(row["after_score"]) == 1.0 for row in rows),
@@ -367,7 +378,7 @@ def run(preflight_only: bool = False) -> None:
     if value.get("task_boundary_policy") == "observable_supported_path_v5_2":
         registry = json.loads((ROOT / value["evaluation"]["public_registry_relative_path"]).read_text(encoding="utf-8"))
         verify_public_registry(registry)
-    elif value.get("task_boundary_policy") == "observable_tool_schema_path_v5_3":
+    elif value.get("task_boundary_policy") in {"observable_tool_schema_path_v5_3", EXECUTION_EVIDENCE_POLICY_VERSION}:
         registry = json.loads((ROOT / value["evaluation"]["public_registry_relative_path"]).read_text(encoding="utf-8"))
         verify_public_tool_schema_registry(registry)
     a, b = value["evaluation"]["task_ids"]
