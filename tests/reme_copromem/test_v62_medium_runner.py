@@ -15,6 +15,14 @@ def _runner():
     return module
 
 
+def _successor_runner():
+    root = Path(__file__).resolve().parents[2]
+    spec = importlib.util.spec_from_file_location("v62_medium_successor_runner", root / "scripts/run_v62_task_conditioned_medium_evaluation_002.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    return module
+
+
 def test_medium_runner_requires_pre_payload_thirty_id_audit(tmp_path: Path):
     runner = _runner()
     (tmp_path / "allocation-audit.json").write_text(json.dumps({"split": "test_normal", "payloads_opened": False,
@@ -52,3 +60,13 @@ def test_medium_live_summary_accepts_v62_arm_names(tmp_path: Path):
         registered_arms=arms)
     assert set(out["arms"]) == set(arms)
     assert out["expected"] == 10
+
+
+def test_successor_carries_failed_infrastructure_cost_without_arm_import(tmp_path: Path):
+    runner = _successor_runner()
+    (tmp_path / "allocation-audit.json").write_text(json.dumps({"split": "test_normal", "payloads_opened": False,
+        "selected_task_ids": [f"{index:07x}_1" for index in range(30)],
+        "selected_family_ids": [f"{index:07x}" for index in range(30)]}))
+    runner._configure(tmp_path)
+    assert runner.base.PROTOCOL == "v6_2_task_conditioned_evaluation_002"
+    assert runner.base.HISTORICAL_EXPOSURE == 2.417682693
