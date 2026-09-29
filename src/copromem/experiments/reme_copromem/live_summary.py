@@ -13,6 +13,8 @@ from decimal import Decimal, InvalidOperation
 from types import MappingProxyType
 from typing import Any, Iterable, Mapping
 
+from .evidence_contract import EvidenceContractError, load_artifact, validate as validate_execution_evidence
+
 
 ARMS = frozenset({
     "no_memory", "official_upstream_reme_fixed", "official_upstream_reme_dynamic",
@@ -168,8 +170,8 @@ def reconcile_ledger(path: pathlib.Path, *, historical_expected_usd: float | Dec
 def _validate_artifact(path: pathlib.Path, *, expected_tasks: set[str], expected_seeds: set[int],
                        require_evidence: bool) -> dict[str, Any]:
     try:
-        row = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        row = load_artifact(path)
+    except EvidenceContractError as exc:
         raise LedgerReconciliationError("scored artifact is unreadable") from exc
     if not isinstance(row, dict):
         raise LedgerReconciliationError("scored artifact has the wrong shape")
@@ -189,16 +191,11 @@ def _validate_artifact(path: pathlib.Path, *, expected_tasks: set[str], expected
     if actions != sum(isinstance(message, dict) and message.get("role") == "assistant" for message in history):
         raise LedgerReconciliationError("scored artifact action count disagrees with canonical history")
     if require_evidence:
-        evidence = row.get("execution_evidence_path")
-        if not isinstance(evidence, str) or not pathlib.Path(evidence).is_absolute():
-            raise LedgerReconciliationError("scored artifact has no absolute execution-evidence path")
-        journal = pathlib.Path(evidence)
-        if not journal.is_file() or not journal.read_bytes():
-            raise LedgerReconciliationError("scored artifact execution-evidence journal is absent or empty")
-        if row.get("execution_evidence_sha256") != hashlib.sha256(journal.read_bytes()).hexdigest():
-            raise LedgerReconciliationError("scored artifact execution-evidence hash mismatch")
-        if not isinstance(row.get("execution_evidence_registry_sha256"), str) or not row.get("execution_evidence_registry_sha256"):
-            raise LedgerReconciliationError("scored artifact lacks execution-evidence registry identity")
+        try:
+            # Artifact layout is <run>/artifacts/<task>/<arm>/trial-N.json.
+            validate_execution_evidence(row, run_root=path.parents[3])
+        except EvidenceContractError as exc:
+            raise LedgerReconciliationError(str(exc)) from exc
     return row
 
 

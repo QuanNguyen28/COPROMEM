@@ -92,6 +92,7 @@ class ReMeDynamicCheckpointManager:
                  verify_no_provider_calls: Callable[[int], None] | None = None,
                  ledger_offset: Callable[[], int] | None = None,
                  initial_semantic_hash: str | None = None,
+                 validate_evidence: Callable[[dict[str, Any]], pathlib.Path] | None = None,
                  event: Callable[[dict[str, Any]], None] | None = None) -> None:
         self.root = root.resolve()
         self.ordered = list(ordered_updates)
@@ -105,6 +106,7 @@ class ReMeDynamicCheckpointManager:
         self.verify_no_provider_calls = verify_no_provider_calls or (lambda _offset: None)
         self.ledger_offset = ledger_offset or (lambda: 0)
         self.initial_semantic_hash = initial_semantic_hash
+        self.validate_evidence = validate_evidence
         self.event = event or (lambda _record: None)
         self.intents = self.root / "intents"
         self.markers = self.root / "markers"
@@ -126,8 +128,10 @@ class ReMeDynamicCheckpointManager:
         if index < 1 or index > len(self.ordered) or self.ordered[index - 1] != identity:
             raise DynamicCheckpointError("ReMe Dynamic update is outside the frozen order")
 
-    @staticmethod
-    def _journal(result: dict[str, Any]) -> tuple[pathlib.Path, str]:
+    def _journal(self, result: dict[str, Any]) -> tuple[pathlib.Path, str]:
+        if self.validate_evidence is not None:
+            path = self.validate_evidence(result)
+            return path, _sha256(path, "execution-evidence journal")
         raw = result.get("execution_evidence_path")
         if not isinstance(raw, str) or not raw:
             raise DynamicCheckpointError("ReMe Dynamic scored artifact has no execution-evidence path")

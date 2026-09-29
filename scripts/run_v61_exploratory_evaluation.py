@@ -7,6 +7,7 @@ from copromem.contrastive_graph_v6 import digest
 from copromem.experiments.reme_copromem.contrastive_v6_runner import retrieval_record, task_batch_update
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, execute_trajectory, official_post, services, v5_budget_bound, write_json, append
 from copromem.integrations.reme.dynamic_checkpoint import DynamicUpdateIdentity, ReMeDynamicCheckpointManager
+from copromem.experiments.reme_copromem.evidence_contract import validate as validate_execution_evidence
 from copromem.experiments.reme_copromem.live_summary import build_live_summary, write_live_summary
 from copromem.experiments.reme_copromem.v61_custody import classify
 from scripts.run_v6_shared_acquisition import c_free_gib,file_sha,git_head
@@ -15,7 +16,11 @@ SOURCE=ROOT/'artifacts/research/official_reme_copromem_pilot/v6_shared_acquisiti
 COPRO=SOURCE/'copromem-v6.1-semantic-recovery-003'; INV=ROOT/'artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v5_engineering_001/public-dev-descriptors.json'; REG=ROOT/'research/reme_copromem_fixed_dynamic_review/appworld_public_tool_schema_registry_v5_3.json'
 ARMS=['no_memory','official_upstream_reme_fixed','official_upstream_reme_dynamic','copromem_v6_1_fixed','copromem_v6_1_dynamic']
 FROZEN_TASK_IDS=['57c3486_2','4ec8de5_1','530b157_1','6bdbc26_2','b119b1f_2','6171bbc_1']
-HISTORICAL_EXPOSURE=2.35384537
+# Evaluation 004 is audit-only.  This carries its settled requests plus the
+# unresolved request's registered maximum once, without treating either as a
+# live evaluation-005 request.
+HISTORICAL_EXPOSURE=2.36387062
+PROTOCOL='v6_1_exploratory_diagnostic_evaluation_005_clean_restart'
 def ev(run,n,**x): append(run/'progress.jsonl',{'event':n,'time_ns':time.time_ns(),**x})
 def st(run,s,**x): write_json(run/'runner-status.json',{'state':s,'pid':os.getpid(),'updated_ns':time.time_ns(),**x})
 def key():
@@ -37,7 +42,7 @@ def prepare(run):
  report,gate=identities(); run.mkdir(parents=True)
  limits={'executor':1800,'reme_lifecycle':256,'reme_embedding':1024,'copromem_decomposition':0}; budget=v5_budget_bound(call_limits=limits,historical_usd=HISTORICAL_EXPOSURE,lifecycle_input_ceiling=131072)
  if budget['all_in_usd']>100:raise RuntimeError('budget exceeds USD 100')
- m={'protocol':'v6_1_exploratory_diagnostic_evaluation_004_clean_restart','exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'git_commit':source_commit(),'arms':ARMS,'evaluation':{'split':'dev','task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
+ m={'protocol':PROTOCOL,'exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'predecessor_evaluation_004_excluded':True,'git_commit':source_commit(),'arms':ARMS,'evaluation':{'split':'dev','task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE,'evaluation_004_unresolved_retained_usd':0.0060078},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
  write_json(run/'template.json',m)
 def freeze(run):
  m=json.loads((run/'template.json').read_text());
@@ -92,7 +97,7 @@ def _dynamic_checkpoint(run,manifest,dynamic,verifier):
  def update(agent,score,event):
   from copromem.integrations.reme.lifecycle import dynamic_post_trial_update
   return dynamic_post_trial_update(agent,score,event)
- return ReMeDynamicCheckpointManager(root=run/'reme-dynamic-checkpoints',ordered_updates=_dynamic_order(manifest),dump_current=dump,load_current=load,dump_verifier=verify,official_update=update,ledger_offset=lambda:ledger_path.stat().st_size if ledger_path.exists() else 0,settled_ids=lambda offset:_settled_after(ledger_path,offset),validate_settlements=lambda offset,ids:_validate_dynamic_settlements(ledger_path,offset,ids),validate_marker_settlements=lambda marker:_validate_marker_settlements(ledger_path,marker),verify_no_provider_calls=lambda offset:_verify_verifier_no_provider(ledger_path,offset),initial_semantic_hash=manifest['banks']['reme_shared_sha256'],event=lambda row:ev(run,row.pop('event'),**row))
+ return ReMeDynamicCheckpointManager(root=run/'reme-dynamic-checkpoints',ordered_updates=_dynamic_order(manifest),dump_current=dump,load_current=load,dump_verifier=verify,official_update=update,ledger_offset=lambda:ledger_path.stat().st_size if ledger_path.exists() else 0,settled_ids=lambda offset:_settled_after(ledger_path,offset),validate_settlements=lambda offset,ids:_validate_dynamic_settlements(ledger_path,offset,ids),validate_marker_settlements=lambda marker:_validate_marker_settlements(ledger_path,marker),verify_no_provider_calls=lambda offset:_verify_verifier_no_provider(ledger_path,offset),initial_semantic_hash=manifest['banks']['reme_shared_sha256'],validate_evidence=lambda result:validate_execution_evidence(result,run_root=run,expected_registry_sha256=json.loads(REG.read_text())['registry_sha256']),event=lambda row:ev(run,row.pop('event'),**row))
 def _has_ledger_reservation(path,call_id):
  if not path.exists():return False
  return any(json.loads(line).get('event')=='reserve' and json.loads(line).get('id')==call_id for line in path.read_text(encoding='utf-8').splitlines())

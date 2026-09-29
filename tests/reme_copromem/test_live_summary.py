@@ -6,6 +6,7 @@ import pathlib
 
 import pytest
 
+from copromem.experiments.reme_copromem.evidence_contract import VERSION
 from copromem.experiments.reme_copromem.live_summary import (
     ARMS, LedgerReconciliationError, build_live_summary, reconcile_ledger, write_live_summary,
 )
@@ -38,7 +39,9 @@ def _artifact(root: pathlib.Path, *, arm: str = "no_memory", task: str = TASKS[0
            "trial_id": trial, "seed": seed, "after_score": 1.0, "actions": 1, "history": history,
            "history_sha256": hashlib.sha256(json.dumps(history, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
            "execution_evidence_path": str(evidence.resolve()), "execution_evidence_sha256": hashlib.sha256(evidence.read_bytes()).hexdigest(),
-           "execution_evidence_registry_sha256": "registry"}
+           "execution_evidence_rows": 1, "execution_evidence_registry_sha256": "registry",
+           "execution_evidence_run_relative": str(evidence.resolve().relative_to(root.resolve())),
+           "execution_evidence_contract_version": VERSION}
     if not valid: row["history_sha256"] = "bad"
     path = root / "artifacts" / task / arm / f"trial-{trial}.json"; path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(row), encoding="utf-8")

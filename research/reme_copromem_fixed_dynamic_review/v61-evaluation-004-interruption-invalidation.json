@@ -1,0 +1,27 @@
+{
+  "classification": "INVALID-INFRASTRUCTURE-INTERRUPTION — audit-only",
+  "manifest_sha256": "ee17600bf551972848e659b371dd34912b73f8fbf0ebeeb2dbee6e3a726a8290",
+  "source_commit": "0b2618ba25ed1ef04b3071ea5081ee3747f1822b",
+  "runner_status_sha256": "45c696d0faa9d5feb0362b911f264cf4e34d1a6bb734c8c94be66e744de7040b",
+  "ledger_sha256": "5574cd1bb80826af5eb95e06b4bf7c4ca1ef716c6436fd851eea5a66f87b5778",
+  "valid_no_memory_artifact": {
+    "artifact_sha256": "041b5d63b4c6fc1cc1b127ec09be50c84fbd07fdb28c9979c1970a2b148b13cb",
+    "official_score": 1.0,
+    "journal_sha256": "dc1b5a848efc9558690e6e589a21448318484c86c334fb8ed5bd17e04854bb6c",
+    "journal_rows": 83,
+    "registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423"
+  },
+  "interrupted_reme_fixed_trajectory": "evaluation:official_upstream_reme_fixed:57c3486_2:trial=1:seed=11001",
+  "reme_fixed_scored_artifact_present": false,
+  "reme_dynamic_update_marker_present": false,
+  "settled_reme_fixed_executor_call_count": 16,
+  "settled_reme_fixed_executor_usd": 0.001693182,
+  "unresolved_reservation": {
+    "id": "1790692290540417657-executor:official_upstream_reme_fixed:57c3486_2:trial=1:seed=11001",
+    "role": "executor:official_upstream_reme_fixed:57c3486_2:trial=1:seed=11001",
+    "maximum_usd": 0.0060078,
+    "treatment": "retained_unresolved_historical_exposure"
+  },
+  "analysis_exclusion": "all evaluation-004 evidence is excluded; no predecessor state is imported",
+  "processes_active_at_audit": false
+}

@@ -26,6 +26,8 @@ from .strict_json import StrictJSONError, extract as extract_copromem_json
 from ...benchmarks.appworld.adapter import AcquisitionIdentity, RawAcquisitionTrajectory
 from ...benchmarks.appworld.adapter import CoProMemAppWorldAdapter, normalize_appworld_history
 from ...online import ScoredCandidate, apply_task_batch
+from .evidence_contract import bind as bind_execution_evidence
+from .evidence_contract import validate as validate_execution_evidence
 
 
 ROOT = pathlib.Path(os.environ.get("COPROMEM_ROOT", pathlib.Path(__file__).resolve().parents[4]))
@@ -268,15 +270,10 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                       "execution_evidence_path": str(journal.with_suffix(".execution-evidence.jsonl")) if execution_evidence else None}
             if execution_evidence is not None:
                 evidence_path = pathlib.Path(str(result["execution_evidence_path"]))
-                if not evidence_path.is_absolute() or not evidence_path.is_file():
-                    raise RuntimeError("execution evidence journal is not an absolute durable file")
-                payload = evidence_path.read_bytes()
-                if not payload:
-                    raise RuntimeError("execution evidence journal is empty")
-                result.update({"execution_evidence_sha256": hashlib.sha256(payload).hexdigest(),
-                               "execution_evidence_rows": len(payload.splitlines()),
-                               "execution_evidence_registry_sha256": execution_evidence["registry_sha256"],
-                               "execution_evidence_run_relative": str(evidence_path.relative_to(run.resolve()))})
+                result.update(bind_execution_evidence(journal=evidence_path, run_root=run,
+                                                      registry_sha256=execution_evidence["registry_sha256"]))
+                validate_execution_evidence(result, run_root=run,
+                                            expected_registry_sha256=execution_evidence["registry_sha256"])
             if artifact_path is not None:
                 write_json(artifact_path, result)
             append(progress, {"event": "trajectory_scored", "phase": phase, "trajectory_id": key, "arm": arm,
