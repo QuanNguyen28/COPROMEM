@@ -89,6 +89,10 @@ def run(run):
      summary(run,m)
     post,marker,audit=task_batch_update(artifacts=copro,registry=registry,pre_state=pre,evidence_paths=[r['execution_evidence_path'] for r in copro]);write_json(run/'copromem-dynamic'/task/'update.json',{'pre_state_sha256':digest(pre),'post_state_sha256':digest(post),'marker':marker,'audit':audit});state=post
   summary(run,m);st(run,'completed')
+ except BaseException as exc:
+  st(run,'failed',failure_class=type(exc).__name__,failure_message=str(exc)[:240])
+  ev(run,'runner_failed',failure_class=type(exc).__name__)
+  raise
  finally:
   if lock.exists():lock.unlink()
 def main():

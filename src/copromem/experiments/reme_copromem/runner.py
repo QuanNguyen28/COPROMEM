@@ -72,14 +72,14 @@ class ReMeService:
         # The upstream ReMe interpreter is intentionally a separate virtual
         # environment.  It still needs the maintained bridge package, whose
         # import root is ``ROOT/src`` rather than the repository root.
-        env = {**os.environ, "PYTHONPATH": os.pathsep.join((str(ROOT / "src"), str(ROOT))),
+        env = {**os.environ, "PYTHONPATH": os.pathsep.join((str(ROOT / "src"), str(ROOT))), "PYTHONUNBUFFERED": "1",
                "OFFICIAL_REME_PORT": str(port),
                "OFFICIAL_REME_RUN_DIR": str(runtime), "OFFICIAL_REME_PROGRESS": str(progress),
                "OFFICIAL_REME_LEDGER": str(ledger), "OFFICIAL_PILOT_HARD_CAP": str(cap_usd),
                "OFFICIAL_REME_SERVICE_NAME": name,
                "OFFICIAL_PILOT_LIFECYCLE_INPUT_TOKEN_CEILING": str(lifecycle_input_ceiling)}
-        self._log = self.log_path.open("a", encoding="utf-8")
-        self.proc = subprocess.Popen([REME_PYTHON, "-m", "copromem.integrations.reme.corrected_service"],
+        self._log = self.log_path.open("a", encoding="utf-8", buffering=1)
+        self.proc = subprocess.Popen([REME_PYTHON, "-u", "-m", "copromem.integrations.reme.corrected_service"],
                                      cwd=ROOT, env=env, stdout=self._log, stderr=subprocess.STDOUT)
 
     @property
@@ -118,7 +118,13 @@ def services(run: pathlib.Path, ledger: pathlib.Path, progress: pathlib.Path, ca
                                     lifecycle_input_ceiling=lifecycle_input_ceiling)
                  for index, name in enumerate(names)}
     try:
-        for service in instances.values(): service.wait_healthy()
+        # Probe all owned children concurrently. A child exit is detected on
+        # its own probe rather than being hidden behind another service's full
+        # timeout.
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(instances)) as pool:
+            futures = [pool.submit(service.wait_healthy) for service in instances.values()]
+            for future in futures: future.result()
         yield instances
     finally:
         for service in instances.values(): service.close()
