@@ -1,0 +1,22 @@
+{
+  "version": "v6.2-runtime-identity-report-v1",
+  "identity_schema_version": "runtime-content-identity-v2",
+  "preflight_source_commit": "bb6db50bf3159a6a723cb739b0bbb220f40ab02d",
+  "preflight_runtime_identity_sha256": "1c39292a7f7868a3e96bc47d1a590216154dadec3884a34d1278947bd60216f1",
+  "logical_components": [
+    "reme_source", "reme_python", "appworld_root", "appworld_python"
+  ],
+  "labels": {
+    "appworld_distribution_version": "0.1.3.post1",
+    "copromem_git_commit": "bb6db50bf3159a6a723cb739b0bbb220f40ab02d",
+    "copromem_git_dirty": "true",
+    "copromem_git_dirty_content_sha256": "1c4484db3cf9bbd6a461aabdc5bf84dca53166b6e859ca8132101b1f5ad7ead1",
+    "python_implementation": "CPython",
+    "python_version": "3.12.3",
+    "reme_git_commit": "2f37a159b72a04ac1885a7db7f1a663a833e7791",
+    "reme_git_dirty": "false",
+    "reme_git_dirty_content_sha256": "clean"
+  },
+  "component_count": 20,
+  "provider_or_benchmark_activity": false
+}
