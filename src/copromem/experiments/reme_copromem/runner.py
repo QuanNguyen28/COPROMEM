@@ -27,6 +27,7 @@ from ...benchmarks.appworld.adapter import AcquisitionIdentity, RawAcquisitionTr
 from ...benchmarks.appworld.adapter import CoProMemAppWorldAdapter, normalize_appworld_history
 from ...online import ScoredCandidate, apply_task_batch
 from .evidence_contract import bind as bind_execution_evidence
+from .evidence_contract import bind_zero_action
 from .evidence_contract import validate as validate_execution_evidence
 
 
@@ -243,6 +244,7 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
             agent.prompt_messages(0, 0, previous, world)
             termination = "completed"
             last_tokens: int | None = None
+            terminal_executor: dict[str, Any] | None = None
             for _ in range(max_actions):
                 try:
                     completion = agent.call_llm(agent.history[0][0])
@@ -254,7 +256,10 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                                      "last_accepted_prompt_tokens": last_tokens, "ceiling": exc.ceiling})
                     break
                 except TruncationTermination:
-                    termination = "truncation_termination"; break
+                    termination = "truncation_termination"
+                    record = getattr(agent.llm_client.chat.completions, "last_record", None)
+                    terminal_executor = dict(record) if isinstance(record, dict) else None
+                    break
                 code, _ = agent.extract_code_and_fix_content(completion)
                 agent.history[0][0].append({"role": "assistant", "content": code})
                 output = world.execute(code)
@@ -270,8 +275,22 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                       "execution_evidence_path": str(journal.with_suffix(".execution-evidence.jsonl")) if execution_evidence else None}
             if execution_evidence is not None:
                 evidence_path = pathlib.Path(str(result["execution_evidence_path"]))
-                result.update(bind_execution_evidence(journal=evidence_path, run_root=run,
-                                                      registry_sha256=execution_evidence["registry_sha256"]))
+                if result["actions"] == 0 and terminal_executor is not None:
+                    manifest_path = run / "manifest.json"
+                    manifest_sha = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    source_commit = str(os.environ.get("COPROMEM_SOURCE_COMMIT") or
+                                        manifest.get("git_commit") or "")
+                    result.update(bind_zero_action(
+                        journal=evidence_path, scorer_journal=journal, run_root=run,
+                        registry_sha256=execution_evidence["registry_sha256"], trajectory_id=key,
+                        after_score=float(after), termination=termination,
+                        executor_record=terminal_executor, manifest_sha256=manifest_sha,
+                        source_commit=source_commit,
+                    ))
+                else:
+                    result.update(bind_execution_evidence(journal=evidence_path, run_root=run,
+                                                          registry_sha256=execution_evidence["registry_sha256"]))
                 validate_execution_evidence(result, run_root=run,
                                             expected_registry_sha256=execution_evidence["registry_sha256"])
             if artifact_path is not None:

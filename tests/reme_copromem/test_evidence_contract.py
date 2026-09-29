@@ -7,7 +7,7 @@ import pathlib
 import pytest
 
 from copromem.experiments.reme_copromem.evidence_contract import (
-    EvidenceContractError, VERSION, bind, load_artifact, validate,
+    EvidenceContractError, VERSION, bind, bind_zero_action, load_artifact, validate,
 )
 
 
@@ -65,4 +65,61 @@ def test_artifact_to_journal_binding_rejects_tamper(tmp_path):
     journal, row = _fixture(tmp_path)
     journal.write_text('{"tampered":true}\n', encoding="utf-8")
     with pytest.raises(EvidenceContractError, match="hash"):
+        validate(row, run_root=tmp_path)
+
+
+def _zero_action_fixture(tmp_path: pathlib.Path) -> dict[str, object]:
+    manifest = {"git_commit": "frozen-source"}
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    journal = tmp_path / "journals" / "telemetry.jsonl"; journal.parent.mkdir()
+    journal.write_bytes(b"")
+    scorer = tmp_path / "journals" / "scorer.jsonl"
+    scorer.write_text(json.dumps({"event":"official_score", "trajectory_id":"evaluation:no_memory:t:trial=1:seed=1",
+                                  "pass_count":1,"fail_count":0}) + "\n", encoding="utf-8")
+    call_id = "executor-call"
+    (tmp_path / "ledger.jsonl").write_text(
+        json.dumps({"event":"reserve","id":call_id,"role":"executor:no_memory:t:trial=1:seed=1"}) + "\n" +
+        json.dumps({"event":"settle","id":call_id,"role":"executor:no_memory:t:trial=1:seed=1","usd":0.01}) + "\n",
+        encoding="utf-8")
+    (tmp_path / "progress.jsonl").write_text(json.dumps(
+        {"event":"call_settled", "id":call_id, "finish_reason":"length", "completion_tokens":2048,
+         "tool_call_present":False, "content_sha256":"a" * 64}) + "\n", encoding="utf-8")
+    return bind_zero_action(
+        journal=journal, scorer_journal=scorer, run_root=tmp_path, registry_sha256=REGISTRY,
+        trajectory_id="evaluation:no_memory:t:trial=1:seed=1", after_score=1.0,
+        termination="truncation_termination",
+        executor_record={"id":call_id,"finish_reason":"length","completion_tokens":2048,
+                         "tool_call_present":False,"content_sha256":"a" * 64},
+        manifest_sha256=hashlib.sha256((tmp_path / "manifest.json").read_bytes()).hexdigest(),
+        source_commit="frozen-source")
+
+
+def test_settled_length_terminal_zero_action_is_canonically_bound(tmp_path):
+    row = _zero_action_fixture(tmp_path)
+    row.update({"trajectory_id":"evaluation:no_memory:t:trial=1:seed=1", "after_score":1.0})
+    assert row["execution_evidence_rows"] == 0
+    assert validate(row, run_root=tmp_path, expected_registry_sha256=REGISTRY).read_bytes() == b""
+
+
+@pytest.mark.parametrize("mutation", ["score", "termination", "settlement", "trajectory"])
+def test_zero_action_tampering_fails_closed(tmp_path, mutation):
+    row = _zero_action_fixture(tmp_path)
+    row.update({"trajectory_id":"evaluation:no_memory:t:trial=1:seed=1", "after_score":1.0})
+    if mutation == "score": row["after_score"] = 0.0
+    elif mutation == "trajectory": row["trajectory_id"] = "other"
+    else:
+        zero = dict(row["zero_action_evidence"])
+        zero["termination" if mutation == "termination" else "executor_settlement_id"] = "completed" if mutation == "termination" else "other"
+        row["zero_action_evidence"] = zero
+    with pytest.raises(EvidenceContractError):
+        validate(row, run_root=tmp_path)
+
+
+def test_nonzero_action_or_normal_empty_journal_is_rejected(tmp_path):
+    row = _zero_action_fixture(tmp_path)
+    row.update({"trajectory_id":"evaluation:no_memory:t:trial=1:seed=1", "after_score":1.0, "actions":1})
+    with pytest.raises(EvidenceContractError):
+        # The contract does not trust an artifact's action count alone; a
+        # normal termination cannot receive the registered zero-action proof.
+        zero = dict(row["zero_action_evidence"]); zero["termination"] = "completed"; row["zero_action_evidence"] = zero
         validate(row, run_root=tmp_path)

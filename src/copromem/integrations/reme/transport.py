@@ -215,6 +215,10 @@ class AppendOnlyLedger:
 class LockedChatCompletions:
     def __init__(self, api_key: str, ledger: AppendOnlyLedger, progress: pathlib.Path, role: str) -> None:
         self.api_key, self.ledger, self.progress, self.role = api_key, ledger, progress, role
+        # Sanitized terminal metadata only.  The execution boundary needs this
+        # to bind a settled zero-action length termination; it never retains
+        # model content or request messages.
+        self.last_record: dict[str, Any] | None = None
 
     def _progress(self, record: dict[str, Any]) -> None:
         line = json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
@@ -296,6 +300,12 @@ class LockedChatCompletions:
                         "reasoning_tokens": reasoning, "latency": latency, "cost": actual,
                         "finish_reason": choice.get("finish_reason"), "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
                         "content_length":len(content), "tool_call_present":bool(message.get("tool_calls"))})
+        self.last_record = {"id": call_id, "role": self.role, "model": returned_model,
+                            "provider": provider, "finish_reason": choice.get("finish_reason"),
+                            "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+                            "completion_tokens": int(usage.get("completion_tokens") or 0),
+                            "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+                            "tool_call_present": bool(message.get("tool_calls"))}
         self.last_accepted_prompt_tokens = int(usage.get("prompt_tokens") or 0)
         if choice.get("finish_reason") == "length":
             raise TruncationTermination(int(usage.get("prompt_tokens") or estimated_input_tokens),
