@@ -1,0 +1,21 @@
+{
+  "run": "v6_1_exploratory_diagnostic_evaluation_007_clean_restart",
+  "classification": "INVALID-METHOD-INTEGRATION",
+  "copromem_retrieval_records": 24,
+  "task_count": 6,
+  "unique_query_hashes": 1,
+  "unique_guidance_hashes": 1,
+  "unique_selected_schema_ids": 1,
+  "selected_schema_id": "schema_40460eb08c5f2b52",
+  "unique_pre_state_hashes": 4,
+  "defects": [
+    "static bank-derived retrieval query ignored runtime public instruction and tool metadata",
+    "Fixed retrievals consumed the Dynamic-mutated shared state"
+  ],
+  "scientific_use": {
+    "copromem_comparison": "invalid",
+    "no_memory_and_reme": "exploratory_diagnostic_only",
+    "efficacy_or_superiority_claim": false
+  },
+  "raw_payload_or_history_included": false
+}
