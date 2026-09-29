@@ -16,6 +16,10 @@ environment-only failures: the Windows-versus-WSL E-drive assertion, child
 subprocess import-path setup, and stale linked-worktree Git pointer. No new
 production-path failure was observed.
 
+The final terminal restart boundary is also covered: a completed run verifies
+the manifest-bound marker and report before returning read-only, while changed
+finalizer process metadata does not change the scientific marker identity.
+
 The local environment still has no configured, deterministically identifiable
 pair of upstream ReMe and AppWorld runtime roots plus installed AppWorld
 distribution identity.  The runner correctly fails closed in that condition.

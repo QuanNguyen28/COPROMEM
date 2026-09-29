@@ -177,3 +177,12 @@ def test_terminal_reconciliation_failure_never_writes_marker_or_completed_report
     assert json.loads((run / "runner-status.json").read_text())["state"] == "failed"
     assert not (run / "copromem-dynamic-checkpoints" / "run-reconciled.json").exists()
     assert not (run / "final-report.json").exists()
+
+
+def test_completed_shadow_is_read_only_on_restart(monkeypatch, tmp_path):
+    mod, run, calls = _shadow(monkeypatch, tmp_path)
+    mod.run(run)
+    completed = len(calls)
+    mod.run(run)
+    assert len(calls) == completed
+    assert not (run / "runner.lock").exists()

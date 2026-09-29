@@ -30,3 +30,9 @@ The state machine is therefore:
 Any missing, inconsistent, or tampered input fails closed.  The finalizer PID
 is not treated as permission for another runner or owned service to remain
 alive.
+
+`finalizer_pid` is diagnostic non-semantic metadata.  It is intentionally
+outside the marker's content identity, so a restart can validate an existing
+terminal marker without treating a new finalizer process as scientific drift.
+An already completed run verifies its marker/report binding and returns
+read-only before it can acquire a lock or start a service.

@@ -73,7 +73,10 @@ def _read(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise CoProMemDynamicCheckpointError("checkpoint record has wrong shape")
     record_hash = value.pop("record_sha256", None)
-    if not isinstance(record_hash, str) or record_hash != digest(value):
+    semantic = dict(value)
+    if value.get("transition") == "run_reconciled":
+        semantic.pop("nonsemantic_metadata", None)
+    if not isinstance(record_hash, str) or record_hash != digest(semantic):
         raise CoProMemDynamicCheckpointError("checkpoint record content hash mismatch")
     value["record_sha256"] = record_hash
     return value
@@ -206,7 +209,8 @@ class CoProMemDynamicCheckpointManager:
                            post_state_sha256=snapshot["semantic_state_sha256"], marker_sha256=marker_sha256,
                            plan_sha256=plan_sha256, validation_sha256=validation_sha256)
 
-    def record_run_reconciled(self, **bindings: Any) -> dict[str, Any]:
+    def record_run_reconciled(self, *, nonsemantic_metadata: Mapping[str, Any] | None = None,
+                              **bindings: Any) -> dict[str, Any]:
         """Persist the immutable terminal transition after every task is authorized.
 
         Reports are deliberately not part of this record: they are created only
@@ -225,21 +229,27 @@ class CoProMemDynamicCheckpointManager:
             "last_authorized_transition_file_sha256": _file_hash(predecessor),
             **bindings,
         }
-        body["record_sha256"] = digest(body)
+        record_sha256 = digest(body)
+        value = {**body, "record_sha256": record_sha256,
+                 "nonsemantic_metadata": dict(nonsemantic_metadata or {})}
         path = self.run_reconciled_path
         if path.exists():
             existing = _read(path)
-            if existing != body:
+            existing_semantic = dict(existing)
+            existing_semantic.pop("record_sha256", None)
+            existing_semantic.pop("nonsemantic_metadata", None)
+            if existing_semantic != body or existing.get("record_sha256") != record_sha256:
                 raise CoProMemDynamicCheckpointError("immutable run_reconciled transition conflict")
             return existing
-        _atomic(path, body)
-        return body
+        _atomic(path, value)
+        return value
 
     def validate_run_reconciled(self) -> dict[str, Any]:
         """Read and validate the terminal record without mutating the prefix."""
         row = _read(self.run_reconciled_path)
         expected = dict(row)
         recorded = expected.pop("record_sha256", None)
+        expected.pop("nonsemantic_metadata", None)
         if recorded != digest(expected):
             raise CoProMemDynamicCheckpointError("run_reconciled record hash mismatch")
         if (row.get("version") != VERSION or row.get("transition") != "run_reconciled"

@@ -113,7 +113,13 @@ def test_run_reconciled_is_global_content_addressed_and_tamper_detected(tmp_path
     marker = manager.record_run_reconciled(
         runtime_identity_file_sha256="runtime", terminal_reconciliation_sha256="terminal",
         scored_artifact_inventory_sha256="artifacts", expected_trajectories=20,
+        nonsemantic_metadata={"finalizer_pid": 1},
     )
+    assert manager.record_run_reconciled(
+        runtime_identity_file_sha256="runtime", terminal_reconciliation_sha256="terminal",
+        scored_artifact_inventory_sha256="artifacts", expected_trajectories=20,
+        nonsemantic_metadata={"finalizer_pid": 2},
+    ) == marker
     assert manager.validate_run_reconciled() == marker
     path = manager.run_reconciled_path
     value = json.loads(path.read_text(encoding="utf-8")); value["expected_trajectories"] = 99

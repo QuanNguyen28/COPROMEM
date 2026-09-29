@@ -85,6 +85,16 @@ def _write_final_reports(run,manifest,marker,marker_file_sha256):
  write_json(run/'final-report.json',report)
  (run/'FINAL_REPORT.md').write_text('# Exploratory diagnostic evaluation\n\nThis report is bound to `run_reconciled`; it is not an efficacy claim.\n',encoding='utf-8')
  return report
+def _completed_run_is_valid(run,m):
+ """A completed run is terminal and read-only; never relaunch its services."""
+ status_path=run/'runner-status.json'; marker_path=run/'copromem-dynamic-checkpoints'/'run-reconciled.json'; report_path=run/'final-report.json'
+ if not status_path.is_file() or json.loads(status_path.read_text(encoding='utf-8')).get('state')!='completed':return False
+ if not marker_path.is_file() or not report_path.is_file():raise RuntimeError('completed status lacks terminal marker or report')
+ marker=json.loads(marker_path.read_text(encoding='utf-8')); semantic=dict(marker); recorded=semantic.pop('record_sha256',None); semantic.pop('nonsemantic_metadata',None)
+ if recorded!=digest(semantic) or marker.get('manifest_sha256')!=file_sha(run/'manifest.json'):raise RuntimeError('completed run_reconciled marker is invalid')
+ report=json.loads(report_path.read_text(encoding='utf-8'))
+ if report.get('run_reconciled_sha256')!=recorded or report.get('run_reconciled_file_sha256')!=file_sha(marker_path):raise RuntimeError('completed final report is not bound to run_reconciled')
+ return True
 def _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint):
  """Read-only reconciliation, then the only path to completed status."""
  _runtime_checkpoint(run,m,'terminal')
@@ -93,7 +103,7 @@ def _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint):
  write_json(run/'terminal-reconciliation.json',report)
  if not report['valid']:raise RuntimeError('terminal reconciliation failed: '+json.dumps(report['failures'],sort_keys=True))
  runtime_path,_=_runtime_checkpoint(run,m,'terminal')
- marker=copro_checkpoint.record_run_reconciled(manifest_sha256=file_sha(run/'manifest.json'),source_commit=m['git_commit'],runtime_identity_file_sha256=file_sha(run/'runtime-identity.json'),runtime_verification_file_sha256=file_sha(runtime_path),scored_artifact_inventory_sha256=_inventory_hash(run/'artifacts'),evidence_inventory_sha256=digest({'journals':_inventory_hash(run/'journals'),'scorer':_inventory_hash(run/'scorer')}),task_query_retrieval_inventory_sha256=_inventory_hash(run/'retrievals'),copromem_fixed_state_sha256=m['banks']['copromem_sha256'],copromem_dynamic_terminal_state_sha256=digest(copro_checkpoint.reconcile(ledger_reconciled=True,fixed_current_state=copro_checkpoint.fixed_initial_state)['dynamic_state']),reme_dynamic_checkpoint_chain_sha256=_inventory_hash(run/'reme-dynamic-checkpoints'),reme_fixed_checkpoint_chain_sha256=_inventory_hash(run/'reme-fixed-integrity'),ledger_sha256=file_sha(run/'ledger.jsonl'),live_summary_sha256=file_sha(run/'live-summary.json'),terminal_reconciliation_sha256=file_sha(run/'terminal-reconciliation.json'),expected_trajectories=m['evaluation']['expected_trajectories'],process_identity={'pid':os.getpid()})
+ marker=copro_checkpoint.record_run_reconciled(manifest_sha256=file_sha(run/'manifest.json'),source_commit=m['git_commit'],runtime_identity_file_sha256=file_sha(run/'runtime-identity.json'),runtime_verification_file_sha256=file_sha(runtime_path),scored_artifact_inventory_sha256=_inventory_hash(run/'artifacts'),evidence_inventory_sha256=digest({'journals':_inventory_hash(run/'journals'),'scorer':_inventory_hash(run/'scorer')}),task_query_retrieval_inventory_sha256=_inventory_hash(run/'retrievals'),copromem_fixed_state_sha256=m['banks']['copromem_sha256'],copromem_dynamic_terminal_state_sha256=digest(copro_checkpoint.reconcile(ledger_reconciled=True,fixed_current_state=copro_checkpoint.fixed_initial_state)['dynamic_state']),reme_dynamic_checkpoint_chain_sha256=_inventory_hash(run/'reme-dynamic-checkpoints'),reme_fixed_checkpoint_chain_sha256=_inventory_hash(run/'reme-fixed-integrity'),ledger_sha256=file_sha(run/'ledger.jsonl'),live_summary_sha256=file_sha(run/'live-summary.json'),terminal_reconciliation_sha256=file_sha(run/'terminal-reconciliation.json'),expected_trajectories=m['evaluation']['expected_trajectories'],nonsemantic_metadata={'finalizer_pid':os.getpid()})
  _write_final_reports(run,m,marker,file_sha(copro_checkpoint.run_reconciled_path))
  st(run,'completed',manifest_sha256=file_sha(run/'manifest.json'),run_reconciled_sha256=marker['record_sha256'])
  return marker
@@ -168,6 +178,7 @@ def _ledger_reconciled(path):
  return not reconcile_ledger(path,historical_expected_usd=HISTORICAL_EXPOSURE).unresolved_reservation_ids
 def run(run):
  m=load(run); lock=run/'runner.lock';
+ if _completed_run_is_valid(run,m):return
  if lock.exists():raise RuntimeError('duplicate runner')
  write_json(lock,{'pid':os.getpid()})
  ledger=AppendOnlyLedger(run/'ledger.jsonl',100,m['budget']['call_limits']);
