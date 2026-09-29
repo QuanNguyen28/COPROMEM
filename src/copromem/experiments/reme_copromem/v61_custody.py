@@ -48,10 +48,12 @@ def classify(root: pathlib.Path, inventory: pathlib.Path) -> dict[str, Any]:
                     category, reason = "hard_exposed", "durable task execution/scoring field"
                 elif any(isinstance(obj, dict) and obj.get("role", "").startswith("executor:") and task_id in str(obj) for obj in parsed):
                     category, reason = "hard_exposed", "executor settlement evidence"
-                elif parsed and not matched:
-                    # Structured unknown task references cannot safely be
-                    # assumed public-only; source documents are already above.
-                    category, reason = "ambiguous", "structured record lacks task-scoped custody evidence"
+                elif matched:
+                    # A record explicitly scoped to a task but lacking a
+                    # recognised public-only or hard-execution marker is
+                    # ambiguous and therefore excluded. A task merely nested
+                    # in a manifest/candidate list remains a public mention.
+                    category, reason = "ambiguous", "task-scoped structured record has unknown custody"
                 rows[task_id].append({"path": relative, "category": category, "reason": reason})
     decisions=[]
     for task_id, evidence in sorted(rows.items()):

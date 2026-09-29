@@ -15,7 +15,7 @@ def test_execution_and_ambiguous_records_fail_closed(tmp_path: Path):
     (tmp_path/"artifacts"/"evaluation").mkdir(parents=True); (tmp_path/"research").mkdir()
     inventory=tmp_path/"research"/"public-dev-descriptors.json"; inventory.write_text("{}")
     (tmp_path/"artifacts"/"evaluation"/"x.json").write_text(json.dumps({"task_id":"ccccccc_1","after_score":1.0,"history":[]}))
-    (tmp_path/"artifacts"/"unknown.json").write_text(json.dumps({"note":"ddddddd_1"}))
+    (tmp_path/"artifacts"/"unknown.json").write_text(json.dumps({"task_id":"ddddddd_1", "note":"unknown custody"}))
     result=classify(tmp_path,inventory)
     assert "ccccccc_1" in result["hard_exclusion"]
     assert "ddddddd_1" in result["ambiguous_exclusion"]
