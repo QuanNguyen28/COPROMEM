@@ -43,8 +43,14 @@ def task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: Mapping[s
     post, marker = commit_task_batch(pre_state, plan)
     return post, marker, {**audit, "post_state_sha256": digest(post), "marker": marker}
 
-def retrieval_record(*, state: Mapping[str, Any], query_operations: list[str], registry_sha256: str) -> tuple[str, dict[str, Any]]:
+def retrieval_record(*, state: Mapping[str, Any], query_operations: list[str], registry_sha256: str,
+                     task_query: Mapping[str, Any] | None = None) -> tuple[str, dict[str, Any]]:
     guidance, provenance = retrieve(state, query_operations, registry_sha256)
     if guidance != reproduce_retrieval(state, query_operations, provenance):
         raise ValueError("v6 guidance is not reproducible")
+    if task_query is not None:
+        if task_query.get("callable_registry_sha256") != registry_sha256 or list(task_query.get("query_operations", [])) != list(query_operations):
+            raise ValueError("retrieval query does not match task-query record")
+        provenance = {**provenance, "task_query": dict(task_query),
+                      "task_query_sha256": str(task_query.get("query_sha256") or "")}
     return guidance, provenance
