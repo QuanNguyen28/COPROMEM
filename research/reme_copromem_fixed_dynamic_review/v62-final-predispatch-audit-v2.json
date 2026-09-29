@@ -1,0 +1,16 @@
+{
+  "version": "v6.2-final-predispatch-audit-v2",
+  "audited_source_commit": "da8eeeac",
+  "terminal_classification": "NO-GO",
+  "runtime_identity_production_wiring": "pass",
+  "terminal_reconciliation_production_wiring": "fail",
+  "run_reconciled_transition": "fail",
+  "completed_requires_reconciliation": "fail",
+  "paid_or_benchmark_activity": false,
+  "remaining_blockers": [
+    "mandatory terminal reconciler is not invoked by the maintained runner",
+    "content-addressed run_reconciled transition is not persisted",
+    "completed status and final reports are not gated on run_reconciled"
+  ],
+  "focused_tests": "11 passed"
+}
