@@ -229,6 +229,8 @@ def validate(row: Mapping[str, Any], *, run_root: pathlib.Path,
     empty = not payload
     if empty:
         _validate_zero_action(row, run_root=run_root)
+    elif ZERO_ACTION in row:
+        raise EvidenceContractError("ordinary execution evidence must not carry zero-action proof")
     if row.get(HASH) != hashlib.sha256(payload).hexdigest():
         raise EvidenceContractError("scored artifact execution-evidence hash mismatch")
     if not isinstance(row.get(ROWS), int) or row[ROWS] != len(payload.splitlines()) or (row[ROWS] <= 0 and not empty):
