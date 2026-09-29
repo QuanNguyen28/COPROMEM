@@ -14,6 +14,12 @@ replicate assumptions for this arm.  Every trajectory must record the Dynamic
 pre-state hash and update opportunity index.  CoProMem Dynamic instead has
 task-batch granularity, so a comparison has different adaptation granularity.
 
+The legacy numeric values retained in trajectory IDs are **stochastic trial
+labels**, not provider seeds. Frozen v6.2 manifests must record
+`provider_seed: null`; OpenRouter/DeepSeek output is not bit-reproducible from
+these labels. A report may use their stable IDs for audit joins, never as a
+claim of deterministic seeded replication.
+
 Changing ReMe to same-pre-state task batches would be a new method named
 **ReMe Dynamic Task-Batch Adaptation**, not official upstream ReMe Dynamic.  No
 merge rule is implemented here; any such rule needs separate preregistration,

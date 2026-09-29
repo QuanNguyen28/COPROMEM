@@ -5,7 +5,12 @@
     "reporting_label": "ordered_online_trials",
     "within_task_independence_claim": false,
     "same_pre_state_variant": "ReMe Dynamic Task-Batch Adaptation",
-    "variant_is_official_upstream_reme": false
+    "variant_is_official_upstream_reme": false,
+    "trial_identity": {
+      "label": "stochastic_trial_id",
+      "provider_seed": null,
+      "deterministic_replication_claim_permitted": false
+    }
   },
   "copromem": {
     "v5": "winner_procedure_memory",
