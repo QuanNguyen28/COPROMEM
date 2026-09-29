@@ -49,13 +49,14 @@ def _number(value: Decimal) -> float:
     return float(value.quantize(_MONEY))
 
 
-def _role_owner(role: str, *, allow_copromem_decomposition: bool) -> tuple[str | None, str]:
+def _role_owner(role: str, *, allow_copromem_decomposition: bool,
+                registered_arms: frozenset[str] = ARMS) -> tuple[str | None, str]:
     if role == "historical_carry_forward":
         return None, "historical"
     match = _EXECUTOR.fullmatch(role)
     if match:
         arm, _task, trial, seed = match.groups()
-        if arm not in ARMS or int(trial) < 1 or int(seed) < 0:
+        if arm not in registered_arms or int(trial) < 1 or int(seed) < 0:
             raise LedgerReconciliationError("executor role has an unregistered arm or malformed identity")
         return arm, "executor"
     lifecycle = {"reme_lifecycle:reme-fixed": "official_upstream_reme_fixed",
@@ -103,10 +104,14 @@ class LedgerReconciliation:
 
 def reconcile_ledger(path: pathlib.Path, *, historical_expected_usd: float | Decimal,
                      historical_id: str = "historical-construction-carry",
-                     allow_copromem_decomposition: bool = False) -> LedgerReconciliation:
+                     allow_copromem_decomposition: bool = False,
+                     registered_arms: Iterable[str] = ARMS) -> LedgerReconciliation:
     """Read the ledger without modifying it and validate every accounting row."""
     if not path.is_file():
         raise LedgerReconciliationError("append-only ledger is absent")
+    registered = frozenset(str(arm) for arm in registered_arms)
+    if not registered:
+        raise LedgerReconciliationError("at least one registered arm is required")
     payload = path.read_bytes()
     reservations: dict[str, dict[str, Any]] = {}
     settlements: dict[str, dict[str, Any]] = {}
@@ -133,7 +138,8 @@ def reconcile_ledger(path: pathlib.Path, *, historical_expected_usd: float | Dec
         role = reservation.get("role")
         if not isinstance(role, str):
             raise LedgerReconciliationError("ledger reservation lacks a role")
-        arm, kind = _role_owner(role, allow_copromem_decomposition=allow_copromem_decomposition)
+        arm, kind = _role_owner(role, allow_copromem_decomposition=allow_copromem_decomposition,
+                                registered_arms=registered)
         maximum = _money(reservation["usd"], "reserved USD")
         settlement = settlements.get(call_id)
         actual: Decimal | None = None
@@ -168,7 +174,7 @@ def reconcile_ledger(path: pathlib.Path, *, historical_expected_usd: float | Dec
 
 
 def _validate_artifact(path: pathlib.Path, *, expected_tasks: set[str], expected_seeds: set[int],
-                       require_evidence: bool) -> dict[str, Any]:
+                       require_evidence: bool, registered_arms: frozenset[str] = ARMS) -> dict[str, Any]:
     try:
         row = load_artifact(path)
     except EvidenceContractError as exc:
@@ -176,7 +182,7 @@ def _validate_artifact(path: pathlib.Path, *, expected_tasks: set[str], expected
     if not isinstance(row, dict):
         raise LedgerReconciliationError("scored artifact has the wrong shape")
     arm, task = row.get("arm"), row.get("task_id")
-    if arm not in ARMS or task not in expected_tasks:
+    if arm not in registered_arms or task not in expected_tasks:
         raise LedgerReconciliationError("scored artifact has an unregistered arm or task")
     try:
         trial, seed = int(row["trial_id"]), int(row["seed"])
@@ -200,14 +206,17 @@ def _validate_artifact(path: pathlib.Path, *, expected_tasks: set[str], expected
 
 
 def reconcile_artifacts(artifact_root: pathlib.Path, *, expected_tasks: Iterable[str], expected_seeds: Iterable[int],
-                        require_evidence: bool = True) -> tuple[dict[str, Any], ...]:
+                        require_evidence: bool = True,
+                        registered_arms: Iterable[str] = ARMS) -> tuple[dict[str, Any], ...]:
     tasks, seeds = set(expected_tasks), set(expected_seeds)
     if not tasks or not seeds:
         raise ValueError("frozen task and seed sets are required")
+    registered = frozenset(str(arm) for arm in registered_arms)
     rows: list[dict[str, Any]] = []
     identities: set[tuple[str, str, int, int]] = set()
     for path in sorted(artifact_root.glob("**/*.json")) if artifact_root.is_dir() else []:
-        row = _validate_artifact(path, expected_tasks=tasks, expected_seeds=seeds, require_evidence=require_evidence)
+        row = _validate_artifact(path, expected_tasks=tasks, expected_seeds=seeds,
+                                 require_evidence=require_evidence, registered_arms=registered)
         identity = (str(row["arm"]), str(row["task_id"]), int(row["trial_id"]), int(row["seed"]))
         if identity in identities:
             raise LedgerReconciliationError("duplicate completed trajectory artifact")
@@ -218,16 +227,19 @@ def reconcile_artifacts(artifact_root: pathlib.Path, *, expected_tasks: Iterable
 def build_live_summary(*, ledger_path: pathlib.Path, artifact_root: pathlib.Path, expected_tasks: Iterable[str],
                        expected_seeds: Iterable[int], historical_expected_usd: float | Decimal,
                        state: str, final: bool = False, require_evidence: bool = True,
-                       expected_trajectories: int | None = None) -> Mapping[str, Any]:
+                       expected_trajectories: int | None = None,
+                       registered_arms: Iterable[str] = ARMS) -> Mapping[str, Any]:
     """Return a deterministic summary; callers may atomically persist it."""
     task_list, seed_list = tuple(expected_tasks), tuple(expected_seeds)
-    ledger = reconcile_ledger(ledger_path, historical_expected_usd=historical_expected_usd)
+    registered = frozenset(str(arm) for arm in registered_arms)
+    ledger = reconcile_ledger(ledger_path, historical_expected_usd=historical_expected_usd,
+                              registered_arms=registered)
     rows = reconcile_artifacts(artifact_root, expected_tasks=task_list, expected_seeds=seed_list,
-                               require_evidence=require_evidence)
-    expected = len(task_list) * len(seed_list) * len(ARMS)
+                               require_evidence=require_evidence, registered_arms=registered)
+    expected = len(task_list) * len(seed_list) * len(registered)
     if expected_trajectories is not None and expected != expected_trajectories:
         raise LedgerReconciliationError("manifest trajectory denominator disagrees with its task/seed/arm allocation")
-    arm_rows = {arm: [row for row in rows if row["arm"] == arm] for arm in sorted(ARMS)}
+    arm_rows = {arm: [row for row in rows if row["arm"] == arm] for arm in sorted(registered)}
     summary: dict[str, Any] = {"state": state, "completed": len(rows), "expected": expected, "arms": {}}
     for arm, items in arm_rows.items():
         settled = [call for call in ledger.calls if call.arm == arm and call.settled_usd is not None]
@@ -258,8 +270,8 @@ def build_live_summary(*, ledger_path: pathlib.Path, artifact_root: pathlib.Path
         "ledger_sha256": ledger.ledger_sha256})
     if final:
         if ledger.unresolved_reservation_ids or len(rows) != expected:
-            raise LedgerReconciliationError("final completion requires 60 trajectories and no unresolved reservation")
-        required = {(arm, task, index + 1, seed) for arm in ARMS for task in task_list
+            raise LedgerReconciliationError("final completion requires every frozen trajectory and no unresolved reservation")
+        required = {(arm, task, index + 1, seed) for arm in registered for task in task_list
                     for index, seed in enumerate(seed_list)}
         observed = {(str(row["arm"]), str(row["task_id"]), int(row["trial_id"]), int(row["seed"])) for row in rows}
         if observed != required:

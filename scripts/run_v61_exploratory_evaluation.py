@@ -29,6 +29,17 @@ FROZEN_TASK_IDS=['57c3486_2','4ec8de5_1','530b157_1','6bdbc26_2','b119b1f_2','61
 # imported into this clean restart.
 HISTORICAL_EXPOSURE=2.416212543
 PROTOCOL='v6_1_exploratory_diagnostic_evaluation_007_clean_restart'
+# Maintained configuration seams for separately frozen successors.  Historical
+# entry points retain these defaults; a dedicated successor wrapper may set
+# them before calling any lifecycle or task boundary.
+EVALUATION_SPLIT='dev'
+HARD_CAP_USD=100
+CALL_LIMITS={'executor':1800,'reme_lifecycle':256,'reme_embedding':1024,'copromem_decomposition':0}
+LIFECYCLE_INPUT_CEILING=131072
+COPRO_FIXED_ARM='copromem_v6_1_fixed'
+COPRO_DYNAMIC_ARM='copromem_v6_1_dynamic'
+TASK_MAJOR_ARM_FIRST=False
+PREEXISTING_RUN_FILES=set()
 def ev(run,n,**x): append(run/'progress.jsonl',{'event':n,'time_ns':time.time_ns(),**x})
 def st(run,s,**x): write_json(run/'runner-status.json',{'state':s,'pid':os.getpid(),'updated_ns':time.time_ns(),**x})
 def key():
@@ -71,7 +82,7 @@ def _validate_terminal_retrieval_inventory(run,m):
  """Ensure every CoProMem evidence-bearing trajectory retained its query record."""
  for task in m['evaluation']['task_ids']:
   for trial in range(1,len(m['evaluation']['seeds'])+1):
-   for arm in ('copromem_v6_1_fixed','copromem_v6_1_dynamic'):
+   for arm in (COPRO_FIXED_ARM,COPRO_DYNAMIC_ARM):
     path=run/'retrievals'/task/f'{arm}-{trial}.json'
     if not path.is_file():raise RuntimeError(f'missing terminal retrieval record: {task}/{arm}/{trial}')
     record=json.loads(path.read_text(encoding='utf-8'))
@@ -108,13 +119,13 @@ def _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint,owne
  st(run,'completed',manifest_sha256=file_sha(run/'manifest.json'),run_reconciled_sha256=marker['record_sha256'])
  return marker
 def prepare(run):
- if run.exists() and any(run.iterdir()):raise RuntimeError('run nonempty')
+ if run.exists() and any(path.name not in PREEXISTING_RUN_FILES for path in run.iterdir()):raise RuntimeError('run nonempty')
  apply_runtime_locators(ROOT)
  report,gate=identities(); run.mkdir(parents=True)
- limits={'executor':1800,'reme_lifecycle':256,'reme_embedding':1024,'copromem_decomposition':0}; budget=v5_budget_bound(call_limits=limits,historical_usd=HISTORICAL_EXPOSURE,lifecycle_input_ceiling=131072)
- if budget['all_in_usd']>100:raise RuntimeError('budget exceeds USD 100')
+ limits=dict(CALL_LIMITS); budget=v5_budget_bound(call_limits=limits,historical_usd=HISTORICAL_EXPOSURE,lifecycle_input_ceiling=LIFECYCLE_INPUT_CEILING)
+ if budget['all_in_usd']>HARD_CAP_USD:raise RuntimeError(f'budget exceeds USD {HARD_CAP_USD:g}')
  commit=source_commit();runtime=build_evaluation_runtime_identity(root=ROOT,source_commit=commit);write_json(run/'runtime-identity.json',runtime)
- m={'protocol':PROTOCOL,'exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'predecessor_evaluation_004_excluded':True,'predecessor_evaluation_005_excluded':True,'git_commit':commit,'runtime_identity_sha256':runtime['runtime_identity_sha256'],'runtime_identity_file_sha256':file_sha(run/'runtime-identity.json'),'arms':ARMS,'evaluation':{'split':'dev','task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'stochastic_trial_ids':[11001,11002],'provider_seed':None,'trial_semantics':'ordered_stochastic_labels_not_provider_seeds','expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE,'evaluation_004_unresolved_retained_usd':0.0060078,'evaluation_005_unresolved_retained_usd':0.005946},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
+ m={'protocol':PROTOCOL,'exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'predecessor_evaluation_004_excluded':True,'predecessor_evaluation_005_excluded':True,'git_commit':commit,'runtime_identity_sha256':runtime['runtime_identity_sha256'],'runtime_identity_file_sha256':file_sha(run/'runtime-identity.json'),'arms':ARMS,'evaluation':{'split':EVALUATION_SPLIT,'task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'stochastic_trial_ids':[11001,11002],'provider_seed':None,'trial_semantics':'ordered_stochastic_labels_not_provider_seeds','expected_trajectories':len(FROZEN_TASK_IDS)*len([11001,11002])*len(ARMS)},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':HARD_CAP_USD,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE,'evaluation_004_unresolved_retained_usd':0.0060078,'evaluation_005_unresolved_retained_usd':0.005946},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
  write_json(run/'template.json',m)
 def freeze(run):
  apply_runtime_locators(ROOT)
@@ -132,7 +143,7 @@ def load(run):
  identities()
  return m
 def summary(run,m,*,state='running',final=False):
- out=build_live_summary(ledger_path=run/'ledger.jsonl',artifact_root=run/'artifacts',expected_tasks=m['evaluation']['task_ids'],expected_seeds=m['evaluation']['seeds'],historical_expected_usd=HISTORICAL_EXPOSURE,state=state,final=final,expected_trajectories=m['evaluation']['expected_trajectories'])
+ out=build_live_summary(ledger_path=run/'ledger.jsonl',artifact_root=run/'artifacts',expected_tasks=m['evaluation']['task_ids'],expected_seeds=m['evaluation']['seeds'],historical_expected_usd=HISTORICAL_EXPOSURE,state=state,final=final,expected_trajectories=m['evaluation']['expected_trajectories'],registered_arms=m['arms'])
  write_live_summary(run/'live-summary.json',out)
 def _dynamic_order(manifest):
  return [DynamicUpdateIdentity(f'evaluation:official_upstream_reme_dynamic:{task}:trial={trial}:seed={seed}',task,trial,seed) for task in manifest['evaluation']['task_ids'] for trial,seed in enumerate(manifest['evaluation']['seeds'],1)]
@@ -184,7 +195,7 @@ def run(run):
  if _completed_run_is_valid(run,m):return
  if lock.exists():raise RuntimeError('duplicate runner')
  write_json(lock,{'pid':os.getpid()})
- ledger=AppendOnlyLedger(run/'ledger.jsonl',100,m['budget']['call_limits']);
+ ledger=AppendOnlyLedger(run/'ledger.jsonl',HARD_CAP_USD,m['budget']['call_limits']);
  if not _has_ledger_reservation(run/'ledger.jsonl','historical-construction-carry'):
   ledger.reserve('historical-construction-carry',HISTORICAL_EXPOSURE,{'role':'historical_carry_forward'});ledger.settle('historical-construction-carry',HISTORICAL_EXPOSURE,{'role':'historical_carry_forward'})
  _runtime_checkpoint(run,m,'startup');k=key();st(run,'running',manifest_sha256=file_sha(run/'manifest.json')); fixed_state=json.loads((COPRO/'fixed-bank.json').read_text()); dynamic_state=json.loads(json.dumps(fixed_state,sort_keys=True)); registry=json.loads(REG.read_text())
@@ -194,7 +205,7 @@ def run(run):
  prefix=copro_checkpoint.reconcile(ledger_reconciled=_ledger_reconciled(run/'ledger.jsonl'),fixed_current_state=fixed_state);dynamic_state=prefix['dynamic_state']
  owned_services={}
  try:
-  with services(run,run/'ledger.jsonl',run/'progress.jsonl',100,['reme-fixed','reme-dynamic','reme-dynamic-verifier'],lifecycle_input_ceiling=131072) as svc:
+  with services(run,run/'ledger.jsonl',run/'progress.jsonl',HARD_CAP_USD,['reme-fixed','reme-dynamic','reme-dynamic-verifier'],lifecycle_input_ceiling=LIFECYCLE_INPUT_CEILING) as svc:
    owned_services=svc
    shared=CONSTRUCTION/'reme/shared-bank.jsonl';
    for name in ('reme-fixed','reme-dynamic'): official_post(svc[name].base_url,'load_memory',{'load_file_path':str(shared),'clear_existing':True})
@@ -208,8 +219,10 @@ def run(run):
     _runtime_checkpoint(run,m,f'task-{task_position:04d}-before-open')
     guard(m,run,'task'); pre_dynamic_state=json.loads(json.dumps(dynamic_state,sort_keys=True)); copro=[]
     copro_checkpoint.freeze_task_pre_state(task,pre_dynamic_state)
-    for trial,seed in enumerate(m['evaluation']['seeds'],1):
-     for arm in ARMS:
+    ordered_units = ([(arm,trial,seed) for arm in ARMS for trial,seed in enumerate(m['evaluation']['seeds'],1)]
+                     if TASK_MAJOR_ARM_FIRST else
+                     [(arm,trial,seed) for trial,seed in enumerate(m['evaluation']['seeds'],1) for arm in ARMS])
+    for arm,trial,seed in ordered_units:
        path=run/'artifacts'/task/arm/f'trial-{trial}.json';
        holder={}
        retrieval_path=run/'retrievals'/task/f'{arm}-{trial}.json'
@@ -227,7 +240,7 @@ def run(run):
         if arm.startswith('official_upstream_reme'):kwargs['memory_base_url']=svc['reme-fixed' if arm.endswith('fixed') else 'reme-dynamic'].base_url
         if arm=='official_upstream_reme_dynamic':kwargs.update({'post_score_update':dynamic_checkpoint.callback(path),'post_score_update_strict':True})
         if arm.startswith('copromem'):
-         retrieval_state=fixed_state if arm=='copromem_v6_1_fixed' else pre_dynamic_state
+         retrieval_state=fixed_state if arm==COPRO_FIXED_ARM else pre_dynamic_state
          def conditioned_memory(instruction, domain, tool_meta, *, state=retrieval_state, holder=holder):
           query=derive_task_query(instruction,domain,tool_meta,registry); validate_task_query(query,instruction=instruction,public_tool_metadata=tool_meta,callable_registry=registry)
           guidance,prov=retrieval_record(state=state,query_operations=query['query_operations'],registry_sha256=registry['registry_sha256'],task_query=query)
@@ -238,16 +251,16 @@ def run(run):
        if arm.startswith('copromem'):
         if not holder:raise RuntimeError('task-conditioned retrieval callback was not invoked')
         if not retrieval_path.exists():write_json(retrieval_path,{'pre_state_sha256':holder['state_sha256'],'guidance':holder['guidance'],'provenance':holder['provenance'],'task_query':holder['query']})
-        if arm=='copromem_v6_1_fixed' and digest(fixed_state)!=m['banks']['copromem_sha256']:raise RuntimeError('CoProMem Fixed state mutated')
-       if arm=='copromem_v6_1_dynamic':copro.append(result)
+        if arm==COPRO_FIXED_ARM and digest(fixed_state)!=m['banks']['copromem_sha256']:raise RuntimeError('CoProMem Fixed state mutated')
+       if arm==COPRO_DYNAMIC_ARM:copro.append(result)
        # The durable public status is refreshed immediately after every
        # artifact, never deferred to the end of a five-arm trial batch.
        summary(run,m)
     if len(copro)!=len(m['evaluation']['seeds']):raise RuntimeError('CoProMem Dynamic batch is incomplete after restart reconciliation')
     retrieval_hashes=[]
     for trial in range(1,len(m['evaluation']['seeds'])+1):
-     record=json.loads((run/'retrievals'/task/f'copromem_v6_1_dynamic-{trial}.json').read_text(encoding='utf-8'));retrieval_hashes.append(digest(record))
-    copro_checkpoint.record(task,'retrievals_materialized',task_query_hashes=[str(json.loads((run/'retrievals'/task/f'copromem_v6_1_dynamic-{trial}.json').read_text(encoding='utf-8'))['task_query']['query_sha256']) for trial in range(1,len(m['evaluation']['seeds'])+1)],retrieval_hashes=retrieval_hashes)
+     record=json.loads((run/'retrievals'/task/f'{COPRO_DYNAMIC_ARM}-{trial}.json').read_text(encoding='utf-8'));retrieval_hashes.append(digest(record))
+    copro_checkpoint.record(task,'retrievals_materialized',task_query_hashes=[str(json.loads((run/'retrievals'/task/f'{COPRO_DYNAMIC_ARM}-{trial}.json').read_text(encoding='utf-8'))['task_query']['query_sha256']) for trial in range(1,len(m['evaluation']['seeds'])+1)],retrieval_hashes=retrieval_hashes)
     copro_checkpoint.record(task,'trajectories_complete',artifact_hashes=[digest(item) for item in copro],scorer_evidence_hashes=[str(item['official_scorer_evidence']['sha256']) for item in copro])
     post,marker,audit=semantic_task_batch_update(artifacts=copro,registry=registry,pre_state=pre_dynamic_state,evidence_paths=[r['execution_evidence_path'] for r in copro],run_root=run)
     copro_checkpoint.record(task,'batch_ready',semantic_projection_hashes=[item['semantic_projection_sha256'] for item in audit['semantic_graph_audits']])

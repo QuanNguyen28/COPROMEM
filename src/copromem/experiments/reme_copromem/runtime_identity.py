@@ -167,8 +167,14 @@ def evaluation_runtime_inputs(*, root: Path, reme_source: Path | None = None,
     reme_interpreter, appworld_interpreter = Path(reme_python_raw), Path(appworld_python_raw)
     if not reme.is_dir() or not appworld.is_dir() or not reme_interpreter.is_file() or not appworld_interpreter.is_file():
         raise RuntimeIdentityError("explicit runtime roots or interpreters are unavailable")
+    runner_override = os.environ.get("COPROMEM_EVALUATION_RUNNER", "")
+    runner = Path(runner_override).resolve() if runner_override else root / "scripts/run_v61_exploratory_evaluation.py"
+    try:
+        runner.relative_to(root)
+    except ValueError as exc:
+        raise RuntimeIdentityError("evaluation runner must remain inside the maintained source tree") from exc
     required = {
-        "evaluation_runner": root / "scripts/run_v61_exploratory_evaluation.py",
+        "evaluation_runner": runner,
         "task_query": root / "src/copromem/experiments/reme_copromem/task_query.py",
         "semantic_lifecycle": root / "src/copromem/experiments/reme_copromem/contrastive_v6_runner.py",
         "evidence_contract": root / "src/copromem/experiments/reme_copromem/evidence_contract.py",

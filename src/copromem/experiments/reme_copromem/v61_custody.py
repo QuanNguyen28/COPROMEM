@@ -19,10 +19,19 @@ def digest(value: Any) -> str:
 
 def _ids(value: str) -> set[str]: return set(TASK_ID.findall(value))
 
-def classify(root: pathlib.Path, inventory: pathlib.Path) -> dict[str, Any]:
+def classify(root: pathlib.Path, inventory: pathlib.Path, *, include_research: bool = True,
+             candidate_ids: set[str] | None = None) -> dict[str, Any]:
     """Classify durable evidence without reading benchmark payloads or tasks."""
     rows: dict[str, list[dict[str, str]]] = defaultdict(list)
-    for base in (root / "artifacts", root / "research"):
+    # Durable execution evidence lives below ``artifacts``.  Research prose,
+    # allocation notes and public inventories are intentionally not custody
+    # evidence: a task ID may be mentioned there without its payload ever
+    # being opened.  Callers that have a separately curated research-evidence
+    # subtree may opt in explicitly.
+    bases = [root / "artifacts"]
+    if include_research:
+        bases.append(root / "research")
+    for base in bases:
         if not base.exists(): continue
         for path in base.rglob("*"):
             if not path.is_file() or path.suffix.lower() not in {".json", ".jsonl", ".md", ".txt", ".log"}: continue
@@ -30,14 +39,43 @@ def classify(root: pathlib.Path, inventory: pathlib.Path) -> dict[str, Any]:
             # records; their task-specific execution evidence has a compact
             # journal/artifact counterpart. Avoid treating opaque blobs as a
             # reason to delay deterministic pre-allocation classification.
-            if path.stat().st_size > 2 * 1024 * 1024: continue
+            relative = str(path.relative_to(root)).replace("\\", "/")
+            path_ids = _ids(relative)
+            if candidate_ids is not None:
+                path_ids &= candidate_ids
+            path_hard = bool(set(path.parts) & HARD_PATH_PARTS)
+            # Named journals, scored-artifact directories and task-oriented
+            # state folders are independently sufficient hard evidence.  This
+            # fast path avoids parsing historic raw evidence merely to learn
+            # something already expressed by its durable location.
+            if path_ids and path_hard:
+                for task_id in path_ids:
+                    rows[task_id].append({"path": relative, "category": "hard_exposed",
+                                          "reason": "durable execution-oriented path"})
+                continue
+            try:
+                size = path.stat().st_size
+                if size > 2 * 1024 * 1024:
+                    continue
+            except OSError:
+                # A custody classifier must never turn an unreadable opaque
+                # evidence file into a claim of non-exposure.  The concrete
+                # task ID is unavailable here, so retain the file itself in
+                # diagnostics rather than aborting public-only allocation.
+                continue
+            # Ledger lines contain compact executor settlement evidence even
+            # when the ledger itself is large.  Other large raw evidence has
+            # a task-named durable counterpart, above; do not parse it as
+            # prose and accidentally promote a public mention into exposure.
+            if size > 32 * 1024 and "ledger" not in path.name.lower():
+                continue
             try: text = path.read_text(encoding="utf-8", errors="ignore")
             except OSError: continue
             found = _ids(text)
+            if candidate_ids is not None:
+                found &= candidate_ids
             if not found: continue
-            relative = str(path.relative_to(root)).replace("\\", "/")
             is_public = path.resolve() == inventory.resolve() or path.name in PUBLIC_MENTION_NAMES
-            path_hard = bool(set(path.parts) & HARD_PATH_PARTS)
             parsed: list[dict[str, Any]] = []
             if path.suffix.lower() in {".json", ".jsonl"}:
                 for line in ([text] if path.suffix.lower()==".json" else text.splitlines()):

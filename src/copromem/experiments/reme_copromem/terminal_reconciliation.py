@@ -41,11 +41,13 @@ def validate_terminal_run(*, run_root: Path, manifest: Mapping[str, Any], runtim
             failures.append({"gate": str(gate), "reason": str(exc)})
     try:
         evaluation = manifest["evaluation"]
-        reconcile_artifacts(root / "artifacts", expected_tasks=evaluation["task_ids"], expected_seeds=evaluation["seeds"], require_evidence=True)
+        registered_arms = manifest.get("arms")
+        reconcile_artifacts(root / "artifacts", expected_tasks=evaluation["task_ids"], expected_seeds=evaluation["seeds"],
+                           require_evidence=True, registered_arms=registered_arms)
         summary = build_live_summary(ledger_path=root / "ledger.jsonl", artifact_root=root / "artifacts",
             expected_tasks=evaluation["task_ids"], expected_seeds=evaluation["seeds"],
             historical_expected_usd=historical_exposure, state="completed", final=True,
-            expected_trajectories=int(evaluation["expected_trajectories"]))
+            expected_trajectories=int(evaluation["expected_trajectories"]), registered_arms=registered_arms)
         if int(summary["completed"]) != int(evaluation["expected_trajectories"]):
             raise RuntimeError("terminal summary denominator mismatch")
     except Exception as exc:
