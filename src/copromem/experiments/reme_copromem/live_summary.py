@@ -217,15 +217,16 @@ def reconcile_artifacts(artifact_root: pathlib.Path, *, expected_tasks: Iterable
 
 def build_live_summary(*, ledger_path: pathlib.Path, artifact_root: pathlib.Path, expected_tasks: Iterable[str],
                        expected_seeds: Iterable[int], historical_expected_usd: float | Decimal,
-                       state: str, final: bool = False, require_evidence: bool = True) -> Mapping[str, Any]:
+                       state: str, final: bool = False, require_evidence: bool = True,
+                       expected_trajectories: int | None = None) -> Mapping[str, Any]:
     """Return a deterministic summary; callers may atomically persist it."""
     task_list, seed_list = tuple(expected_tasks), tuple(expected_seeds)
     ledger = reconcile_ledger(ledger_path, historical_expected_usd=historical_expected_usd)
     rows = reconcile_artifacts(artifact_root, expected_tasks=task_list, expected_seeds=seed_list,
                                require_evidence=require_evidence)
     expected = len(task_list) * len(seed_list) * len(ARMS)
-    if expected != 60:
-        raise LedgerReconciliationError("v6.1 exploratory evaluation denominator must be exactly 60")
+    if expected_trajectories is not None and expected != expected_trajectories:
+        raise LedgerReconciliationError("manifest trajectory denominator disagrees with its task/seed/arm allocation")
     arm_rows = {arm: [row for row in rows if row["arm"] == arm] for arm in sorted(ARMS)}
     summary: dict[str, Any] = {"state": state, "completed": len(rows), "expected": expected, "arms": {}}
     for arm, items in arm_rows.items():
