@@ -115,7 +115,7 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
         trajectory_id = f"evaluation:{arm}:{task}:trial={trial}:seed={seed}"
         scorer = run / "scorer" / f"{arm}-{task}-{trial}.jsonl"
         _rows(scorer, [{"event": "official_score", "trajectory_id": trajectory_id, "task_id": task,
-                        "pass_count": 1, "fail_count": 0}])
+                        "pass_count": 1, "fail_count": 0, "score_phase": "post_trajectory"}])
         history = [{"role": "assistant", "content": "local"}]
         binding = bind(journal=journal, run_root=run, registry_sha256=json.loads(mod.REG.read_text())["registry_sha256"],
                        scorer_journal=scorer, trajectory_id=trajectory_id, task_id=task, after_score=1.0,

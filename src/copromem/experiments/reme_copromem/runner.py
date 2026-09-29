@@ -265,6 +265,10 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                 output = world.execute(code)
                 agent.history[0][0].append({"role": "user", "content": "Output:\n```\n" + output + "```\n\n"})
                 if world.task_completed(): break
+            # The upstream agent's initial score remains auditable as
+            # ``pre_trajectory``.  Mark exactly one later scorer call as the
+            # terminal binding before invoking the unchanged upstream method.
+            world.mark_post_trajectory_score()
             after = agent.get_reward(world)  # AppWorldProxy durably journals official score.
             result = {"trajectory_id": key, "arm": arm, "task_id": task_id, "trial_id": trial_id,
                       "seed": seed, "before_score": before, "after_score": after,
@@ -281,12 +285,17 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                     source_commit = str(os.environ.get("COPROMEM_SOURCE_COMMIT") or
                                         manifest.get("git_commit") or "")
+                    runtime_identity = run / "runtime-identity.json"
+                    if not runtime_identity.is_file():
+                        raise RuntimeError("zero-action evidence requires durable runtime identity")
                     result.update(bind_zero_action(
                         journal=evidence_path, scorer_journal=journal, run_root=run,
                         registry_sha256=execution_evidence["registry_sha256"], trajectory_id=key,
                         after_score=float(after), termination=termination,
                         executor_record=terminal_executor, manifest_sha256=manifest_sha,
-                        source_commit=source_commit,
+                        source_commit=source_commit, task_id=task_id, arm=arm, trial_id=trial_id,
+                        seed=seed, history_sha256=result["history_sha256"],
+                        runtime_identity_sha256=hashlib.sha256(runtime_identity.read_bytes()).hexdigest(),
                     ))
                 else:
                     result.update(bind_execution_evidence(journal=evidence_path, run_root=run,

@@ -1,0 +1,37 @@
+{
+  "version": "v62-evaluation-001-evidence-forensic-v1",
+  "classification": "B_VALIDATOR_BUG",
+  "run": "v6_2_task_conditioned_evaluation_001",
+  "manifest_sha256": "1f0855ee93ebbb8c22c60711cb6c9ccfb52e78cd6b4f1b73f9d525f1da11b316",
+  "source_commit": "6c128a75d71df16fe619de9f178a658287447f3c",
+  "attempt": {
+    "scored_artifact_exists": false,
+    "executor_calls_settled": 10,
+    "executor_finish_reason_counts": {"stop": 10},
+    "completion_tokens": [61, 38, 20, 63, 35, 42, 24, 79, 66, 20],
+    "reasoning_tokens_all_zero": true,
+    "tool_call_present_count": 0,
+    "submitted_action_count": 10,
+    "applied_action_count": 10,
+    "response_attested_journal_rows": 11,
+    "scorer_records": [
+      {"phase_before_repair": "unlabeled_baseline", "pass_count": 0, "fail_count": 7},
+      {"phase_before_repair": "unlabeled_terminal", "pass_count": 7, "fail_count": 0}
+    ],
+    "zero_action_path_eligible": false
+  },
+  "failure": {
+    "first_raising_boundary": "evidence_contract._scorer_evidence",
+    "incorrect_predicate": "len(all_official_score_rows) != 1",
+    "corrected_predicate": "len(post_trajectory_official_score_rows) == 1",
+    "reason": "baseline and terminal scorer calls are intentional and had no durable phase label"
+  },
+  "ledger": {"reservations": 11, "settlements": 11, "unresolved": 0},
+  "sanitized_evidence_sha256": {
+    "journal": "f86d802578ee46629dffa4c8ed6c71b5f02a199ddec7fc2151f075d732ada346",
+    "execution_evidence": "c11443812740d2e2d65a1e2385e006bcb8e64698e9cd7cf888eb31f4ec9a3be9",
+    "progress": "704a12de9a51e0de2bb58bf48c6b457c6f0b692c9aa7ea2fae37af5c857d252e",
+    "ledger": "04ec9128be1a39a75e7399c8890ed6e03a91deed7f8e4e7979e21eec12d6bbe5"
+  },
+  "successor_rule": "Do not copy, score, or analyze this trajectory; carry its settled cost only as historical infrastructure exposure."
+}

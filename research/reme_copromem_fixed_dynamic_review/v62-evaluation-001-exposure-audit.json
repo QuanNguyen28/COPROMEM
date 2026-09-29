@@ -1,0 +1,19 @@
+{
+  "version": "v62-evaluation-001-exposure-audit-v1",
+  "run": "v6_2_task_conditioned_evaluation_001",
+  "manifest_sha256": "1f0855ee93ebbb8c22c60711cb6c9ccfb52e78cd6b4f1b73f9d525f1da11b316",
+  "hard_exposed": ["024c982_1"],
+  "opened": ["024c982_1"],
+  "executed": ["024c982_1"],
+  "scorer_invoked": ["024c982_1"],
+  "evidence_bearing": ["024c982_1"],
+  "selected_but_unopened": [
+    "042a9fc_1", "09b0ee6_1", "0a9d82a_1", "0d01c76_1", "0de03ea_1",
+    "1150ed6_1", "13547f5_1", "166f4ff_1", "21abae1_1", "270f1ff_1",
+    "29a7b7e_1", "2c544f9_1", "2d9f728_1", "31dc501_1", "325d6ec_1",
+    "32616b5_1", "3aa1a22_1", "3b8fb7a_1", "3d9a636_1", "425a494_1",
+    "522e5e5_1", "552869a_1", "59fae45_1", "5a83b05_1", "634f342_1",
+    "652485c_1", "6b6ca61_1", "6f4b9a5_1", "7847649_1"
+  ],
+  "policy": "durable execution evidence, not manifest mention, determines payload exposure"
+}

@@ -56,6 +56,12 @@ class AppWorldProxy:
         self._completed = False
         self._finished = False
         self._action_index = 0
+        # The upstream agent asks for a baseline score before it acts and a
+        # terminal score afterwards.  Both are official scorer calls, but
+        # only the terminal one may bind a scored trajectory.  Make that
+        # distinction durable rather than asking downstream reconciliation to
+        # infer it from journal ordering.
+        self._score_phase = "pre_trajectory"
 
     def _send(self, value: dict[str, Any]) -> dict[str, Any]:
         assert self._proc.stdin and self._proc.stdout
@@ -113,13 +119,19 @@ class AppWorldProxy:
         return response["output"]
 
     def task_completed(self) -> bool: return self._completed
+
+    def mark_post_trajectory_score(self) -> None:
+        """Mark the next official score as the sole terminal score binding."""
+        self._score_phase = "post_trajectory"
+
     def evaluate(self) -> Any:
         response = self._send({"op": "score"})
         if self.journal_path is not None:
             record = {"event": "official_score", "task_id": self.task_id,
                       "trajectory_id": self.journal_trajectory_id,
                       "pass_count": int(response["pass_count"]),
-                      "fail_count": int(response["fail_count"]), "time_ns": time.time_ns()}
+                      "fail_count": int(response["fail_count"]),
+                      "score_phase": self._score_phase, "time_ns": time.time_ns()}
             self.journal_path.parent.mkdir(parents=True, exist_ok=True)
             with self.journal_path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(record, sort_keys=True) + "\n")

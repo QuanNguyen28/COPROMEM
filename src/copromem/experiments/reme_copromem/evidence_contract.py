@@ -25,6 +25,7 @@ SCORER = "official_scorer_evidence"
 FIELDS = frozenset({PATH, HASH, ROWS, REGISTRY, RELATIVE, VERSION_FIELD})
 ZERO_ACTION_VERSION = "canonical-zero-action-evidence-v1"
 ZERO_ACTION_TERMINATIONS = frozenset({"truncation_termination"})
+TERMINAL_SCORE_PHASE = "post_trajectory"
 
 
 class EvidenceContractError(RuntimeError):
@@ -97,24 +98,26 @@ def _terminal_progress(run_root: pathlib.Path, call_id: str) -> dict[str, Any]:
 
 
 def _scorer_evidence(path: pathlib.Path, *, trajectory_id: str, score: Any, task_id: str | None = None,
-                     require_zero_actions: bool = False) -> dict[str, Any]:
+                     require_zero_actions: bool = False,
+                     score_phase: str = TERMINAL_SCORE_PHASE) -> dict[str, Any]:
     """Verify the durable AppWorld score record without exporting its payload."""
     try:
         rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
     except (OSError, json.JSONDecodeError) as exc:
         raise EvidenceContractError("zero-action scorer evidence is unreadable") from exc
     submitted = [row for row in rows if row.get("event") == "action_submitted"]
-    scores = [row for row in rows if row.get("event") == "official_score"]
+    scores = [row for row in rows if row.get("event") == "official_score" and row.get("score_phase") == score_phase]
     if (require_zero_actions and submitted) or len(scores) != 1 or scores[0].get("trajectory_id") != trajectory_id:
-        raise EvidenceContractError("zero-action scorer evidence is inconsistent")
+        raise EvidenceContractError("terminal scorer evidence is inconsistent")
     if task_id is not None and scores[0].get("task_id") != task_id:
         raise EvidenceContractError("scorer task identity differs from artifact")
     observed = int(scores[0].get("pass_count", 0)) / max(1, int(scores[0].get("pass_count", 0)) + int(scores[0].get("fail_count", 0)))
     if float(score) != observed:
-        raise EvidenceContractError("zero-action scorer result differs from artifact")
+        raise EvidenceContractError("terminal scorer result differs from artifact")
     return {"path": str(path.resolve()), "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             "pass_count": int(scores[0].get("pass_count", 0)), "fail_count": int(scores[0].get("fail_count", 0)),
-            "official_score": observed, "trajectory_id": trajectory_id, "task_id": scores[0].get("task_id")}
+            "official_score": observed, "trajectory_id": trajectory_id, "task_id": scores[0].get("task_id"),
+            "score_phase": score_phase}
 
 
 def bind(*, journal: pathlib.Path, run_root: pathlib.Path, registry_sha256: str,
@@ -146,14 +149,17 @@ def bind(*, journal: pathlib.Path, run_root: pathlib.Path, registry_sha256: str,
         result[SCORER] = {"path": scorer["path"], "sha256": scorer["sha256"],
                           "trajectory_id": trajectory_id, "task_id": task_id,
                           "pass_count": scorer["pass_count"], "fail_count": scorer["fail_count"],
-                          "official_score": scorer["official_score"], "history_sha256": history_sha256}
+                          "official_score": scorer["official_score"], "history_sha256": history_sha256,
+                          "score_phase": scorer["score_phase"]}
     return result
 
 
 def bind_zero_action(*, journal: pathlib.Path, scorer_journal: pathlib.Path, run_root: pathlib.Path,
                      registry_sha256: str, trajectory_id: str, after_score: float,
                      termination: str, executor_record: Mapping[str, Any],
-                     manifest_sha256: str, source_commit: str) -> dict[str, Any]:
+                     manifest_sha256: str, source_commit: str, task_id: str,
+                     arm: str, trial_id: int, seed: int, history_sha256: str,
+                     runtime_identity_sha256: str) -> dict[str, Any]:
     """Bind the sole permitted empty telemetry journal outcome.
 
     This is deliberately restricted to a settled, length-truncated executor
@@ -178,16 +184,20 @@ def bind_zero_action(*, journal: pathlib.Path, scorer_journal: pathlib.Path, run
     terminal = _terminal_progress(run_root, call_id)
     if terminal.get("content_sha256") != output_hash:
         raise EvidenceContractError("zero-action terminal output hash differs from progress")
-    scorer = _scorer_evidence(scorer_journal, trajectory_id=trajectory_id, score=after_score, require_zero_actions=True)
+    scorer = _scorer_evidence(scorer_journal, trajectory_id=trajectory_id, task_id=task_id,
+                              score=after_score, require_zero_actions=True)
     evidence = {
-        "version": ZERO_ACTION_VERSION, "trajectory_id": trajectory_id,
+        "version": ZERO_ACTION_VERSION, "trajectory_id": trajectory_id, "task_id": task_id,
+        "arm": arm, "trial_id": trial_id, "seed": seed, "history_sha256": history_sha256,
         "executor_settlement_id": call_id, "executor_settlement_sha256": _digest(settlement),
         "executor_terminal_progress_sha256": _digest(terminal),
         "model_output_sha256": output_hash, "termination": termination,
         "submitted_action_count": 0, "tool_call_present": False,
         "callable_event_count": 0, "scorer_evidence_path": scorer["path"],
         "scorer_evidence_sha256": scorer["sha256"], "official_score": float(after_score),
+        "scorer_score_phase": scorer["score_phase"],
         "manifest_sha256": manifest_sha256, "source_commit": source_commit,
+        "runtime_identity_sha256": runtime_identity_sha256,
     }
     evidence["binding_sha256"] = _digest(evidence)
     return {PATH: str(journal), HASH: hashlib.sha256(payload).hexdigest(), ROWS: 0,
@@ -202,7 +212,11 @@ def _validate_zero_action(row: Mapping[str, Any], *, run_root: pathlib.Path) -> 
     copy = dict(evidence); binding = copy.pop("binding_sha256", None)
     if not isinstance(binding, str) or binding != _digest(copy):
         raise EvidenceContractError("zero-action evidence binding hash mismatch")
-    if evidence.get("trajectory_id") != row.get("trajectory_id") or evidence.get("termination") not in ZERO_ACTION_TERMINATIONS:
+    if (evidence.get("trajectory_id") != row.get("trajectory_id") or
+            evidence.get("task_id") != row.get("task_id") or evidence.get("arm") != row.get("arm") or
+            evidence.get("trial_id") != row.get("trial_id") or evidence.get("seed") != row.get("seed") or
+            evidence.get("history_sha256") != row.get("history_sha256") or
+            evidence.get("termination") not in ZERO_ACTION_TERMINATIONS):
         raise EvidenceContractError("zero-action trajectory or termination mismatch")
     if evidence.get("submitted_action_count") != 0 or evidence.get("tool_call_present") is not False or evidence.get("callable_event_count") != 0:
         raise EvidenceContractError("zero-action evidence contains action or callable telemetry")
@@ -217,6 +231,9 @@ def _validate_zero_action(row: Mapping[str, Any], *, run_root: pathlib.Path) -> 
         raise EvidenceContractError("zero-action manifest is unreadable") from exc
     if not manifest_commit or evidence.get("source_commit") != manifest_commit:
         raise EvidenceContractError("zero-action source-commit binding mismatch")
+    runtime = run_root / "runtime-identity.json"
+    if not runtime.is_file() or evidence.get("runtime_identity_sha256") != hashlib.sha256(runtime.read_bytes()).hexdigest():
+        raise EvidenceContractError("zero-action runtime-identity binding mismatch")
     settlement = _ledger_settlement(run_root, str(evidence.get("executor_settlement_id") or ""))
     if evidence.get("executor_settlement_sha256") != _digest(settlement):
         raise EvidenceContractError("zero-action settlement hash mismatch")
@@ -225,8 +242,10 @@ def _validate_zero_action(row: Mapping[str, Any], *, run_root: pathlib.Path) -> 
             evidence.get("model_output_sha256") != terminal.get("content_sha256")):
         raise EvidenceContractError("zero-action terminal progress hash mismatch")
     scorer = _scorer_evidence(pathlib.Path(str(evidence.get("scorer_evidence_path") or "")),
-                              trajectory_id=str(row.get("trajectory_id") or ""), score=row.get("after_score"))
-    if scorer["sha256"] != evidence.get("scorer_evidence_sha256"):
+                              trajectory_id=str(row.get("trajectory_id") or ""),
+                              task_id=str(row.get("task_id") or ""), score=row.get("after_score"))
+    if (scorer["sha256"] != evidence.get("scorer_evidence_sha256") or
+            evidence.get("scorer_score_phase") != TERMINAL_SCORE_PHASE):
         raise EvidenceContractError("zero-action scorer hash mismatch")
 
 
@@ -237,7 +256,7 @@ def _validate_scorer_binding(row: Mapping[str, Any]) -> None:
     path = pathlib.Path(str(binding.get("path") or ""))
     scorer = _scorer_evidence(path, trajectory_id=str(row.get("trajectory_id") or ""),
                               task_id=str(row.get("task_id") or ""), score=row.get("after_score"))
-    for field in ("sha256", "pass_count", "fail_count", "official_score", "trajectory_id", "task_id"):
+    for field in ("sha256", "pass_count", "fail_count", "official_score", "trajectory_id", "task_id", "score_phase"):
         if binding.get(field) != scorer.get(field):
             raise EvidenceContractError("ordinary scorer binding mismatch")
     if binding.get("history_sha256") != row.get("history_sha256"):
