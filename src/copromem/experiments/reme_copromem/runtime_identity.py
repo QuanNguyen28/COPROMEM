@@ -117,6 +117,20 @@ def apply_runtime_locators(root: Path) -> dict[str, str]:
     return locators
 
 
+def _distribution_version(interpreter: Path, distribution: str) -> str:
+    """Read a package identity in its owning interpreter environment.
+
+    ReMe and AppWorld intentionally live in separate environments.  Asking
+    the current (often ReMe) process for AppWorld metadata incorrectly turns
+    the split-environment design into a preflight failure.
+    """
+    code = "from importlib import metadata; print(metadata.version(%r))" % distribution
+    try:
+        return subprocess.check_output([str(interpreter), "-c", code], text=True).strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeIdentityError("configured runtime distribution identity is unavailable") from exc
+
+
 def _git_identity(root: Path) -> dict[str, str]:
     """Record commit plus deterministic dirty content, never an absolute path."""
     try:
@@ -204,13 +218,7 @@ def evaluation_runtime_inputs(*, root: Path, reme_source: Path | None = None,
     if source_commit and source_commit != copromem_git["git_commit"]:
         raise RuntimeIdentityError("declared CoProMem source commit differs from the checked-out runtime")
     reme_git = _git_identity(reme)
-    try:
-        appworld_version = metadata.version("appworld")
-    except metadata.PackageNotFoundError:
-        # During a real WSL preflight this function runs under the configured
-        # AppWorld interpreter.  A host-side result without that distribution
-        # must fail closed rather than borrowing an import path.
-        appworld_version = "unresolved"
+    appworld_version = _distribution_version(appworld_interpreter, "appworld")
     labels = {"copromem_git_commit": copromem_git["git_commit"],
               "python_implementation": platform.python_implementation(), "python_version": platform.python_version(),
               "appworld_distribution_version": appworld_version,

@@ -8,7 +8,7 @@ import pytest
 from copromem.experiments.reme_copromem.runtime_identity import (
     RuntimeIdentityError, _git_identity, _local_runtime_config, build_runtime_identity,
     evaluation_runtime_inputs, verify_runtime_identity,
-    resolve_runtime_locators,
+    resolve_runtime_locators, _distribution_version,
 )
 from copromem.integrations.reme.bank import semantic_bank_hash
 from copromem.integrations.reme.fixed_checkpoint import ReMeFixedIntegrityError, ReMeFixedIntegrityManager
@@ -61,6 +61,15 @@ def test_windows_style_absolute_runtime_locators_are_resolved_without_becoming_i
         "reme_source": values["COPROMEM_REME_SOURCE"], "reme_python": values["COPROMEM_REME_PYTHON"],
         "appworld_root": values["COPROMEM_APPWORLD_ROOT"], "appworld_python": values["COPROMEM_APPWORLD_PYTHON"],
     }
+
+
+def test_distribution_identity_is_queried_through_owning_interpreter(monkeypatch, tmp_path):
+    calls: list[list[str]] = []
+    def fake_output(command, **_kwargs):
+        calls.append(command); return "0.1.3.post1\n"
+    monkeypatch.setattr(subprocess, "check_output", fake_output)
+    assert _distribution_version(tmp_path / "appworld-python", "appworld") == "0.1.3.post1"
+    assert calls == [[str(tmp_path / "appworld-python"), "-c", "from importlib import metadata; print(metadata.version('appworld'))"]]
 
 
 def test_git_identity_binds_commit_dirty_state_and_content(tmp_path):
