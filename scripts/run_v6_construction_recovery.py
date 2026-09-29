@@ -26,7 +26,7 @@ from scripts.run_v6_shared_acquisition import c_free_gib, construct_reme, file_s
 
 SOURCE_RUN = ROOT / "artifacts/research/official_reme_copromem_pilot/v6_shared_acquisition_001"
 SOURCE_MANIFEST_SHA256 = "422a45f8925b82dd83287bb10642a857fd3753b77570ccadb069f4ed310ad607"
-COPRO_RECOVERY = SOURCE_RUN / "copromem-v6-recovery-001"
+COPRO_RECOVERY = SOURCE_RUN / "copromem-v6.1-semantic-recovery-003"
 
 
 def _event(run: pathlib.Path, event: str, **extra: Any) -> None:
@@ -50,14 +50,14 @@ def _settled_exposure(path: pathlib.Path) -> tuple[float, int]:
 def _source_identity() -> dict[str, Any]:
     if file_sha(SOURCE_RUN / "manifest.json") != SOURCE_MANIFEST_SHA256:
         raise RuntimeError("source acquisition manifest hash mismatch")
-    recovery = json.loads((COPRO_RECOVERY / "recovery.json").read_text(encoding="utf-8"))
+    recovery = json.loads((COPRO_RECOVERY / "semantic-recovery-report.json").read_text(encoding="utf-8"))
     if recovery.get("source_manifest_sha256") != SOURCE_MANIFEST_SHA256 or not recovery.get("gate", {}).get("passed"):
-        raise RuntimeError("recovered CoProMem bank has not passed its construction gate")
+        raise RuntimeError("v6.1 semantic CoProMem bank has not passed admission")
     ledger = SOURCE_RUN / "ledger.jsonl"
     exposure, settlement_count = _settled_exposure(ledger)
     return {"source_manifest_sha256": SOURCE_MANIFEST_SHA256, "source_pool_sha256": file_sha(SOURCE_RUN / "shared-pool.json"),
             "source_ledger_sha256": file_sha(ledger), "source_settled_exposure_usd": exposure,
-            "source_settlement_count": settlement_count, "copromem_recovery_sha256": recovery["recovery_sha256"],
+            "source_settlement_count": settlement_count, "copromem_semantic_report_sha256": recovery["report_sha256"],
             "copromem_state_sha256": recovery["gate"]["state_sha256"]}
 
 
@@ -130,7 +130,7 @@ def execute(run: pathlib.Path) -> None:
             raise RuntimeError("unsettled provider reservation")
         report = {"classification": "ACQUISITION READY: immutable shared pool produced independently constructed upstream ReMe and repaired deterministic CoProMem v6 banks.",
                   "manifest_sha256": file_sha(run / "manifest.json"), "source_identity": value["source_identity"], "reme": reme,
-                  "copromem": json.loads((COPRO_RECOVERY / "gate.json").read_text(encoding="utf-8")), "ledger_exposure_usd": ledger._exposure(),
+                  "copromem": json.loads((COPRO_RECOVERY / "semantic-admission-gate.json").read_text(encoding="utf-8")), "ledger_exposure_usd": ledger._exposure(),
                   "c_free_gib": c_free_gib()}
         write_json(run / "FINAL_ACQUISITION_REPORT.json", report)
         _status(run, "completed", final_report_sha256=file_sha(run / "FINAL_ACQUISITION_REPORT.json")); _event(run, "construction_recovery_completed")
