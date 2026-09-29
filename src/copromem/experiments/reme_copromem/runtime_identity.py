@@ -135,9 +135,14 @@ def _git_identity(root: Path) -> dict[str, str]:
         # Include content, rather than merely names, when a pinned checkout is dirty.
         command = ["git", "diff", "--binary", "HEAD"] if "GIT_DIR" in env else ["git", "-C", str(root), "diff", "--binary", "HEAD"]
         diff = subprocess.check_output(command, env=env)
-        # The tracked diff plus complete registered tree is sufficient to make
-        # dirty source changes content-addressable without serializing locators.
-        dirty_hash = hashlib.sha256(diff + _canonical({"tree": tree_hash(root)})).hexdigest() if dirty else "clean"
+        untracked_command = ["git", "ls-files", "--others", "--exclude-standard"] if "GIT_DIR" in env else ["git", "-C", str(root), "ls-files", "--others", "--exclude-standard"]
+        untracked = subprocess.check_output(untracked_command, text=True, env=env).splitlines()
+        untracked_content = [{"relative": item, "sha256": content_hash(root / item)}
+                             for item in sorted(untracked) if (root / item).is_file()]
+        # The tracked diff plus the exact non-ignored untracked contents makes
+        # dirty source changes content-addressable without serializing locators
+        # or traversing ignored research artifacts.
+        dirty_hash = hashlib.sha256(diff + _canonical(untracked_content)).hexdigest() if dirty else "clean"
     except (OSError, subprocess.CalledProcessError) as exc:
         raise RuntimeIdentityError("required upstream Git identity is unavailable") from exc
     return {"git_commit": commit, "git_dirty": str(dirty).lower(), "git_dirty_content_sha256": dirty_hash}
