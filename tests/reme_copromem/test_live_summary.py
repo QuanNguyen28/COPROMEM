@@ -35,13 +35,20 @@ def _artifact(root: pathlib.Path, *, arm: str = "no_memory", task: str = TASKS[0
     history = [{"role": "user", "content": "public"}, {"role": "assistant", "content": "call"}]
     evidence = root / "journals" / f"{arm}-{task}-{trial}.jsonl"; evidence.parent.mkdir(parents=True, exist_ok=True)
     evidence.write_text('{"event":"response_attested"}\n', encoding="utf-8")
+    scorer = root / "journals" / f"{arm}-{task}-{trial}.scorer.jsonl"
+    scorer.write_text(json.dumps({"event":"official_score", "trajectory_id":f"evaluation:{arm}:{task}:trial={trial}:seed={seed}",
+                                  "task_id":task, "pass_count":1, "fail_count":0}) + "\n", encoding="utf-8")
     row = {"trajectory_id": f"evaluation:{arm}:{task}:trial={trial}:seed={seed}", "arm": arm, "task_id": task,
            "trial_id": trial, "seed": seed, "after_score": 1.0, "actions": 1, "history": history,
            "history_sha256": hashlib.sha256(json.dumps(history, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
            "execution_evidence_path": str(evidence.resolve()), "execution_evidence_sha256": hashlib.sha256(evidence.read_bytes()).hexdigest(),
            "execution_evidence_rows": 1, "execution_evidence_registry_sha256": "registry",
            "execution_evidence_run_relative": str(evidence.resolve().relative_to(root.resolve())),
-           "execution_evidence_contract_version": VERSION}
+           "execution_evidence_contract_version": VERSION,
+           "official_scorer_evidence": {"path":str(scorer.resolve()), "sha256":hashlib.sha256(scorer.read_bytes()).hexdigest(),
+             "trajectory_id":f"evaluation:{arm}:{task}:trial={trial}:seed={seed}", "task_id":task,
+             "pass_count":1,"fail_count":0,"official_score":1.0,
+             "history_sha256":hashlib.sha256(json.dumps(history, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}}
     if not valid: row["history_sha256"] = "bad"
     path = root / "artifacts" / task / arm / f"trial-{trial}.json"; path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(row), encoding="utf-8")

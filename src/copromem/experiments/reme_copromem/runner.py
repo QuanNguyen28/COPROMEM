@@ -290,7 +290,9 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                     ))
                 else:
                     result.update(bind_execution_evidence(journal=evidence_path, run_root=run,
-                                                          registry_sha256=execution_evidence["registry_sha256"]))
+                                                          registry_sha256=execution_evidence["registry_sha256"],
+                                                          scorer_journal=journal, trajectory_id=key, task_id=task_id,
+                                                          after_score=float(after), history_sha256=result["history_sha256"]))
                 validate_execution_evidence(result, run_root=run,
                                             expected_registry_sha256=execution_evidence["registry_sha256"])
             if artifact_path is not None:
