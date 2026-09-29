@@ -30,6 +30,16 @@ FAILED = ROOT / "artifacts/research/official_reme_copromem_pilot/v6_1_explorator
 COPRO_V61 = SOURCE / "copromem-v6.1-semantic-recovery-003"
 SOURCE_MANIFEST_SHA256 = "422a45f8925b82dd83287bb10642a857fd3753b77570ccadb069f4ed310ad607"
 FAILED_MANIFEST_SHA256 = "9525b30ac2fc56b179fcb6031a46597324a7dcb8d8b33847405df9488f42bf78"
+BASE_SUCCESSOR_MANIFEST_SHA256 = "80d5fd6832691afc20192888f960381347b9dc7c91a0dd647e786db6413f8b8e"
+
+
+def capacity_decision(free_gib: float, policy: dict[str, float], *, launch: bool = False) -> str:
+    """The amended 5/4/3 GiB policy, independently testable without I/O."""
+    if launch and free_gib < float(policy["launch_floor_gib"]):
+        raise RuntimeError("C-drive launch floor breached")
+    if free_gib < float(policy["mandatory_stop_gib"]):
+        raise RuntimeError("C-drive mandatory stop threshold breached")
+    return "warning" if free_gib < float(policy["warning_gib"]) else "ok"
 
 
 def _event(run: pathlib.Path, name: str, **extra: Any) -> None:
@@ -69,7 +79,7 @@ def _identity() -> dict[str, Any]:
             "copromem_v61_bank_sha256": semantic["gate"]["state_sha256"]}
 
 
-def prepare(run: pathlib.Path) -> None:
+def prepare(run: pathlib.Path, *, storage_amendment: bool = False) -> None:
     if run.exists() and any(run.iterdir()):
         raise RuntimeError("successor run directory is not empty")
     identity = _identity(); run.mkdir(parents=True, exist_ok=True)
@@ -77,15 +87,29 @@ def prepare(run: pathlib.Path) -> None:
     budget = v5_budget_bound(call_limits=limits, historical_usd=float(identity["failed_construction_ledger"]["settled_exposure_usd"]), lifecycle_input_ceiling=131072)
     if float(budget["all_in_usd"]) > 100.0:
         raise RuntimeError("successor conservative construction bound exceeds USD 100")
-    manifest = {"protocol": "v6_1_exploratory_diagnostic_construction_002", "purpose": "full_durable_official_reme_bank_construction_successor",
+    storage = {"launch_floor_gib": 10.0, "warning_gib": 10.0, "mandatory_stop_gib": 10.0}
+    protocol = "v6_1_exploratory_diagnostic_construction_002"
+    amendment: dict[str, Any] | None = None
+    if storage_amendment:
+        base = ROOT / "artifacts/research/official_reme_copromem_pilot/v6_1_exploratory_diagnostic_construction_002/manifest.json"
+        if not base.is_file() or file_sha(base) != BASE_SUCCESSOR_MANIFEST_SHA256:
+            raise RuntimeError("immutable pre-amendment successor manifest hash mismatch")
+        protocol = "v6_1_exploratory_diagnostic_construction_003_storage_policy_amendment"
+        storage = {"launch_floor_gib": 5.0, "warning_gib": 4.0, "mandatory_stop_gib": 3.0}
+        amendment = {"version": 1, "kind": "infrastructure_only_storage_policy", "base_manifest_sha256": BASE_SUCCESSOR_MANIFEST_SHA256,
+                     "statement": "does not alter acquisition evidence, methods, model, allocation, evaluation arms, or analysis",
+                     "all_runtime_paths": "E-backed successor directory"}
+    manifest = {"protocol": protocol, "purpose": "full_durable_official_reme_bank_construction_successor",
                 "git_commit": git_head(), "source_identity": identity,
                 "durability": {"snapshot_directory": "reme/snapshots", "checkpoint": "reme/construction.jsonl",
                                "intent_journal": "reme/construction.intents.jsonl", "ordered_item_count": 24,
                                "snapshot_after_each_item": True, "reload_test_before_marker": True,
                                "resume_policy": "restore latest valid ordered snapshot; fail closed on ambiguity"},
-                "execution": {"c_floor_gib": 10.0, "executor_dispatch_permitted": False, "official_reme_only": True,
+                "execution": {"storage_policy": storage, "executor_dispatch_permitted": False, "official_reme_only": True,
                               "lifecycle_input_ceiling": 131072, "provider_route": "unchanged_from_frozen_v6_source"},
                 "budget": {**budget, "hard_cap_usd": 100.0, "call_limits": limits, "fits_hard_cap": True}}
+    if amendment is not None:
+        manifest["infrastructure_amendment"] = amendment
     write_json(run / "template.json", manifest)
 
 
@@ -107,8 +131,7 @@ def load(run: pathlib.Path) -> dict[str, Any]:
     value = json.loads(manifest.read_text(encoding="utf-8"))
     if value["git_commit"] != git_head() or _identity() != value["source_identity"]:
         raise RuntimeError("successor source identity changed")
-    if c_free_gib() < float(value["execution"]["c_floor_gib"]):
-        raise RuntimeError("C-drive floor breached")
+    capacity_decision(c_free_gib(), value["execution"]["storage_policy"], launch=True)
     return value
 
 
@@ -142,6 +165,14 @@ def _require_settled(ledger: AppendOnlyLedger) -> None:
         raise RuntimeError("successor ledger has unresolved reservation")
 
 
+def _capacity_guard(run: pathlib.Path, policy: dict[str, float]) -> callable:
+    def guard(stage: str) -> None:
+        free = c_free_gib(); decision = capacity_decision(free, policy)
+        if decision == "warning":
+            _event(run, "storage_warning", stage=stage, c_free_gib=free, threshold_gib=policy["warning_gib"])
+    return guard
+
+
 def run_construction(run: pathlib.Path) -> None:
     value = load(run); lock = _lock(run); ledger = AppendOnlyLedger(run / "ledger.jsonl", 100.0, value["budget"]["call_limits"])
     try:
@@ -150,18 +181,29 @@ def run_construction(run: pathlib.Path) -> None:
             ledger.reserve("historical-failed-construction-001", amount, {"role": "historical_carry_forward", "source": "v6_1_exploratory_diagnostic_construction_001"})
             ledger.settle("historical-failed-construction-001", amount, {"role": "historical_carry_forward", "source": "v6_1_exploratory_diagnostic_construction_001"})
         _require_settled(ledger)
-        _status(run, "running", manifest_sha256=file_sha(run / "manifest.json")); _event(run, "construction_successor_started")
+        storage_policy = value["execution"]["storage_policy"]
+        # All service state, logs, snapshots, and temporary files are rooted
+        # under this E-backed run.  No research record is cleaned up here.
+        runtime_tmp = run / "tmp"; runtime_tmp.mkdir(parents=True, exist_ok=True)
+        os.environ.update({"TMPDIR": str(runtime_tmp), "TMP": str(runtime_tmp), "TEMP": str(runtime_tmp)})
+        _status(run, "running", manifest_sha256=file_sha(run / "manifest.json"), c_free_gib=c_free_gib()); _event(run, "construction_successor_started")
         inputs = _inputs(); reme_dir = run / "reme"; snapshot_dir = reme_dir / "snapshots"; checkpoint = reme_dir / "construction.jsonl"
+        capacity_guard = _capacity_guard(run, storage_policy)
         with services(run, run / "ledger.jsonl", run / "progress.jsonl", 100.0,
                       ["reme-builder", "reme-verifier", "reme-fixed", "reme-dynamic"], lifecycle_input_ceiling=131072) as svc:
             shared_hash, count = construct_durable_snapshot_bank(official_post, svc["reme-builder"].base_url, svc["reme-verifier"].base_url,
-                                                                   inputs, checkpoint, snapshot_dir, lambda record: _event_callback(run, record))
+                                                                   inputs, checkpoint, snapshot_dir, lambda record: _event_callback(run, record),
+                                                                   capacity_guard=capacity_guard)
             if count != 24:
                 raise RuntimeError("durable ReMe construction did not account for every source trajectory")
             shared = reme_dir / "shared-bank.jsonl"
+            capacity_guard("publish_final_snapshot")
             shared_hash = freeze_durable_final_snapshot(snapshot_dir, count, shared)
+            capacity_guard("clone_fixed")
             fixed_hash = load_clone(official_post, svc["reme-fixed"].base_url, shared, shared_hash)
+            capacity_guard("clone_dynamic")
             dynamic_hash = load_clone(official_post, svc["reme-dynamic"].base_url, shared, shared_hash)
+            capacity_guard("retrieval_health")
             probe = official_post(svc["reme-fixed"].base_url, "retrieve_task_memory", {"query": str(inputs[0]["task_history"][0].get("content", "")), "top_k": 1,
                                                                                            "enable_llm_build": False, "enable_llm_rerank": False, "enable_llm_rewrite": False})
             write_json(reme_dir / "retrieval-health.json", {"bank_sha256": shared_hash, "input_source": "immutable_acquisition_public_instruction",
@@ -182,8 +224,8 @@ def run_construction(run: pathlib.Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(); parser.add_argument("command", choices=("prepare", "freeze", "preflight", "run")); parser.add_argument("--run", type=pathlib.Path, required=True); args = parser.parse_args()
-    if args.command == "prepare": prepare(args.run)
+    parser = argparse.ArgumentParser(); parser.add_argument("command", choices=("prepare", "freeze", "preflight", "run")); parser.add_argument("--run", type=pathlib.Path, required=True); parser.add_argument("--storage-amendment", action="store_true"); args = parser.parse_args()
+    if args.command == "prepare": prepare(args.run, storage_amendment=args.storage_amendment)
     elif args.command == "freeze": freeze(args.run)
     elif args.command == "preflight":
         value = load(args.run); _status(args.run, "preflight_passed", manifest_sha256=file_sha(args.run / "manifest.json"), c_free_gib=c_free_gib()); _event(args.run, "preflight_passed"); print(json.dumps({"provider_calls": 0, "all_in_usd": value["budget"]["all_in_usd"]}))

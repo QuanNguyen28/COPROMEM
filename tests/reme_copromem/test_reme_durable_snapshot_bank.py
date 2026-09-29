@@ -7,7 +7,7 @@ import pytest
 
 from copromem.integrations.reme.bank import construct_durable_snapshot_bank, freeze_durable_final_snapshot, load_clone
 from copromem.integrations.reme.transport import AppendOnlyLedger
-from scripts.run_v61_reme_durable_construction_successor import _require_settled
+from scripts.run_v61_reme_durable_construction_successor import _require_settled, capacity_decision
 
 
 class FakeReMe:
@@ -98,3 +98,13 @@ def test_unsettled_reservation_blocks_construction_before_provider_work(tmp_path
     ledger.reserve("pending", 0.01, {"role": "reme_lifecycle:test"})
     with pytest.raises(RuntimeError, match="unresolved reservation"):
         _require_settled(ledger)
+
+
+def test_storage_amendment_uses_5_4_3_thresholds_fail_closed() -> None:
+    policy = {"launch_floor_gib": 5.0, "warning_gib": 4.0, "mandatory_stop_gib": 3.0}
+    assert capacity_decision(5.0, policy, launch=True) == "ok"
+    assert capacity_decision(3.5, policy) == "warning"
+    with pytest.raises(RuntimeError, match="launch floor"):
+        capacity_decision(4.99, policy, launch=True)
+    with pytest.raises(RuntimeError, match="mandatory stop"):
+        capacity_decision(2.99, policy)

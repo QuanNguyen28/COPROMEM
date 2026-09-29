@@ -234,13 +234,19 @@ def _checkpoint_rows(path: pathlib.Path) -> list[dict[str, Any]]:
 
 def construct_durable_snapshot_bank(post: Post, builder_url: str, verifier_url: str,
                                     trajectories: list[dict[str, Any]], checkpoint: pathlib.Path,
-                                    snapshots: pathlib.Path, event: Callable[[dict[str, Any]], None]) -> tuple[str, int]:
+                                    snapshots: pathlib.Path, event: Callable[[dict[str, Any]], None],
+                                    capacity_guard: Callable[[str], None] | None = None) -> tuple[str, int]:
     """Build an upstream bank with durable, reload-tested state after each item.
 
     A checkpoint is authoritative only when its named snapshot exists and the
     snapshot metadata exactly covers the ordered completed prefix.  Ambiguous
     pre-marker snapshots fail closed instead of replaying provider calls.
     """
+    def guarded_post(stage: str, base_url: str, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if capacity_guard is not None:
+            capacity_guard(stage)
+        return post(base_url, endpoint, payload)
+
     rows = _checkpoint_rows(checkpoint); completed = [str(row["trajectory_id"]) for row in rows]
     expected = [str(item["trajectory_id"]) for item in trajectories]
     if completed != expected[:len(completed)] or len(completed) != len(set(completed)):
@@ -267,26 +273,28 @@ def construct_durable_snapshot_bank(post: Post, builder_url: str, verifier_url: 
                 or not snapshot.is_file() or metadata.get("snapshot_file_sha256") != file_hash(snapshot)
                 or metadata.get("snapshot_sha256") != semantic_bank_hash(snapshot)):
             raise RuntimeError("durable ReMe snapshot metadata mismatch")
-        post(builder_url, "load_memory", {"load_file_path": str(snapshot), "clear_existing": True})
+        guarded_post("restore_snapshot", builder_url, "load_memory", {"load_file_path": str(snapshot), "clear_existing": True})
         event({"event": "reme_durable_snapshot_restored", "item_count": len(completed), "snapshot_sha256": metadata["snapshot_sha256"]})
     for index, item in enumerate(trajectories[len(completed):], len(completed) + 1):
+        if capacity_guard is not None:
+            capacity_guard("construction_item")
         _append(intents, {"trajectory_id": str(item["trajectory_id"]), "state": "started",
                           "ordered_index": index, "history_sha256": item.get("history_sha256")})
-        summary = post(builder_url, "summary_task_memory", {"trajectories": [{"task_id": item["task_id"], "messages": item["task_history"], "score": item["after_score"]}], "success_threshold": 1.0, "enable_soft_comparison": True, "validation_threshold": 0.5})
+        summary = guarded_post("summary_task_memory", builder_url, "summary_task_memory", {"trajectories": [{"task_id": item["task_id"], "messages": item["task_history"], "score": item["after_score"]}], "success_threshold": 1.0, "enable_soft_comparison": True, "validation_threshold": 0.5})
         memories = _summary_memories(summary)
-        added = post(builder_url, "add_task_memory", {"memory_list": memories})
+        added = guarded_post("add_task_memory", builder_url, "add_task_memory", {"memory_list": memories})
         item_for_metadata = {"trajectory_id": str(item["trajectory_id"]), "history_sha256": item.get("history_sha256"),
                              "lifecycle_output_hashes": {"summary_sha256": canonical_hash(summary), "add_sha256": canonical_hash(added)}}
         snapshot = snapshots / f"after-{index:04d}.jsonl"
-        post(builder_url, "dump_memory", {"dump_file_path": str(snapshot)})
+        guarded_post("durable_snapshot", builder_url, "dump_memory", {"dump_file_path": str(snapshot)})
         # Verify both the bytes and a clean verifier-process reload before a
         # completion marker may attest this item.
         if not snapshot.is_file(): raise RuntimeError("durable ReMe snapshot dump is absent")
         _fsync_file(snapshot)
         metadata = _snapshot_metadata(snapshot, completed + [item_for_metadata["trajectory_id"]], item_for_metadata)
         verifier_dump = snapshots / f"verify-{index:04d}.jsonl"
-        post(verifier_url, "load_memory", {"load_file_path": str(snapshot), "clear_existing": True})
-        post(verifier_url, "dump_memory", {"dump_file_path": str(verifier_dump)})
+        guarded_post("snapshot_reload_verification", verifier_url, "load_memory", {"load_file_path": str(snapshot), "clear_existing": True})
+        guarded_post("snapshot_reload_verification", verifier_url, "dump_memory", {"dump_file_path": str(verifier_dump)})
         if not verifier_dump.is_file():
             raise RuntimeError("durable ReMe verifier snapshot dump is absent")
         _fsync_file(verifier_dump)
