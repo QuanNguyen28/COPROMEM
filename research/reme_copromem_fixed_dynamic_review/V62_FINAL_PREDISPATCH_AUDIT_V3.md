@@ -10,7 +10,7 @@ only then writes `completed`.  Production-path shadow tests cover the success
 chain, terminal failure, and interruption boundaries without provider,
 AppWorld, scorer, service, or payload activity.
 
-The focused offline command completed with **82 passed**. The broader
+The focused offline command completed with **83 passed**. The broader
 `tests/reme_copromem` suite has only the three previously documented
 environment-only failures: the Windows-versus-WSL E-drive assertion, child
 subprocess import-path setup, and stale linked-worktree Git pointer. No new

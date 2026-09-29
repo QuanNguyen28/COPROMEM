@@ -5,7 +5,7 @@
   "terminal_reconciliation_production_wiring": "pass",
   "run_reconciled_transition": "pass",
   "completed_requires_reconciliation": "pass",
-  "focused_zero_provider_tests": "82 passed",
+  "focused_zero_provider_tests": "83 passed",
   "unchanged_environment_only_failures": [
     "Windows-versus-WSL E-drive assertion",
     "subprocess import-path setup",
