@@ -8,6 +8,7 @@ official scorer.
 from __future__ import annotations
 
 import contextlib
+import inspect
 import hashlib
 import json
 import os
@@ -254,7 +255,14 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
             # already-scored trajectory.
             if post_score_update is not None:
                 try:
-                    post_score_update(agent, result)
+                    # The durable scorer artifact above is deliberately
+                    # written before an upstream Dynamic-memory update. New
+                    # v6.1 callers receive the still-live AppWorld proxy;
+                    # legacy two-argument callbacks retain their contract.
+                    if len(inspect.signature(post_score_update).parameters) >= 3:
+                        post_score_update(agent, result, world)
+                    else:
+                        post_score_update(agent, result)
                 except Exception as exc:
                     append(progress, {"event": "post_score_update_failed", "trajectory_id": key,
                                       "arm": arm, "error_type": type(exc).__name__})
