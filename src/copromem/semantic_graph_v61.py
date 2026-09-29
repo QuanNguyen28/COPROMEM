@@ -5,7 +5,6 @@ authentication, runtime context, and supervisor control remain provenance-only.
 """
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Any, Mapping
 
 from .contrastive_graph_v6 import Graph, build_graph, commit, digest, plan_task_batch, validate_plan
@@ -38,7 +37,13 @@ def _index(registry: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
 
 
 def project_graph(graph: Graph, registry: Mapping[str, Any]) -> tuple[Graph, dict[str, Any]]:
-    """Remove non-domain scaffolding and collapse semantically equivalent calls."""
+    """Project non-domain scaffolding while preserving domain occurrence order.
+
+    Occurrence identity is semantic evidence: without a general public proof
+    that removing it is safe, repeated calls remain distinct.  In particular,
+    ``read -> write -> read`` stays three nodes even if the reads share an API
+    name and public slots.
+    """
     index = _index(registry)
     roles: dict[int, str] = {}
     excluded: list[dict[str, Any]] = []
@@ -50,39 +55,33 @@ def project_graph(graph: Graph, registry: Mapping[str, Any]) -> tuple[Graph, dic
         if role != "domain_operation":
             excluded.append({"node_index": position, "operation": operation, "role": role, "reason": "non_domain_provenance_only"})
     domain = {position for position, role in roles.items() if role == "domain_operation"}
-    dataflow = [edge for edge in graph.edges if edge["kind"] == "redacted_dataflow" and edge["from"] in domain and edge["to"] in domain]
-    protected = {int(edge["from"]) for edge in dataflow} | {int(edge["to"]) for edge in dataflow}
-    groups: dict[tuple[Any, ...], list[int]] = defaultdict(list)
-    for position in sorted(domain):
-        node = graph.nodes[position]
-        # Distinct producer/consumer evidence prevents a collapse. Otherwise
-        # repeated equivalent reads are one semantic node with multiplicity.
-        key = (node["operation"], position) if position in protected else (node["operation"], tuple(node["public_required"]), tuple(node["output_slots"]))
-        groups[key].append(position)
-    mapping: dict[int, int] = {}; retained: list[dict[str, Any]] = []; collapsed: list[dict[str, Any]] = []
-    for new_index, positions in enumerate(sorted(groups.values(), key=lambda values: min(values))):
-        representative = dict(graph.nodes[positions[0]])
-        representative["index"] = new_index
-        representative["multiplicity"] = len(positions)
-        representative["evidence_node_indices"] = positions
-        representative["evidence_node_sha256"] = [digest(graph.nodes[position]) for position in positions]
-        retained.append(representative)
-        mapping.update({position: new_index for position in positions})
-        if len(positions) > 1:
-            collapsed.append({"operation": representative["operation"], "multiplicity": len(positions),
-                              "source_indices": positions, "reason": "equivalent_no_distinct_domain_dataflow"})
-    edges = []
-    for edge in dataflow:
+    mapping: dict[int, int] = {}; retained: list[dict[str, Any]] = []
+    for new_index, position in enumerate(sorted(domain)):
+        node = dict(graph.nodes[position]); node["index"] = new_index
+        node["multiplicity"] = 1; node["evidence_node_indices"] = [position]
+        node["evidence_node_sha256"] = [digest(graph.nodes[position])]
+        retained.append(node); mapping[position] = new_index
+    edges: list[dict[str, Any]] = []
+    # Preserve direct domain order and induce a transitive domain order across
+    # excluded infrastructure/auth/control nodes.
+    positions = sorted(domain)
+    for left, right in zip(positions, positions[1:]):
+        edges.append({"kind": "order", "from": mapping[left], "to": mapping[right],
+                      "induced_over_excluded": right - left > 1})
+    for edge in graph.edges:
+        if edge["kind"] not in {"redacted_dataflow", "declared_dependency"} or edge["from"] not in domain or edge["to"] not in domain:
+            continue
         projected = {key: value for key, value in edge.items() if key not in {"from", "to"}}
         projected.update({"from": mapping[int(edge["from"])], "to": mapping[int(edge["to"])]})
         if projected not in edges: edges.append(projected)
-    body = {"registry_sha256": graph.registry_sha256, "nodes": tuple(retained), "edges": tuple(sorted(edges, key=lambda item: digest(item)))}
+    edges = sorted(edges, key=lambda item: (int(item["from"]), int(item["to"]), str(item["kind"]), digest(item)))
+    body = {"registry_sha256": graph.registry_sha256, "nodes": tuple(retained), "edges": tuple(edges)}
     semantic = Graph(graph.registry_sha256, body["nodes"], body["edges"], digest(body))
     audit = {"policy_version": POLICY_VERSION, "role_version": ROLE_VERSION, "original_graph_sha256": graph.sha256,
-             "semantic_projection_sha256": semantic.sha256, "excluded_nodes": excluded, "collapsed_repeats": collapsed,
+             "semantic_projection_sha256": semantic.sha256, "excluded_nodes": excluded, "collapsed_repeats": [],
              "retained_domain_nodes": [{"operation": row["operation"], "multiplicity": row["multiplicity"],
                                          "evidence_node_sha256": row["evidence_node_sha256"]} for row in retained],
-             "retained_domain_dataflow_edges": edges, "provenance_sha256": digest({"original": graph.sha256, "semantic": semantic.sha256, "excluded": excluded, "collapsed": collapsed, "edges": edges})}
+             "retained_domain_dataflow_edges": edges, "provenance_sha256": digest({"original": graph.sha256, "semantic": semantic.sha256, "excluded": excluded, "collapsed": [], "edges": edges})}
     return semantic, audit
 
 
