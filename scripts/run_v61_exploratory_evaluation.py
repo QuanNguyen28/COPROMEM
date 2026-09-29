@@ -13,6 +13,7 @@ from copromem.experiments.reme_copromem.live_summary import build_live_summary, 
 from copromem.experiments.reme_copromem.live_summary import reconcile_ledger
 from copromem.experiments.reme_copromem.copromem_dynamic_checkpoint import CoProMemDynamicCheckpointManager
 from copromem.integrations.reme.fixed_checkpoint import ReMeFixedIntegrityManager
+from copromem.experiments.reme_copromem.runtime_identity import build_evaluation_runtime_identity, verify_runtime_identity, evaluation_runtime_inputs
 from copromem.experiments.reme_copromem.v61_custody import classify
 from scripts.run_v6_shared_acquisition import c_free_gib,file_sha,git_head
 
@@ -43,21 +44,32 @@ def identities():
  return report,gate
 def source_commit():
  return os.environ.get('COPROMEM_SOURCE_COMMIT') or git_head()
+def _runtime_identity(run,m):
+ record_path=run/'runtime-identity.json'
+ if not record_path.is_file():raise RuntimeError('runtime identity record is absent')
+ record=json.loads(record_path.read_text(encoding='utf-8'))
+ content,trees,labels=evaluation_runtime_inputs(root=ROOT,source_commit=m['git_commit'])
+ verify_runtime_identity(record,content=content,trees=trees,labels=labels)
+ if file_sha(record_path)!=m.get('runtime_identity_file_sha256') or record.get('runtime_identity_sha256')!=m.get('runtime_identity_sha256'):raise RuntimeError('manifest-bound runtime identity mismatch')
+ return record
 def prepare(run):
  if run.exists() and any(run.iterdir()):raise RuntimeError('run nonempty')
  report,gate=identities(); run.mkdir(parents=True)
  limits={'executor':1800,'reme_lifecycle':256,'reme_embedding':1024,'copromem_decomposition':0}; budget=v5_budget_bound(call_limits=limits,historical_usd=HISTORICAL_EXPOSURE,lifecycle_input_ceiling=131072)
  if budget['all_in_usd']>100:raise RuntimeError('budget exceeds USD 100')
- m={'protocol':PROTOCOL,'exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'predecessor_evaluation_004_excluded':True,'predecessor_evaluation_005_excluded':True,'git_commit':source_commit(),'arms':ARMS,'evaluation':{'split':'dev','task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'stochastic_trial_ids':[11001,11002],'provider_seed':None,'trial_semantics':'ordered_stochastic_labels_not_provider_seeds','expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE,'evaluation_004_unresolved_retained_usd':0.0060078,'evaluation_005_unresolved_retained_usd':0.005946},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
+ commit=source_commit();runtime=build_evaluation_runtime_identity(root=ROOT,source_commit=commit);write_json(run/'runtime-identity.json',runtime)
+ m={'protocol':PROTOCOL,'exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'predecessor_evaluation_004_excluded':True,'predecessor_evaluation_005_excluded':True,'git_commit':commit,'runtime_identity_sha256':runtime['runtime_identity_sha256'],'runtime_identity_file_sha256':file_sha(run/'runtime-identity.json'),'arms':ARMS,'evaluation':{'split':'dev','task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'stochastic_trial_ids':[11001,11002],'provider_seed':None,'trial_semantics':'ordered_stochastic_labels_not_provider_seeds','expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE,'evaluation_004_unresolved_retained_usd':0.0060078,'evaluation_005_unresolved_retained_usd':0.005946},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
  write_json(run/'template.json',m)
 def freeze(run):
  m=json.loads((run/'template.json').read_text());
  if m['git_commit']!=source_commit():raise RuntimeError('source changed')
+ _runtime_identity(run,m)
  write_json(run/'manifest.json',m)
  (run/'manifest.sha256').write_text(file_sha(run/'manifest.json')+'\n')
 def load(run):
  if file_sha(run/'manifest.json')!=(run/'manifest.sha256').read_text().strip():raise RuntimeError('manifest mismatch')
  m=json.loads((run/'manifest.json').read_text());
+ _runtime_identity(run,m)
  if c_free_gib()<5:raise RuntimeError('C launch floor')
  identities()
  return m

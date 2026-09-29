@@ -5,7 +5,7 @@ import json
 import pytest
 
 from copromem.experiments.reme_copromem.runtime_identity import (
-    RuntimeIdentityError, build_runtime_identity, verify_runtime_identity,
+    RuntimeIdentityError, build_runtime_identity, evaluation_runtime_inputs, verify_runtime_identity,
 )
 from copromem.integrations.reme.bank import semantic_bank_hash
 from copromem.integrations.reme.fixed_checkpoint import ReMeFixedIntegrityError, ReMeFixedIntegrityManager
@@ -29,6 +29,13 @@ def test_missing_identity_and_changed_scorer_are_rejected(tmp_path):
     scorer.write_text("score=2\n")
     with pytest.raises(RuntimeIdentityError):
         verify_runtime_identity(record, content={"scorer": scorer})
+
+
+def test_evaluation_runtime_requires_explicit_roots_before_dispatch(tmp_path, monkeypatch):
+    monkeypatch.delenv("COPROMEM_REME_SOURCE", raising=False)
+    monkeypatch.delenv("COPROMEM_APPWORLD_ROOT", raising=False)
+    with pytest.raises(RuntimeIdentityError, match="explicit"):
+        evaluation_runtime_inputs(root=tmp_path)
 
 
 def test_reme_fixed_checkpoint_is_semantic_and_chain_verified(tmp_path):
