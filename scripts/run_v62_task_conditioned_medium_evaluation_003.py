@@ -60,11 +60,11 @@ def _source_manifest() -> dict[str, Any]:
 
 
 def _prepare(run: pathlib.Path) -> None:
-    _configure(run)
     source = _source_manifest()
     run.mkdir(parents=True, exist_ok=True)
     for name in (ALLOCATION_NAME, "custody-audit.json"):
         copy_evidence_file(SOURCE_RUN / name, run / name)
+    _configure(run)
     amendment = {
         "version": "v6.2-evaluation-003-infrastructure-recovery-v1",
         "source_protocol": SOURCE_PROTOCOL,
