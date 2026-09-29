@@ -204,7 +204,10 @@ def _fsync_directory(path: pathlib.Path) -> None:
 
 def _fsync_file(path: pathlib.Path) -> None:
     """Durably flush a service-written dump before it becomes a checkpoint."""
-    with path.open("rb") as handle:
+    # Windows rejects fsync on a read-only descriptor.  Read/write mode does
+    # not alter a service dump and preserves the same durability guarantee on
+    # the E-backed Linux production filesystem.
+    with path.open("r+b") as handle:
         os.fsync(handle.fileno())
     _fsync_directory(path.parent)
 

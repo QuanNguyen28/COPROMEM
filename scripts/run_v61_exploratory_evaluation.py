@@ -6,6 +6,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]; sys.path[:0]=[str(ROOT),str(RO
 from copromem.contrastive_graph_v6 import digest
 from copromem.experiments.reme_copromem.contrastive_v6_runner import retrieval_record, task_batch_update
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, execute_trajectory, official_post, services, v5_budget_bound, write_json, append
+from copromem.integrations.reme.dynamic_checkpoint import DynamicUpdateIdentity, ReMeDynamicCheckpointManager
 from copromem.experiments.reme_copromem.v61_custody import classify
 from scripts.run_v6_shared_acquisition import c_free_gib,file_sha,git_head
 
@@ -65,23 +66,76 @@ def summary(run,m):
  for a in ARMS:
   x=[r for r in rows if r.get('arm')==a]; out['arms'][a]={'Completed':len(x),'Successes':sum(r['after_score']==1 for r in x),'AvgScore':sum(r['after_score'] for r in x)/len(x) if x else 0,'SuccessRate':sum(r['after_score']==1 for r in x)/len(x) if x else 0,'AvgActions':sum(r['actions'] for r in x)/len(x) if x else 0,'Calls':0,'Cost':0}
  write_json(run/'live-summary.json',out)
+def _dynamic_order(manifest):
+ return [DynamicUpdateIdentity(f'evaluation:official_upstream_reme_dynamic:{task}:trial={trial}:seed={seed}',task,trial,seed) for task in manifest['evaluation']['task_ids'] for trial,seed in enumerate(manifest['evaluation']['seeds'],1)]
+def _settled_after(path,offset):
+ if not path.exists(): return []
+ rows=[]
+ for line in path.read_bytes()[offset:].splitlines():
+  try:
+   row=json.loads(line)
+   if row.get('event')=='settle' and str(row.get('role','')).startswith(('reme_lifecycle:reme-dynamic','reme_embedding:reme-dynamic')):rows.append(str(row['id']))
+  except json.JSONDecodeError: raise RuntimeError('ledger tail is malformed')
+ return rows
+def _ledger_tail(path,offset):
+ if not path.exists(): return []
+ return [json.loads(line) for line in path.read_bytes()[offset:].splitlines()]
+def _validate_dynamic_settlements(path,offset,ids):
+ rows=[json.loads(line) for line in path.read_text(encoding='utf-8').splitlines()] if path.exists() else []
+ tail=_ledger_tail(path,offset)
+ reserved={str(row['id']) for row in rows if row.get('event')=='reserve'}; settled={str(row['id']) for row in rows if row.get('event')=='settle'}
+ for row in tail:
+  if row.get('event')=='reserve' and str(row.get('role','')).startswith(('reme_lifecycle:reme-dynamic','reme_embedding:reme-dynamic')) and str(row['id']) not in settled:raise RuntimeError('unresolved ReMe Dynamic lifecycle reservation')
+ if any(item not in reserved or item not in settled for item in ids):raise RuntimeError('unknown ReMe Dynamic settlement binding')
+def _validate_marker_settlements(path,marker):
+ rows=[json.loads(line) for line in path.read_text(encoding='utf-8').splitlines()] if path.exists() else []
+ settled={str(row['id']):row for row in rows if row.get('event')=='settle'}
+ for item in marker['newly_settled_lifecycle_or_embedding_ids']:
+  row=settled.get(str(item)); role=str(row.get('role','')) if row else ''
+  if not row or not role.startswith(('reme_lifecycle:reme-dynamic','reme_embedding:reme-dynamic')):raise RuntimeError('ReMe Dynamic marker settlement binding is invalid')
+def _verify_verifier_no_provider(path,offset):
+ if any(str(row.get('role','')).startswith(('reme_lifecycle:reme-dynamic-verifier','reme_embedding:reme-dynamic-verifier')) for row in _ledger_tail(path,offset)):raise RuntimeError('ReMe Dynamic verifier attempted a provider request')
+def _dynamic_checkpoint(run,manifest,dynamic,verifier):
+ ledger_path=run/'ledger.jsonl'
+ def dump(path): official_post(dynamic.base_url,'dump_memory',{'dump_file_path':str(path)})
+ def load(path): official_post(dynamic.base_url,'load_memory',{'load_file_path':str(path),'clear_existing':True})
+ def verify(snapshot,target):
+  official_post(verifier.base_url,'load_memory',{'load_file_path':str(snapshot),'clear_existing':True})
+  official_post(verifier.base_url,'dump_memory',{'dump_file_path':str(target)})
+ def update(agent,score,event):
+  from copromem.integrations.reme.lifecycle import dynamic_post_trial_update
+  return dynamic_post_trial_update(agent,score,event)
+ return ReMeDynamicCheckpointManager(root=run/'reme-dynamic-checkpoints',ordered_updates=_dynamic_order(manifest),dump_current=dump,load_current=load,dump_verifier=verify,official_update=update,ledger_offset=lambda:ledger_path.stat().st_size if ledger_path.exists() else 0,settled_ids=lambda offset:_settled_after(ledger_path,offset),validate_settlements=lambda offset,ids:_validate_dynamic_settlements(ledger_path,offset,ids),validate_marker_settlements=lambda marker:_validate_marker_settlements(ledger_path,marker),verify_no_provider_calls=lambda offset:_verify_verifier_no_provider(ledger_path,offset),initial_semantic_hash=manifest['banks']['reme_shared_sha256'],event=lambda row:ev(run,row.pop('event'),**row))
+def _has_ledger_reservation(path,call_id):
+ if not path.exists():return False
+ return any(json.loads(line).get('event')=='reserve' and json.loads(line).get('id')==call_id for line in path.read_text(encoding='utf-8').splitlines())
 def run(run):
  m=load(run); lock=run/'runner.lock';
  if lock.exists():raise RuntimeError('duplicate runner')
  write_json(lock,{'pid':os.getpid()})
- ledger=AppendOnlyLedger(run/'ledger.jsonl',100,m['budget']['call_limits']);ledger.reserve('historical-construction-carry',2.31368065,{'role':'historical_carry_forward'});ledger.settle('historical-construction-carry',2.31368065,{'role':'historical_carry_forward'});k=key();st(run,'running',manifest_sha256=file_sha(run/'manifest.json')); state=json.loads((COPRO/'fixed-bank.json').read_text()); registry=json.loads(REG.read_text()); terms=sorted({x['terminal_effect'] for x in state['contrastive_v6_schemas'].values()})
+ ledger=AppendOnlyLedger(run/'ledger.jsonl',100,m['budget']['call_limits']);
+ if not _has_ledger_reservation(run/'ledger.jsonl','historical-construction-carry'):
+  ledger.reserve('historical-construction-carry',2.31368065,{'role':'historical_carry_forward'});ledger.settle('historical-construction-carry',2.31368065,{'role':'historical_carry_forward'})
+ k=key();st(run,'running',manifest_sha256=file_sha(run/'manifest.json')); state=json.loads((COPRO/'fixed-bank.json').read_text()); registry=json.loads(REG.read_text()); terms=sorted({x['terminal_effect'] for x in state['contrastive_v6_schemas'].values()})
  try:
-  with services(run,run/'ledger.jsonl',run/'progress.jsonl',100,['reme-fixed','reme-dynamic'],lifecycle_input_ceiling=131072) as svc:
+  with services(run,run/'ledger.jsonl',run/'progress.jsonl',100,['reme-fixed','reme-dynamic','reme-dynamic-verifier'],lifecycle_input_ceiling=131072) as svc:
    shared=CONSTRUCTION/'reme/shared-bank.jsonl';
    for name in ('reme-fixed','reme-dynamic'): official_post(svc[name].base_url,'load_memory',{'load_file_path':str(shared),'clear_existing':True})
+   dynamic_checkpoint=_dynamic_checkpoint(run,m,svc['reme-dynamic'],svc['reme-dynamic-verifier'])
+   dynamic_checkpoint.restore_latest()
    for task in m['evaluation']['task_ids']:
     guard(m,run,'task'); pre=state; copro=[]
     for trial,seed in enumerate(m['evaluation']['seeds'],1):
      for arm in ARMS:
       path=run/'artifacts'/task/arm/f'trial-{trial}.json';
-      if path.exists():continue
+      if path.exists():
+       if arm=='official_upstream_reme_dynamic':
+        checkpoint_state=dynamic_checkpoint.reconcile(); identity=DynamicUpdateIdentity(f'evaluation:{arm}:{task}:trial={trial}:seed={seed}')
+        if _dynamic_order(m).index(identity)>=checkpoint_state['completed_count']:raise RuntimeError('scored ReMe Dynamic artifact lacks a completed durable update marker')
+       continue
       kwargs={};
       if arm.startswith('official_upstream_reme'):kwargs['memory_base_url']=svc['reme-fixed' if arm.endswith('fixed') else 'reme-dynamic'].base_url
+      if arm=='official_upstream_reme_dynamic':kwargs.update({'post_score_update':dynamic_checkpoint.callback(path),'post_score_update_strict':True})
       if arm.startswith('copromem'):
        guidance,prov=retrieval_record(state=pre,query_operations=terms,registry_sha256=registry['registry_sha256']); write_json(run/'retrievals'/task/f'{arm}-{trial}.json',{'pre_state_sha256':digest(pre),'guidance':guidance,'provenance':prov});kwargs['memory_for_instruction']=lambda *_a,g=guidance:g
       result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256']},**kwargs)

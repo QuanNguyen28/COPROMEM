@@ -168,6 +168,21 @@ def configure_memory_transport(agent: Any,
         agent.get_memory = lambda _query: None
 
 
+def invoke_post_score_update(callback: Callable[..., None], agent: Any, result: dict[str, Any], world: Any,
+                             *, strict: bool, progress: pathlib.Path, trajectory_id: str, arm: str) -> None:
+    """Invoke a durable post-score hook without changing legacy callback semantics."""
+    try:
+        if len(inspect.signature(callback).parameters) >= 3:
+            callback(agent, result, world)
+        else:
+            callback(agent, result)
+    except Exception as exc:
+        append(progress, {"event": "post_score_update_failed", "trajectory_id": trajectory_id,
+                          "arm": arm, "error_type": type(exc).__name__, "strict": strict})
+        if strict:
+            raise
+
+
 def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: AppendOnlyLedger,
                        api_key: str, all_task_ids: list[str], arm: str, task_id: str,
                        trial_id: int, seed: int, max_actions: int, temperature: float,
@@ -175,6 +190,7 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                        memory_for_instruction: Callable[[str, str, dict[str, Any]], str] | None = None,
                        phase: str = "evaluation", artifact_path: pathlib.Path | None = None,
                        post_score_update: Callable[[Any, dict[str, Any]], None] | None = None,
+                       post_score_update_strict: bool = False,
                        execution_evidence: dict[str, Any] | None = None) -> dict[str, Any]:
     """Run one arm/task/trial without changing the source agent's decisions.
 
@@ -271,18 +287,13 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
             # artifact durability. Its failures never remove or replay the
             # already-scored trajectory.
             if post_score_update is not None:
-                try:
-                    # The durable scorer artifact above is deliberately
-                    # written before an upstream Dynamic-memory update. New
-                    # v6.1 callers receive the still-live AppWorld proxy;
-                    # legacy two-argument callbacks retain their contract.
-                    if len(inspect.signature(post_score_update).parameters) >= 3:
-                        post_score_update(agent, result, world)
-                    else:
-                        post_score_update(agent, result)
-                except Exception as exc:
-                    append(progress, {"event": "post_score_update_failed", "trajectory_id": key,
-                                      "arm": arm, "error_type": type(exc).__name__})
+                # The durable scorer artifact above is deliberately written
+                # before an upstream Dynamic-memory update.  Strict Dynamic
+                # callers propagate a checkpoint failure; legacy users keep
+                # the historical best-effort callback contract.
+                invoke_post_score_update(post_score_update, agent, result, world,
+                                         strict=post_score_update_strict, progress=progress,
+                                         trajectory_id=key, arm=arm)
             return result
     finally:
         CALL_ROLE.reset(token)
