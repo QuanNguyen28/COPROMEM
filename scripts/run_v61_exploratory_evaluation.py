@@ -30,16 +30,18 @@ def identities():
  report=json.loads((CONSTRUCTION/'FINAL_CONSTRUCTION_REPORT.json').read_text()); gate=json.loads((COPRO/'semantic-admission-gate.json').read_text())
  if report['shared_bank_sha256']!='6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0' or gate['state_sha256']!='add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448':raise RuntimeError('completed bank identity mismatch')
  return report,gate
+def source_commit():
+ return os.environ.get('COPROMEM_SOURCE_COMMIT') or git_head()
 def prepare(run):
  if run.exists() and any(run.iterdir()):raise RuntimeError('run nonempty')
  report,gate=identities(); run.mkdir(parents=True)
  limits={'executor':1800,'reme_lifecycle':256,'reme_embedding':1024,'copromem_decomposition':0}; budget=v5_budget_bound(call_limits=limits,historical_usd=HISTORICAL_EXPOSURE,lifecycle_input_ceiling=131072)
  if budget['all_in_usd']>100:raise RuntimeError('budget exceeds USD 100')
- m={'protocol':'v6_1_exploratory_diagnostic_evaluation_004_clean_restart','exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'git_commit':git_head(),'arms':ARMS,'evaluation':{'split':'dev','task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
+ m={'protocol':'v6_1_exploratory_diagnostic_evaluation_004_clean_restart','exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'git_commit':source_commit(),'arms':ARMS,'evaluation':{'split':'dev','task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
  write_json(run/'template.json',m)
 def freeze(run):
  m=json.loads((run/'template.json').read_text());
- if m['git_commit']!=git_head():raise RuntimeError('source changed')
+ if m['git_commit']!=source_commit():raise RuntimeError('source changed')
  write_json(run/'manifest.json',m)
  (run/'manifest.sha256').write_text(file_sha(run/'manifest.json')+'\n')
 def load(run):
