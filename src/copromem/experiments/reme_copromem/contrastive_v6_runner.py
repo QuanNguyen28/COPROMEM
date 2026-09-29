@@ -15,6 +15,33 @@ SEMANTIC_STATE_FORMAT = "copromem-v6.1-semantic-state-v1"
 def fresh_state() -> dict[str, Any]:
     return {"state_format": STATE_FORMAT, "contrastive_v6_schemas": {}}
 
+
+def semantic_state_compatibility(state: Mapping[str, Any]) -> str | None:
+    """Return the accepted semantic-bank representation, or ``None``.
+
+    The immutable v6.1 recovery wrote semantic-projection schemas into the
+    original v6 container format.  That representation is semantically
+    equivalent to the later explicit v6.1 state format, but an arbitrary raw
+    v6 state is not.  Accept only that narrow, content-proven legacy form so
+    a runner cannot silently feed an ordinary raw v6 bank to the semantic
+    lifecycle.
+    """
+    state_format = state.get("state_format")
+    if state_format in {None, SEMANTIC_STATE_FORMAT}:
+        return "explicit_semantic"
+    if state_format != STATE_FORMAT:
+        return None
+    schemas = state.get("contrastive_v6_schemas")
+    if not isinstance(schemas, Mapping) or not schemas:
+        return None
+    if all(isinstance(schema, Mapping)
+           and schema.get("policy_version") == SEMANTIC_POLICY_VERSION
+           and isinstance(schema.get("semantic_projection_hashes"), list)
+           and isinstance(schema.get("semantic_provenance_hashes"), list)
+           for schema in schemas.values()):
+        return "legacy_v61_semantic_content"
+    return None
+
 def plan_task_batch_from_artifacts(*, artifacts: list[Mapping[str, Any]], registry: Mapping[str, Any], pre_state: Mapping[str, Any], evidence_paths: list[str | Path]) -> tuple[dict[str, Any], dict[str, Any]]:
     """Build the pure v6 plan from durable, scored public evidence only."""
     if len(artifacts) != len(evidence_paths) or any("after_score" not in item for item in artifacts):
@@ -54,7 +81,8 @@ def semantic_task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: 
     """v6.1 semantic contrastive update over fully scorer-bound artifacts only."""
     if len(artifacts) != len(evidence_paths) or len(artifacts) < 2:
         raise ValueError("complete same-task semantic batch required")
-    if pre_state.get("state_format") not in {None, SEMANTIC_STATE_FORMAT}:
+    compatibility = semantic_state_compatibility(pre_state)
+    if compatibility is None:
         raise ValueError("raw v6 state cannot enter a v6.1 semantic bank")
     semantic_graphs=[]; audits=[]
     for artifact, evidence_path in zip(artifacts, evidence_paths):
@@ -77,6 +105,7 @@ def semantic_task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: 
         post={**post,"state_format":SEMANTIC_STATE_FORMAT}
         marker={**marker,"post_state_sha256":digest(post),"semantic_policy_version":SEMANTIC_POLICY_VERSION}
     audit={"state_format":SEMANTIC_STATE_FORMAT,"semantic_policy_version":SEMANTIC_POLICY_VERSION,
+           "pre_state_format":pre_state.get("state_format"), "pre_state_compatibility":compatibility,
            "pre_state_sha256":digest(pre_state),"semantic_graph_audits":audits,"plan":plan,"validation":validation,
            "marker":marker,"post_state_sha256":digest(post)}
     if marker["state"] == "rejected" and post != dict(pre_state):

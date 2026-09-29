@@ -189,7 +189,7 @@ def _has_ledger_reservation(path,call_id):
  if not path.exists():return False
  return any(json.loads(line).get('event')=='reserve' and json.loads(line).get('id')==call_id for line in path.read_text(encoding='utf-8').splitlines())
 def _ledger_reconciled(path):
- return not reconcile_ledger(path,historical_expected_usd=HISTORICAL_EXPOSURE).unresolved_reservation_ids
+ return not reconcile_ledger(path,historical_expected_usd=HISTORICAL_EXPOSURE,registered_arms=ARMS).unresolved_reservation_ids
 def run(run):
  m=load(run); lock=run/'runner.lock';
  if _completed_run_is_valid(run,m):return

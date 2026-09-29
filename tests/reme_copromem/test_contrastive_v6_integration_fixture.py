@@ -17,7 +17,12 @@ from copromem.experiments.reme_copromem.contrastive_v6_integration_fixture impor
     run_restart_drills,
     run_telemetry_equivalence,
 )
-from copromem.experiments.reme_copromem.contrastive_v6_runner import fresh_state
+from copromem.experiments.reme_copromem.contrastive_v6_runner import (
+    SEMANTIC_STATE_FORMAT,
+    fresh_state,
+    semantic_state_compatibility,
+)
+from copromem.semantic_graph_v61 import POLICY_VERSION as SEMANTIC_POLICY_VERSION
 
 
 def _root(name: str) -> Path:
@@ -114,3 +119,24 @@ def test_partition_reclassifies_only_frozen_global_runtime_context_legacy_rows()
     legacy["event_sha256"] = digest({key: value for key, value in legacy.items() if key != "event_sha256"})
     with pytest.raises(ValueError, match="telemetry integrity rejection"):
         partition_v6_graph_evidence([legacy], registry["registry_sha256"], runtime_context_fields=frozenset({"access_token"}))
+
+
+def test_semantic_lifecycle_accepts_only_the_content_proven_legacy_v61_container():
+    raw = fresh_state()
+    assert semantic_state_compatibility(raw) is None
+
+    legacy_semantic = fresh_state()
+    legacy_semantic["contrastive_v6_schemas"] = {
+        "schema_fixture": {
+            "policy_version": SEMANTIC_POLICY_VERSION,
+            "semantic_projection_hashes": ["projection"],
+            "semantic_provenance_hashes": ["provenance"],
+        }
+    }
+    assert semantic_state_compatibility(legacy_semantic) == "legacy_v61_semantic_content"
+
+    explicit = {"state_format": SEMANTIC_STATE_FORMAT, "contrastive_v6_schemas": {}}
+    assert semantic_state_compatibility(explicit) == "explicit_semantic"
+
+    legacy_semantic["contrastive_v6_schemas"]["schema_fixture"]["policy_version"] = "raw-v6"
+    assert semantic_state_compatibility(legacy_semantic) is None

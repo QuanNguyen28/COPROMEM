@@ -70,3 +70,20 @@ def test_successor_carries_failed_infrastructure_cost_without_arm_import(tmp_pat
     runner._configure(tmp_path)
     assert runner.base.PROTOCOL == "v6_2_task_conditioned_evaluation_002"
     assert runner.base.HISTORICAL_EXPOSURE == 2.417682693
+
+
+def test_v62_restart_ledger_reconciliation_uses_the_frozen_v62_arm_set(tmp_path: Path):
+    runner = _successor_runner()
+    (tmp_path / "allocation-audit.json").write_text(json.dumps({"split": "test_normal", "payloads_opened": False,
+        "selected_task_ids": [f"{index:07x}_1" for index in range(30)],
+        "selected_family_ids": [f"{index:07x}" for index in range(30)]}))
+    runner._configure(tmp_path)
+    ledger = tmp_path / "ledger.jsonl"
+    rows = [
+        {"event": "reserve", "id": "historical-construction-carry", "role": "historical_carry_forward", "usd": 2.417682693},
+        {"event": "settle", "id": "historical-construction-carry", "role": "historical_carry_forward", "usd": 2.417682693},
+        {"event": "reserve", "id": "executor-v62", "role": "executor:copromem_v6_2_dynamic:task:trial=1:seed=11001", "usd": 0.01},
+        {"event": "settle", "id": "executor-v62", "role": "executor:copromem_v6_2_dynamic:task:trial=1:seed=11001", "usd": 0.01},
+    ]
+    ledger.write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+    assert runner.base._ledger_reconciled(ledger)
