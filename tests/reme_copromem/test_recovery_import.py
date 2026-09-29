@@ -6,6 +6,8 @@ from pathlib import Path
 
 from copromem.experiments.reme_copromem.evidence_contract import VERSION, bind
 from copromem.experiments.reme_copromem.recovery_import import import_scored_artifact
+from copromem.experiments.reme_copromem.live_summary import reconcile_ledger
+from copromem.experiments.reme_copromem.runner import AppendOnlyLedger
 
 
 def _sha(path: Path) -> str:
@@ -44,3 +46,16 @@ def test_import_rebinds_only_derived_journal_locations(tmp_path: Path):
     assert carried["execution_evidence_path"].startswith(str(target.resolve()))
     assert _sha(source_artifact) != _sha(target_artifact)
     assert execution.read_bytes() == (target / "journals" / execution.name).read_bytes()
+
+
+def test_recovery_import_uses_one_historical_carry_and_does_not_recharge_prefix(tmp_path: Path):
+    """A successor ledger starts clean; predecessor settlements remain audit evidence."""
+    ledger_path = tmp_path / "ledger.jsonl"
+    ledger = AppendOnlyLedger(ledger_path, 100.0, {"executor:no_memory:task:trial=1:seed=1": 1.0})
+    ledger.reserve("historical-construction-carry", 2.435839694, {"role": "historical_carry_forward"})
+    ledger.settle("historical-construction-carry", 2.435839694, {"role": "historical_carry_forward"})
+    recovered = reconcile_ledger(ledger_path, historical_expected_usd=2.435839694,
+                                 registered_arms={"no_memory"})
+    assert not recovered.unresolved_reservation_ids
+    assert float(recovered.historical_settled_exposure) == 2.435839694
+    assert float(recovered.settled_evaluation_cost) == 0.0
