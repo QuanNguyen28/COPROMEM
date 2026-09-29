@@ -14,6 +14,8 @@ from scripts.run_v6_shared_acquisition import c_free_gib,file_sha,git_head
 SOURCE=ROOT/'artifacts/research/official_reme_copromem_pilot/v6_shared_acquisition_001'; CONSTRUCTION=ROOT/'artifacts/research/official_reme_copromem_pilot/v6_1_exploratory_diagnostic_construction_003'
 COPRO=SOURCE/'copromem-v6.1-semantic-recovery-003'; INV=ROOT/'artifacts/research/official_reme_copromem_pilot/fixed_dynamic_v5_engineering_001/public-dev-descriptors.json'; REG=ROOT/'research/reme_copromem_fixed_dynamic_review/appworld_public_tool_schema_registry_v5_3.json'
 ARMS=['no_memory','official_upstream_reme_fixed','official_upstream_reme_dynamic','copromem_v6_1_fixed','copromem_v6_1_dynamic']
+FROZEN_TASK_IDS=['57c3486_2','4ec8de5_1','530b157_1','6bdbc26_2','b119b1f_2','6171bbc_1']
+HISTORICAL_EXPOSURE=2.35384537
 def ev(run,n,**x): append(run/'progress.jsonl',{'event':n,'time_ns':time.time_ns(),**x})
 def st(run,s,**x): write_json(run/'runner-status.json',{'state':s,'pid':os.getpid(),'updated_ns':time.time_ns(),**x})
 def key():
@@ -30,22 +32,10 @@ def identities():
  return report,gate
 def prepare(run):
  if run.exists() and any(run.iterdir()):raise RuntimeError('run nonempty')
- report,gate=identities(); audit=classify(ROOT,INV); hard=set(audit['hard_exclusion'])|set(audit['ambiguous_exclusion']); inv=json.loads(INV.read_text())['tasks']; state=json.loads((COPRO/'fixed-bank.json').read_text()); registry=json.loads(REG.read_text())
- schemas=state['contrastive_v6_schemas']; terminals=sorted({x['terminal_effect'] for x in schemas.values()}); candidates=[]
- for row in inv:
-  tid=str(row['task_id']); fam=tid.rsplit('_',1)[0]
-  if tid in hard:continue
-  desc={'family':fam,'public_app_descriptions_sha256':digest(row['app_descriptions']),'compatible_terminal_effects':terminals}
-  candidates.append({'task_id':tid,'family':fam,'schema_family_hash':digest(terminals),'descriptor_sha256':digest(desc),'descriptor':desc})
- candidates.sort(key=lambda x:(x['schema_family_hash'],x['descriptor_sha256'],x['task_id'])); selected=[]; seen=set()
- for row in candidates:
-  if row['family'] not in seen: selected.append(row);seen.add(row['family'])
-  if len(selected)==6:break
- run.mkdir(parents=True); write_json(run/'custody-audit.json',audit); write_json(run/'allocation-audit.json',{'inventory_sha256':file_sha(INV),'exclusion_set_sha256':digest(sorted(hard)),'candidate_list_sha256':digest(candidates),'ordering_rule':'(schema_family_hash, descriptor_sha256, task_id)','selected':selected,'compatibility_conditioned_exploratory_sampling':True,'test_normal_used':False})
- if len(selected)<6:raise RuntimeError('fewer than six fresh compatible public families')
- limits={'executor':1800,'reme_lifecycle':256,'reme_embedding':1024,'copromem_decomposition':0}; budget=v5_budget_bound(call_limits=limits,historical_usd=2.31368065,lifecycle_input_ceiling=131072)
+ report,gate=identities(); run.mkdir(parents=True)
+ limits={'executor':1800,'reme_lifecycle':256,'reme_embedding':1024,'copromem_decomposition':0}; budget=v5_budget_bound(call_limits=limits,historical_usd=HISTORICAL_EXPOSURE,lifecycle_input_ceiling=131072)
  if budget['all_in_usd']>100:raise RuntimeError('budget exceeds USD 100')
- m={'protocol':'v6_1_exploratory_diagnostic_evaluation_001','exploratory_diagnostic_only':True,'git_commit':git_head(),'arms':ARMS,'evaluation':{'split':'dev','task_ids':[x['task_id'] for x in selected],'seeds':[11001,11002],'expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits},'allocation_audit_sha256':file_sha(run/'allocation-audit.json'),'custody_audit_sha256':file_sha(run/'custody-audit.json')}
+ m={'protocol':'v6_1_exploratory_diagnostic_evaluation_004_clean_restart','exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'git_commit':git_head(),'arms':ARMS,'evaluation':{'split':'dev','task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
  write_json(run/'template.json',m)
 def freeze(run):
  m=json.loads((run/'template.json').read_text());
@@ -59,7 +49,7 @@ def load(run):
  identities()
  return m
 def summary(run,m,*,state='running',final=False):
- out=build_live_summary(ledger_path=run/'ledger.jsonl',artifact_root=run/'artifacts',expected_tasks=m['evaluation']['task_ids'],expected_seeds=m['evaluation']['seeds'],historical_expected_usd=2.31368065,state=state,final=final)
+ out=build_live_summary(ledger_path=run/'ledger.jsonl',artifact_root=run/'artifacts',expected_tasks=m['evaluation']['task_ids'],expected_seeds=m['evaluation']['seeds'],historical_expected_usd=HISTORICAL_EXPOSURE,state=state,final=final)
  write_live_summary(run/'live-summary.json',out)
 def _dynamic_order(manifest):
  return [DynamicUpdateIdentity(f'evaluation:official_upstream_reme_dynamic:{task}:trial={trial}:seed={seed}',task,trial,seed) for task in manifest['evaluation']['task_ids'] for trial,seed in enumerate(manifest['evaluation']['seeds'],1)]
@@ -110,7 +100,7 @@ def run(run):
  write_json(lock,{'pid':os.getpid()})
  ledger=AppendOnlyLedger(run/'ledger.jsonl',100,m['budget']['call_limits']);
  if not _has_ledger_reservation(run/'ledger.jsonl','historical-construction-carry'):
-  ledger.reserve('historical-construction-carry',2.31368065,{'role':'historical_carry_forward'});ledger.settle('historical-construction-carry',2.31368065,{'role':'historical_carry_forward'})
+  ledger.reserve('historical-construction-carry',HISTORICAL_EXPOSURE,{'role':'historical_carry_forward'});ledger.settle('historical-construction-carry',HISTORICAL_EXPOSURE,{'role':'historical_carry_forward'})
  k=key();st(run,'running',manifest_sha256=file_sha(run/'manifest.json')); state=json.loads((COPRO/'fixed-bank.json').read_text()); registry=json.loads(REG.read_text()); terms=sorted({x['terminal_effect'] for x in state['contrastive_v6_schemas'].values()})
  try:
   with services(run,run/'ledger.jsonl',run/'progress.jsonl',100,['reme-fixed','reme-dynamic','reme-dynamic-verifier'],lifecycle_input_ceiling=131072) as svc:
