@@ -132,7 +132,9 @@ def run(run):
        guidance,prov=retrieval_record(state=pre,query_operations=terms,registry_sha256=registry['registry_sha256']); write_json(run/'retrievals'/task/f'{arm}-{trial}.json',{'pre_state_sha256':digest(pre),'guidance':guidance,'provenance':prov});kwargs['memory_for_instruction']=lambda *_a,g=guidance:g
       result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256']},**kwargs)
       if arm=='copromem_v6_1_dynamic':copro.append(result)
-     summary(run,m)
+      # The durable public status is refreshed immediately after every
+      # artifact, never deferred to the end of a five-arm trial batch.
+      summary(run,m)
     post,marker,audit=task_batch_update(artifacts=copro,registry=registry,pre_state=pre,evidence_paths=[r['execution_evidence_path'] for r in copro]);write_json(run/'copromem-dynamic'/task/'update.json',{'pre_state_sha256':digest(pre),'post_state_sha256':digest(post),'marker':marker,'audit':audit});state=post;summary(run,m)
   summary(run,m,state='completed',final=True);st(run,'completed')
  except BaseException as exc:
