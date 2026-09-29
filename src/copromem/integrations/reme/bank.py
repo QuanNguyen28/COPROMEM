@@ -188,6 +188,151 @@ def construct_once(post: Post, base_url: str, trajectories: list[dict[str, Any]]
     return snapshot_hash, len(trajectories)
 
 
+def _fsync_directory(path: pathlib.Path) -> None:
+    """Best-effort directory durability on filesystems that support it."""
+    try:
+        descriptor = os.open(str(path), os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(descriptor)
+    except OSError:
+        pass
+    finally:
+        os.close(descriptor)
+
+
+def _fsync_file(path: pathlib.Path) -> None:
+    """Durably flush a service-written dump before it becomes a checkpoint."""
+    with path.open("rb") as handle:
+        os.fsync(handle.fileno())
+    _fsync_directory(path.parent)
+
+
+def _snapshot_metadata(path: pathlib.Path, ordered: list[str], item: dict[str, Any]) -> dict[str, Any]:
+    rows = _bank_rows(path)
+    return {"version": 1, "snapshot_file": path.name, "snapshot_file_sha256": file_hash(path),
+            "snapshot_sha256": semantic_bank_hash(path), "ordered_completed_items": ordered,
+            "item_count": len(ordered), "memory_entry_count": len(rows),
+            "vector_count": sum(isinstance(row.get("vector"), list) for row in rows),
+            "source_trajectory_id": item["trajectory_id"], "source_history_sha256": item.get("history_sha256"),
+            "lifecycle_output_hashes": item["lifecycle_output_hashes"]}
+
+
+def _atomic_json(path: pathlib.Path, value: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        json.dump(value, handle, sort_keys=True, separators=(",", ":")); handle.write("\n"); handle.flush(); os.fsync(handle.fileno())
+    os.replace(temporary, path); _fsync_directory(path.parent)
+
+
+def _checkpoint_rows(path: pathlib.Path) -> list[dict[str, Any]]:
+    if not path.exists(): return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+
+
+def construct_durable_snapshot_bank(post: Post, builder_url: str, verifier_url: str,
+                                    trajectories: list[dict[str, Any]], checkpoint: pathlib.Path,
+                                    snapshots: pathlib.Path, event: Callable[[dict[str, Any]], None]) -> tuple[str, int]:
+    """Build an upstream bank with durable, reload-tested state after each item.
+
+    A checkpoint is authoritative only when its named snapshot exists and the
+    snapshot metadata exactly covers the ordered completed prefix.  Ambiguous
+    pre-marker snapshots fail closed instead of replaying provider calls.
+    """
+    rows = _checkpoint_rows(checkpoint); completed = [str(row["trajectory_id"]) for row in rows]
+    expected = [str(item["trajectory_id"]) for item in trajectories]
+    if completed != expected[:len(completed)] or len(completed) != len(set(completed)):
+        raise RuntimeError("durable ReMe checkpoint order mismatch")
+    intents = checkpoint.with_name(f"{checkpoint.stem}.intents.jsonl")
+    started = [str(row["trajectory_id"]) for row in _checkpoint_rows(intents)
+               if row.get("state") == "started"]
+    # An intent is written before the first provider call for an item.  If the
+    # process dies before its reload-tested snapshot/marker, replay could
+    # duplicate a settled call.  It is intentionally an integrity stop, not a
+    # best-effort retry mechanism.
+    unresolved_started = set(started) - set(completed)
+    if unresolved_started:
+        raise RuntimeError("durable ReMe item intent lacks a completion snapshot marker")
+    if any(trajectory_id not in expected for trajectory_id in started):
+        raise RuntimeError("durable ReMe item intent references an unknown trajectory")
+    snapshots.mkdir(parents=True, exist_ok=True)
+    metadata_paths = sorted(snapshots.glob("after-*.json"))
+    if len(metadata_paths) != len(completed):
+        raise RuntimeError("durable ReMe checkpoint/snapshot count mismatch")
+    if completed:
+        metadata = json.loads(metadata_paths[-1].read_text(encoding="utf-8")); snapshot = snapshots / metadata["snapshot_file"]
+        if (metadata.get("ordered_completed_items") != completed or metadata.get("item_count") != len(completed)
+                or not snapshot.is_file() or metadata.get("snapshot_file_sha256") != file_hash(snapshot)
+                or metadata.get("snapshot_sha256") != semantic_bank_hash(snapshot)):
+            raise RuntimeError("durable ReMe snapshot metadata mismatch")
+        post(builder_url, "load_memory", {"load_file_path": str(snapshot), "clear_existing": True})
+        event({"event": "reme_durable_snapshot_restored", "item_count": len(completed), "snapshot_sha256": metadata["snapshot_sha256"]})
+    for index, item in enumerate(trajectories[len(completed):], len(completed) + 1):
+        _append(intents, {"trajectory_id": str(item["trajectory_id"]), "state": "started",
+                          "ordered_index": index, "history_sha256": item.get("history_sha256")})
+        summary = post(builder_url, "summary_task_memory", {"trajectories": [{"task_id": item["task_id"], "messages": item["task_history"], "score": item["after_score"]}], "success_threshold": 1.0, "enable_soft_comparison": True, "validation_threshold": 0.5})
+        memories = _summary_memories(summary)
+        added = post(builder_url, "add_task_memory", {"memory_list": memories})
+        item_for_metadata = {"trajectory_id": str(item["trajectory_id"]), "history_sha256": item.get("history_sha256"),
+                             "lifecycle_output_hashes": {"summary_sha256": canonical_hash(summary), "add_sha256": canonical_hash(added)}}
+        snapshot = snapshots / f"after-{index:04d}.jsonl"
+        post(builder_url, "dump_memory", {"dump_file_path": str(snapshot)})
+        # Verify both the bytes and a clean verifier-process reload before a
+        # completion marker may attest this item.
+        if not snapshot.is_file(): raise RuntimeError("durable ReMe snapshot dump is absent")
+        _fsync_file(snapshot)
+        metadata = _snapshot_metadata(snapshot, completed + [item_for_metadata["trajectory_id"]], item_for_metadata)
+        verifier_dump = snapshots / f"verify-{index:04d}.jsonl"
+        post(verifier_url, "load_memory", {"load_file_path": str(snapshot), "clear_existing": True})
+        post(verifier_url, "dump_memory", {"dump_file_path": str(verifier_dump)})
+        if not verifier_dump.is_file():
+            raise RuntimeError("durable ReMe verifier snapshot dump is absent")
+        _fsync_file(verifier_dump)
+        if semantic_bank_hash(verifier_dump) != metadata["snapshot_sha256"]:
+            raise RuntimeError("durable ReMe snapshot reload verification failed")
+        _atomic_json(snapshots / f"after-{index:04d}.json", metadata)
+        _append(checkpoint, {**item_for_metadata, "state": "completed", "snapshot_sha256": metadata["snapshot_sha256"],
+                             "snapshot_file_sha256": metadata["snapshot_file_sha256"], "memory_entry_count": metadata["memory_entry_count"], "vector_count": metadata["vector_count"]})
+        completed.append(item_for_metadata["trajectory_id"])
+        event({"event": "reme_durable_item_completed", "trajectory_id": item_for_metadata["trajectory_id"], "item_count": len(completed),
+               "snapshot_sha256": metadata["snapshot_sha256"], "memory_entry_count": metadata["memory_entry_count"], "vector_count": metadata["vector_count"]})
+    if len(completed) != len(trajectories): raise RuntimeError("durable ReMe construction incomplete")
+    final_path = snapshots / f"after-{len(completed):04d}.json"
+    if not final_path.is_file():
+        raise RuntimeError("durable ReMe final snapshot metadata is absent")
+    final = json.loads(final_path.read_text(encoding="utf-8"))
+    return str(final["snapshot_sha256"]), len(completed)
+
+
+def freeze_durable_final_snapshot(snapshots: pathlib.Path, count: int,
+                                  destination: pathlib.Path) -> str:
+    """Publish the reload-verified final per-item snapshot as the shared bank."""
+    metadata_path = snapshots / f"after-{count:04d}.json"
+    if not metadata_path.is_file():
+        raise RuntimeError("durable ReMe final snapshot metadata is absent")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    source = snapshots / str(metadata.get("snapshot_file", ""))
+    if (metadata.get("item_count") != count or metadata.get("ordered_completed_items") is None
+            or len(metadata["ordered_completed_items"]) != count or not source.is_file()
+            or metadata.get("snapshot_file_sha256") != file_hash(source)
+            or metadata.get("snapshot_sha256") != semantic_bank_hash(source)):
+        raise RuntimeError("durable ReMe final snapshot metadata mismatch")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    with source.open("rb") as origin, temporary.open("wb") as target:
+        while chunk := origin.read(1024 * 1024):
+            target.write(chunk)
+        target.flush(); os.fsync(target.fileno())
+    os.replace(temporary, destination); _fsync_directory(destination.parent)
+    if (file_hash(destination) != metadata["snapshot_file_sha256"]
+            or semantic_bank_hash(destination) != metadata["snapshot_sha256"]):
+        raise RuntimeError("published ReMe final snapshot differs from durable snapshot")
+    _write_complete_marker(destination, str(metadata["snapshot_sha256"]), count)
+    return str(metadata["snapshot_sha256"])
+
+
 def load_clone(post: Post, base_url: str, dump_file: pathlib.Path,
                expected_snapshot_hash: str) -> str:
     """Load an exact snapshot into an isolated legacy service."""
