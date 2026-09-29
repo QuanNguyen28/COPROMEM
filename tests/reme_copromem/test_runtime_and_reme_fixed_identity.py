@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import subprocess
 
 import pytest
 
 from copromem.experiments.reme_copromem.runtime_identity import (
-    RuntimeIdentityError, build_runtime_identity, evaluation_runtime_inputs, verify_runtime_identity,
+    RuntimeIdentityError, _git_identity, _local_runtime_config, build_runtime_identity,
+    evaluation_runtime_inputs, verify_runtime_identity,
 )
 from copromem.integrations.reme.bank import semantic_bank_hash
 from copromem.integrations.reme.fixed_checkpoint import ReMeFixedIntegrityError, ReMeFixedIntegrityManager
@@ -36,6 +38,33 @@ def test_evaluation_runtime_requires_explicit_roots_before_dispatch(tmp_path, mo
     monkeypatch.delenv("COPROMEM_APPWORLD_ROOT", raising=False)
     with pytest.raises(RuntimeIdentityError, match="explicit"):
         evaluation_runtime_inputs(root=tmp_path)
+
+
+def test_local_runtime_config_is_a_path_locator_not_a_semantic_identity(tmp_path, monkeypatch):
+    config = tmp_path / ".copromem-runtime.json"
+    config.write_text(json.dumps({"version": "copromem-runtime-local-v1", "reme_source": str(tmp_path),
+                                  "reme_python": str(tmp_path / "reme-python"), "appworld_root": str(tmp_path),
+                                  "appworld_python": str(tmp_path / "appworld-python")}), encoding="utf-8")
+    assert _local_runtime_config(tmp_path)["reme_source"] == str(tmp_path)
+    config.write_text(json.dumps({"version": "wrong", "reme_source": str(tmp_path)}), encoding="utf-8")
+    with pytest.raises(RuntimeIdentityError, match="schema"):
+        _local_runtime_config(tmp_path)
+
+
+def test_git_identity_binds_commit_dirty_state_and_content(tmp_path):
+    subprocess.check_call(["git", "init", "-q", str(tmp_path)])
+    subprocess.check_call(["git", "-C", str(tmp_path), "config", "user.email", "runtime@test.invalid"])
+    subprocess.check_call(["git", "-C", str(tmp_path), "config", "user.name", "runtime"])
+    source = tmp_path / "agent.py"; source.write_text("value = 1\n", encoding="utf-8")
+    subprocess.check_call(["git", "-C", str(tmp_path), "add", "agent.py"])
+    subprocess.check_call(["git", "-C", str(tmp_path), "commit", "-qm", "fixture"])
+    clean = _git_identity(tmp_path)
+    assert clean["git_dirty"] == "false" and clean["git_dirty_content_sha256"] == "clean"
+    source.write_text("value = 2\n", encoding="utf-8")
+    dirty = _git_identity(tmp_path)
+    assert dirty["git_dirty"] == "true" and dirty["git_dirty_content_sha256"] != "clean"
+    source.write_text("value = 3\n", encoding="utf-8")
+    assert _git_identity(tmp_path)["git_dirty_content_sha256"] != dirty["git_dirty_content_sha256"]
 
 
 def test_reme_fixed_checkpoint_is_semantic_and_chain_verified(tmp_path):

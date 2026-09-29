@@ -1,0 +1,7 @@
+{
+  "version": "copromem-runtime-local-v1",
+  "reme_source": "/absolute/path/to/reme-source",
+  "reme_python": "/absolute/path/to/reme-python",
+  "appworld_root": "/absolute/path/to/appworld-source",
+  "appworld_python": "/absolute/path/to/appworld-python"
+}
