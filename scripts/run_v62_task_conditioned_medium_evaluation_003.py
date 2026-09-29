@@ -175,7 +175,13 @@ def _recover_copromem_boundary(run: pathlib.Path, manifest: dict[str, Any]) -> d
 
 def recover(run: pathlib.Path) -> None:
     _configure(run)
-    manifest = base.load(run)
+    manifest_path = run / "manifest.json"
+    manifest_hash = run / "manifest.sha256"
+    if not manifest_path.is_file() or not manifest_hash.is_file() or file_sha256(manifest_path) != manifest_hash.read_text(encoding="utf-8").strip():
+        raise RuntimeError("recovery manifest is absent or hash-inconsistent")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("protocol") != PROTOCOL:
+        raise RuntimeError("recovery manifest protocol mismatch")
     source_manifest = _source_manifest()
     if manifest["evaluation"]["task_ids"] != source_manifest["evaluation"]["task_ids"] or manifest["arms"] != source_manifest["arms"]:
         raise RuntimeError("recovery manifest changes frozen scientific allocation")
