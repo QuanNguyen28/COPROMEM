@@ -51,7 +51,8 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
     copro.write_text(json.dumps({"contrastive_v6_schemas": {"s": {"terminal_effect": "x"}}}), encoding="utf-8")
     manifest = {
         "arms": list(mod.ARMS), "evaluation": {"task_ids": ["shadow-a", "shadow-b"], "seeds": [11, 12], "expected_trajectories": 20},
-        "banks": {"reme_shared_sha256": semantic_bank_hash(shared), "copromem_sha256": "shadow"},
+        "banks": {"reme_shared_sha256": semantic_bank_hash(shared),
+                  "copromem_sha256": mod.digest({"contrastive_v6_schemas": {"s": {"terminal_effect": "x"}}})},
         "budget": {"call_limits": {"executor": 100, "reme_lifecycle": 20, "reme_embedding": 20, "copromem_decomposition": 0}},
         "storage_policy": {"launch_floor_gib": 5, "warning_gib": 4, "mandatory_stop_gib": 3},
     }
@@ -84,6 +85,8 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
     monkeypatch.setattr(mod, "task_batch_update", fake_batch)
     def fake_execute(**kwargs):
         arm, task, trial, seed = kwargs["arm"], kwargs["task_id"], kwargs["trial_id"], kwargs["seed"]
+        if kwargs.get("memory_for_instruction") is not None:
+            kwargs["memory_for_instruction"]("shadow public instruction", "appworld", {"app_descriptions": {}})
         if interrupt_on_call_number is not None and len(calls) + 1 == interrupt_on_call_number:
             raise KeyboardInterrupt()
         call_id = f"shadow-{arm}-{task}-{trial}"
