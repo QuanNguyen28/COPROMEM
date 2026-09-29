@@ -7,6 +7,7 @@ from copromem.contrastive_graph_v6 import digest
 from copromem.experiments.reme_copromem.contrastive_v6_runner import retrieval_record, task_batch_update
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, execute_trajectory, official_post, services, v5_budget_bound, write_json, append
 from copromem.integrations.reme.dynamic_checkpoint import DynamicUpdateIdentity, ReMeDynamicCheckpointManager
+from copromem.experiments.reme_copromem.live_summary import build_live_summary, write_live_summary
 from copromem.experiments.reme_copromem.v61_custody import classify
 from scripts.run_v6_shared_acquisition import c_free_gib,file_sha,git_head
 
@@ -57,15 +58,9 @@ def load(run):
  if c_free_gib()<5:raise RuntimeError('C launch floor')
  identities()
  return m
-def summary(run,m):
- rows=[]
- for p in (run/'artifacts').glob('*/*/*.json'):
-  try:rows.append(json.loads(p.read_text()))
-  except:pass
- out={'completed':len(rows),'expected':60,'arms':{}}
- for a in ARMS:
-  x=[r for r in rows if r.get('arm')==a]; out['arms'][a]={'Completed':len(x),'Successes':sum(r['after_score']==1 for r in x),'AvgScore':sum(r['after_score'] for r in x)/len(x) if x else 0,'SuccessRate':sum(r['after_score']==1 for r in x)/len(x) if x else 0,'AvgActions':sum(r['actions'] for r in x)/len(x) if x else 0,'Calls':0,'Cost':0}
- write_json(run/'live-summary.json',out)
+def summary(run,m,*,state='running',final=False):
+ out=build_live_summary(ledger_path=run/'ledger.jsonl',artifact_root=run/'artifacts',expected_tasks=m['evaluation']['task_ids'],expected_seeds=m['evaluation']['seeds'],historical_expected_usd=2.31368065,state=state,final=final)
+ write_live_summary(run/'live-summary.json',out)
 def _dynamic_order(manifest):
  return [DynamicUpdateIdentity(f'evaluation:official_upstream_reme_dynamic:{task}:trial={trial}:seed={seed}',task,trial,seed) for task in manifest['evaluation']['task_ids'] for trial,seed in enumerate(manifest['evaluation']['seeds'],1)]
 def _settled_after(path,offset):
@@ -141,11 +136,13 @@ def run(run):
       result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256']},**kwargs)
       if arm=='copromem_v6_1_dynamic':copro.append(result)
      summary(run,m)
-    post,marker,audit=task_batch_update(artifacts=copro,registry=registry,pre_state=pre,evidence_paths=[r['execution_evidence_path'] for r in copro]);write_json(run/'copromem-dynamic'/task/'update.json',{'pre_state_sha256':digest(pre),'post_state_sha256':digest(post),'marker':marker,'audit':audit});state=post
-  summary(run,m);st(run,'completed')
+    post,marker,audit=task_batch_update(artifacts=copro,registry=registry,pre_state=pre,evidence_paths=[r['execution_evidence_path'] for r in copro]);write_json(run/'copromem-dynamic'/task/'update.json',{'pre_state_sha256':digest(pre),'post_state_sha256':digest(post),'marker':marker,'audit':audit});state=post;summary(run,m)
+  summary(run,m,state='completed',final=True);st(run,'completed')
  except BaseException as exc:
   st(run,'failed',failure_class=type(exc).__name__,failure_message=str(exc)[:240])
   ev(run,'runner_failed',failure_class=type(exc).__name__)
+  try:summary(run,m,state='failed')
+  except Exception:pass
   raise
  finally:
   if lock.exists():lock.unlink()
