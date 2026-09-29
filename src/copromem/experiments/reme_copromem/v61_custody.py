@@ -5,6 +5,7 @@ import hashlib
 import json
 import pathlib
 import re
+import argparse
 from collections import defaultdict
 from typing import Any
 
@@ -25,6 +26,11 @@ def classify(root: pathlib.Path, inventory: pathlib.Path) -> dict[str, Any]:
         if not base.exists(): continue
         for path in base.rglob("*"):
             if not path.is_file() or path.suffix.lower() not in {".json", ".jsonl", ".md", ".txt", ".log"}: continue
+            # Large archives/raw logs are not authoritative task-custody
+            # records; their task-specific execution evidence has a compact
+            # journal/artifact counterpart. Avoid treating opaque blobs as a
+            # reason to delay deterministic pre-allocation classification.
+            if path.stat().st_size > 2 * 1024 * 1024: continue
             try: text = path.read_text(encoding="utf-8", errors="ignore")
             except OSError: continue
             found = _ids(text)
@@ -66,3 +72,8 @@ def classify(root: pathlib.Path, inventory: pathlib.Path) -> dict[str, Any]:
     return {"version":"v6.1-behavioral-custody-v1","hard_exclusion":hard,"public_mention_only":mention,"ambiguous_exclusion":ambiguous,
             "hard_exclusion_sha256":digest(hard),"public_mention_only_sha256":digest(mention),"ambiguous_exclusion_sha256":digest(ambiguous),
             "decisions":decisions,"decision_trace_sha256":digest(decisions),"test_normal_prohibited":True}
+
+def main() -> None:
+    parser=argparse.ArgumentParser(); parser.add_argument("--root",type=pathlib.Path,required=True); parser.add_argument("--inventory",type=pathlib.Path,required=True); parser.add_argument("--out",type=pathlib.Path,required=True); args=parser.parse_args()
+    value=classify(args.root,args.inventory); args.out.parent.mkdir(parents=True,exist_ok=True); args.out.write_text(json.dumps(value,ensure_ascii=False,sort_keys=True,indent=2)+"\n",encoding="utf-8")
+if __name__ == "__main__": main()
