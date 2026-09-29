@@ -95,11 +95,11 @@ def _completed_run_is_valid(run,m):
  report=json.loads(report_path.read_text(encoding='utf-8'))
  if report.get('run_reconciled_sha256')!=recorded or report.get('run_reconciled_file_sha256')!=file_sha(marker_path):raise RuntimeError('completed final report is not bound to run_reconciled')
  return True
-def _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint):
+def _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint,owned_services):
  """Read-only reconciliation, then the only path to completed status."""
  _runtime_checkpoint(run,m,'terminal')
  summary(run,m,state='reconciling',final=True);st(run,'reconciling',manifest_sha256=file_sha(run/'manifest.json'))
- report=validate_terminal_run(run_root=run,manifest=m,runtime_verify=lambda:_runtime_identity(run,m),copro_reconcile=lambda:copro_checkpoint.reconcile(ledger_reconciled=_ledger_reconciled(run/'ledger.jsonl'),fixed_current_state=copro_checkpoint.fixed_initial_state),reme_dynamic_reconcile=dynamic_checkpoint.reconcile,reme_fixed_reconcile=fixed_checkpoint.reconcile,active_processes=lambda:False,historical_exposure=HISTORICAL_EXPOSURE,additional_checks={'task_query_and_retrieval_inventory':lambda:_validate_terminal_retrieval_inventory(run,m)})
+ report=validate_terminal_run(run_root=run,manifest=m,runtime_verify=lambda:_runtime_identity(run,m),copro_reconcile=lambda:copro_checkpoint.reconcile(ledger_reconciled=_ledger_reconciled(run/'ledger.jsonl'),fixed_current_state=copro_checkpoint.fixed_initial_state),reme_dynamic_reconcile=dynamic_checkpoint.reconcile,reme_fixed_reconcile=fixed_checkpoint.reconcile,active_processes=lambda:any(getattr(item,'proc',None) is not None and item.proc.poll() is None for item in owned_services.values()),historical_exposure=HISTORICAL_EXPOSURE,additional_checks={'task_query_and_retrieval_inventory':lambda:_validate_terminal_retrieval_inventory(run,m)})
  write_json(run/'terminal-reconciliation.json',report)
  if not report['valid']:raise RuntimeError('terminal reconciliation failed: '+json.dumps(report['failures'],sort_keys=True))
  runtime_path,_=_runtime_checkpoint(run,m,'terminal')
@@ -189,8 +189,10 @@ def run(run):
  write_json(run/'copromem-state-identities.json',{'fixed_initial_sha256':digest(fixed_state),'dynamic_initial_sha256':digest(dynamic_state),'non_aliased':True})
  copro_checkpoint=CoProMemDynamicCheckpointManager(root=run/'copromem-dynamic-checkpoints',manifest_sha256=file_sha(run/'manifest.json'),source_identity_sha256=digest({'git_commit':m.get('git_commit','offline-shadow')}),registry_sha256=registry['registry_sha256'],ordered_tasks=m['evaluation']['task_ids'],fixed_initial_state=fixed_state,dynamic_initial_state=dynamic_state)
  prefix=copro_checkpoint.reconcile(ledger_reconciled=_ledger_reconciled(run/'ledger.jsonl'),fixed_current_state=fixed_state);dynamic_state=prefix['dynamic_state']
+ owned_services={}
  try:
   with services(run,run/'ledger.jsonl',run/'progress.jsonl',100,['reme-fixed','reme-dynamic','reme-dynamic-verifier'],lifecycle_input_ceiling=131072) as svc:
+   owned_services=svc
    shared=CONSTRUCTION/'reme/shared-bank.jsonl';
    for name in ('reme-fixed','reme-dynamic'): official_post(svc[name].base_url,'load_memory',{'load_file_path':str(shared),'clear_existing':True})
    def dump_fixed(path): official_post(svc['reme-fixed'].base_url,'dump_memory',{'dump_file_path':str(path)})
@@ -253,7 +255,7 @@ def run(run):
     if digest(fixed_state)!=m['banks']['copromem_sha256'] or fixed_state is dynamic_state:raise RuntimeError('CoProMem Fixed/Dynamic state isolation violated')
     fixed_marker=fixed_checkpoint.checkpoint(label=f'task-{task_position:04d}',predecessor_checkpoint_sha256=fixed_marker['checkpoint_sha256'])
     summary(run,m)
-  _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint)
+  _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint,owned_services)
  except BaseException as exc:
   st(run,'failed',failure_class=type(exc).__name__,failure_message=str(exc)[:240])
   ev(run,'runner_failed',failure_class=type(exc).__name__)

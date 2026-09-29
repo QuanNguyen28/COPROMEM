@@ -36,3 +36,6 @@ outside the marker's content identity, so a restart can validate an existing
 terminal marker without treating a new finalizer process as scientific drift.
 An already completed run verifies its marker/report binding and returns
 read-only before it can acquire a lock or start a service.
+
+The runner retains the exact service handles after their context closes and
+the terminal validator rejects any owned child whose process is still alive.
