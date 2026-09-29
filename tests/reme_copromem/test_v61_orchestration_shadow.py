@@ -82,7 +82,7 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
         assert len(kwargs["artifacts"]) == 2
         post_state = {**kwargs["pre_state"], "shadow_updates": len(kwargs["artifacts"])}
         return post_state, {"state": "committed"}, {"shadow": True}
-    monkeypatch.setattr(mod, "task_batch_update", fake_batch)
+    monkeypatch.setattr(mod, "semantic_task_batch_update", fake_batch)
     def fake_execute(**kwargs):
         arm, task, trial, seed = kwargs["arm"], kwargs["task_id"], kwargs["trial_id"], kwargs["seed"]
         if kwargs.get("memory_for_instruction") is not None:
