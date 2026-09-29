@@ -5,6 +5,7 @@ import argparse, hashlib, json, os, pathlib, sys, time
 ROOT=pathlib.Path(__file__).resolve().parents[1]; sys.path[:0]=[str(ROOT),str(ROOT/'src')]
 from copromem.contrastive_graph_v6 import digest
 from copromem.experiments.reme_copromem.contrastive_v6_runner import retrieval_record, task_batch_update
+from copromem.experiments.reme_copromem.task_query import derive_task_query, validate_task_query
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, execute_trajectory, official_post, services, v5_budget_bound, write_json, append
 from copromem.integrations.reme.dynamic_checkpoint import DynamicUpdateIdentity, ReMeDynamicCheckpointManager
 from copromem.experiments.reme_copromem.evidence_contract import validate as validate_execution_evidence
@@ -110,7 +111,9 @@ def run(run):
  ledger=AppendOnlyLedger(run/'ledger.jsonl',100,m['budget']['call_limits']);
  if not _has_ledger_reservation(run/'ledger.jsonl','historical-construction-carry'):
   ledger.reserve('historical-construction-carry',HISTORICAL_EXPOSURE,{'role':'historical_carry_forward'});ledger.settle('historical-construction-carry',HISTORICAL_EXPOSURE,{'role':'historical_carry_forward'})
- k=key();st(run,'running',manifest_sha256=file_sha(run/'manifest.json')); state=json.loads((COPRO/'fixed-bank.json').read_text()); registry=json.loads(REG.read_text()); terms=sorted({x['terminal_effect'] for x in state['contrastive_v6_schemas'].values()})
+ k=key();st(run,'running',manifest_sha256=file_sha(run/'manifest.json')); fixed_state=json.loads((COPRO/'fixed-bank.json').read_text()); dynamic_state=json.loads(json.dumps(fixed_state,sort_keys=True)); registry=json.loads(REG.read_text())
+ if digest(fixed_state)!=digest(dynamic_state) or fixed_state is dynamic_state:raise RuntimeError('CoProMem Fixed/Dynamic initial state isolation failed')
+ write_json(run/'copromem-state-identities.json',{'fixed_initial_sha256':digest(fixed_state),'dynamic_initial_sha256':digest(dynamic_state),'non_aliased':True})
  try:
   with services(run,run/'ledger.jsonl',run/'progress.jsonl',100,['reme-fixed','reme-dynamic','reme-dynamic-verifier'],lifecycle_input_ceiling=131072) as svc:
    shared=CONSTRUCTION/'reme/shared-bank.jsonl';
@@ -118,7 +121,7 @@ def run(run):
    dynamic_checkpoint=_dynamic_checkpoint(run,m,svc['reme-dynamic'],svc['reme-dynamic-verifier'])
    dynamic_checkpoint.restore_latest()
    for task in m['evaluation']['task_ids']:
-    guard(m,run,'task'); pre=state; copro=[]
+    guard(m,run,'task'); pre_dynamic_state=json.loads(json.dumps(dynamic_state,sort_keys=True)); copro=[]
     for trial,seed in enumerate(m['evaluation']['seeds'],1):
      for arm in ARMS:
       path=run/'artifacts'/task/arm/f'trial-{trial}.json';
@@ -131,13 +134,26 @@ def run(run):
       if arm.startswith('official_upstream_reme'):kwargs['memory_base_url']=svc['reme-fixed' if arm.endswith('fixed') else 'reme-dynamic'].base_url
       if arm=='official_upstream_reme_dynamic':kwargs.update({'post_score_update':dynamic_checkpoint.callback(path),'post_score_update_strict':True})
       if arm.startswith('copromem'):
-       guidance,prov=retrieval_record(state=pre,query_operations=terms,registry_sha256=registry['registry_sha256']); write_json(run/'retrievals'/task/f'{arm}-{trial}.json',{'pre_state_sha256':digest(pre),'guidance':guidance,'provenance':prov});kwargs['memory_for_instruction']=lambda *_a,g=guidance:g
+       retrieval_state=fixed_state if arm=='copromem_v6_1_fixed' else pre_dynamic_state
+       holder={}
+       def conditioned_memory(instruction, domain, tool_meta, *, state=retrieval_state, holder=holder):
+        query=derive_task_query(instruction,domain,tool_meta,registry); validate_task_query(query,instruction=instruction,public_tool_metadata=tool_meta,callable_registry=registry)
+        guidance,prov=retrieval_record(state=state,query_operations=query['query_operations'],registry_sha256=registry['registry_sha256'],task_query=query)
+        holder.update({'guidance':guidance,'provenance':prov,'query':query,'state_sha256':digest(state)})
+        return guidance
+       kwargs['memory_for_instruction']=conditioned_memory
       result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256']},**kwargs)
+      if arm.startswith('copromem'):
+       if not holder:raise RuntimeError('task-conditioned retrieval callback was not invoked')
+       write_json(run/'retrievals'/task/f'{arm}-{trial}.json',{'pre_state_sha256':holder['state_sha256'],'guidance':holder['guidance'],'provenance':holder['provenance'],'task_query':holder['query']})
+       if arm=='copromem_v6_1_fixed' and digest(fixed_state)!=m['banks']['copromem_sha256']:raise RuntimeError('CoProMem Fixed state mutated')
       if arm=='copromem_v6_1_dynamic':copro.append(result)
       # The durable public status is refreshed immediately after every
       # artifact, never deferred to the end of a five-arm trial batch.
       summary(run,m)
-    post,marker,audit=task_batch_update(artifacts=copro,registry=registry,pre_state=pre,evidence_paths=[r['execution_evidence_path'] for r in copro]);write_json(run/'copromem-dynamic'/task/'update.json',{'pre_state_sha256':digest(pre),'post_state_sha256':digest(post),'marker':marker,'audit':audit});state=post;summary(run,m)
+    post,marker,audit=task_batch_update(artifacts=copro,registry=registry,pre_state=pre_dynamic_state,evidence_paths=[r['execution_evidence_path'] for r in copro]);write_json(run/'copromem-dynamic'/task/'update.json',{'pre_state_sha256':digest(pre_dynamic_state),'post_state_sha256':digest(post),'marker':marker,'audit':audit});dynamic_state=post
+    if digest(fixed_state)!=m['banks']['copromem_sha256'] or fixed_state is dynamic_state:raise RuntimeError('CoProMem Fixed/Dynamic state isolation violated')
+    summary(run,m)
   summary(run,m,state='completed',final=True);st(run,'completed')
  except BaseException as exc:
   st(run,'failed',failure_class=type(exc).__name__,failure_message=str(exc)[:240])
