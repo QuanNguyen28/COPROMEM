@@ -1,0 +1,19 @@
+{
+  "version": "v6.2-audit-disposition-v1",
+  "source_audit": "V61_CURRENT_BUG_AUDIT.md",
+  "items": {
+    "fixed_dynamic_contamination": "confirmed_implementation_defect_repaired",
+    "task_independent_retrieval": "confirmed_implementation_defect_repaired",
+    "raw_v6_dynamic_learning": "confirmed_implementation_defect_repaired",
+    "semantic_order_loss": "confirmed_implementation_defect_repaired",
+    "restart_timeline": "confirmed_integrity_restart_defect_pending_runner_reconciliation",
+    "ordinary_score_binding": "confirmed_integrity_restart_defect_repaired_at_artifact_boundary",
+    "reme_fixed_identity": "confirmed_runtime_risk_without_observed_corruption",
+    "runtime_content_pinning": "confirmed_runtime_risk_without_observed_corruption",
+    "best_candidate_winner": "intended_v6_method_behavior",
+    "richer_procedure_guidance": "protocol_ambiguity_requires_separate_amendment",
+    "reme_dynamic_per_trial_updates": "protocol_ambiguity_requires_separate_amendment",
+    "path_portability": "outside_scientific_scope"
+  },
+  "contains_raw_benchmark_data": false
+}
