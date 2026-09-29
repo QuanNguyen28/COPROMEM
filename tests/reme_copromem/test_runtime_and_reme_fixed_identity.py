@@ -8,6 +8,7 @@ import pytest
 from copromem.experiments.reme_copromem.runtime_identity import (
     RuntimeIdentityError, _git_identity, _local_runtime_config, build_runtime_identity,
     evaluation_runtime_inputs, verify_runtime_identity,
+    resolve_runtime_locators,
 )
 from copromem.integrations.reme.bank import semantic_bank_hash
 from copromem.integrations.reme.fixed_checkpoint import ReMeFixedIntegrityError, ReMeFixedIntegrityManager
@@ -49,6 +50,17 @@ def test_local_runtime_config_is_a_path_locator_not_a_semantic_identity(tmp_path
     config.write_text(json.dumps({"version": "wrong", "reme_source": str(tmp_path)}), encoding="utf-8")
     with pytest.raises(RuntimeIdentityError, match="schema"):
         _local_runtime_config(tmp_path)
+
+
+def test_windows_style_absolute_runtime_locators_are_resolved_without_becoming_identity(tmp_path, monkeypatch):
+    values = {"COPROMEM_REME_SOURCE": r"E:\runtime\reme", "COPROMEM_REME_PYTHON": r"E:\runtime\reme\python.exe",
+              "COPROMEM_APPWORLD_ROOT": r"E:\runtime\appworld", "COPROMEM_APPWORLD_PYTHON": r"E:\runtime\appworld\python.exe"}
+    for key, value in values.items():
+        monkeypatch.setenv(key, value)
+    assert resolve_runtime_locators(tmp_path) == {
+        "reme_source": values["COPROMEM_REME_SOURCE"], "reme_python": values["COPROMEM_REME_PYTHON"],
+        "appworld_root": values["COPROMEM_APPWORLD_ROOT"], "appworld_python": values["COPROMEM_APPWORLD_PYTHON"],
+    }
 
 
 def test_git_identity_binds_commit_dirty_state_and_content(tmp_path):

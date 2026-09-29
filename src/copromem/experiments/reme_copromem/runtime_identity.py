@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 from importlib import metadata
@@ -119,11 +120,21 @@ def apply_runtime_locators(root: Path) -> dict[str, str]:
 def _git_identity(root: Path) -> dict[str, str]:
     """Record commit plus deterministic dirty content, never an absolute path."""
     try:
-        commit = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
-        status = subprocess.check_output(["git", "-C", str(root), "status", "--porcelain=v1", "--untracked-files=all"], text=True)
+        env = dict(os.environ)
+        pointer = root / ".git"
+        if os.name == "posix" and pointer.is_file():
+            match = re.match(r"gitdir:\s*([A-Za-z]):/(.+)", pointer.read_text(encoding="utf-8").strip())
+            if match:
+                env["GIT_DIR"] = f"/mnt/{match.group(1).lower()}/{match.group(2)}"
+                env["GIT_WORK_TREE"] = str(root)
+        command = ["git", "rev-parse", "HEAD"] if "GIT_DIR" in env else ["git", "-C", str(root), "rev-parse", "HEAD"]
+        commit = subprocess.check_output(command, text=True, env=env).strip()
+        command = ["git", "status", "--porcelain=v1", "--untracked-files=all"] if "GIT_DIR" in env else ["git", "-C", str(root), "status", "--porcelain=v1", "--untracked-files=all"]
+        status = subprocess.check_output(command, text=True, env=env)
         dirty = bool(status.strip())
         # Include content, rather than merely names, when a pinned checkout is dirty.
-        diff = subprocess.check_output(["git", "-C", str(root), "diff", "--binary", "HEAD"])
+        command = ["git", "diff", "--binary", "HEAD"] if "GIT_DIR" in env else ["git", "-C", str(root), "diff", "--binary", "HEAD"]
+        diff = subprocess.check_output(command, env=env)
         # The tracked diff plus complete registered tree is sufficient to make
         # dirty source changes content-addressable without serializing locators.
         dirty_hash = hashlib.sha256(diff + _canonical({"tree": tree_hash(root)})).hexdigest() if dirty else "clean"
@@ -178,6 +189,9 @@ def evaluation_runtime_inputs(*, root: Path, reme_source: Path | None = None,
         raise RuntimeIdentityError("installed official AppWorld evaluator is unavailable")
     required["appworld_package_identity"] = package / "__init__.py"
     required["appworld_official_evaluator"] = scorer
+    copromem_git = _git_identity(root)
+    if source_commit and source_commit != copromem_git["git_commit"]:
+        raise RuntimeIdentityError("declared CoProMem source commit differs from the checked-out runtime")
     reme_git = _git_identity(reme)
     try:
         appworld_version = metadata.version("appworld")
@@ -186,9 +200,11 @@ def evaluation_runtime_inputs(*, root: Path, reme_source: Path | None = None,
         # AppWorld interpreter.  A host-side result without that distribution
         # must fail closed rather than borrowing an import path.
         appworld_version = "unresolved"
-    labels = {"copromem_git_commit": source_commit or os.environ.get("COPROMEM_SOURCE_COMMIT", "unresolved"),
+    labels = {"copromem_git_commit": copromem_git["git_commit"],
               "python_implementation": platform.python_implementation(), "python_version": platform.python_version(),
-              "appworld_distribution_version": appworld_version, **{f"reme_{key}": value for key, value in reme_git.items()}}
+              "appworld_distribution_version": appworld_version,
+              **{f"copromem_{key}": value for key, value in copromem_git.items() if key != "git_commit"},
+              **{f"reme_{key}": value for key, value in reme_git.items()}}
     if "unresolved" in labels.values():
         raise RuntimeIdentityError("required Git or AppWorld distribution identity is unresolved")
     return required, {"upstream_reme_tree": reme, "appworld_protocol_package": package}, labels
