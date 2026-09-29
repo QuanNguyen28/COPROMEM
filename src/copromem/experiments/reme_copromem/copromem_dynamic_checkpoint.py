@@ -106,6 +106,11 @@ class CoProMemDynamicCheckpointManager:
     def initial(self) -> Path:
         return self.root / "initial.json"
 
+    @property
+    def run_reconciled_path(self) -> Path:
+        """The global, post-task terminal transition (not a task transition)."""
+        return self.root / "run-reconciled.json"
+
     def _initialise(self) -> None:
         payload = {
             "version": VERSION, "manifest_sha256": self.manifest_sha256,
@@ -200,6 +205,52 @@ class CoProMemDynamicCheckpointManager:
         return self.record(task, "post_state_snapshot_persisted", post_state_snapshot=snapshot,
                            post_state_sha256=snapshot["semantic_state_sha256"], marker_sha256=marker_sha256,
                            plan_sha256=plan_sha256, validation_sha256=validation_sha256)
+
+    def record_run_reconciled(self, **bindings: Any) -> dict[str, Any]:
+        """Persist the immutable terminal transition after every task is authorized.
+
+        Reports are deliberately not part of this record: they are created only
+        afterwards and must instead bind this content-addressed transition.
+        """
+        prefix = self.reconcile(ledger_reconciled=True, fixed_current_state=self.fixed_initial_state)
+        if prefix["completed_task_count"] != len(self.tasks):
+            raise CoProMemDynamicCheckpointError("cannot reconcile a run before its Dynamic task prefix is complete")
+        predecessor = self._record_path(self.tasks[-1], "next_task_authorized")
+        body = {
+            "version": VERSION,
+            "transition": "run_reconciled",
+            "manifest_sha256": self.manifest_sha256,
+            "source_identity_sha256": self.source_identity_sha256,
+            "registry_sha256": self.registry_sha256,
+            "last_authorized_transition_file_sha256": _file_hash(predecessor),
+            **bindings,
+        }
+        body["record_sha256"] = digest(body)
+        path = self.run_reconciled_path
+        if path.exists():
+            existing = _read(path)
+            if existing != body:
+                raise CoProMemDynamicCheckpointError("immutable run_reconciled transition conflict")
+            return existing
+        _atomic(path, body)
+        return body
+
+    def validate_run_reconciled(self) -> dict[str, Any]:
+        """Read and validate the terminal record without mutating the prefix."""
+        row = _read(self.run_reconciled_path)
+        expected = dict(row)
+        recorded = expected.pop("record_sha256", None)
+        if recorded != digest(expected):
+            raise CoProMemDynamicCheckpointError("run_reconciled record hash mismatch")
+        if (row.get("version") != VERSION or row.get("transition") != "run_reconciled"
+                or row.get("manifest_sha256") != self.manifest_sha256
+                or row.get("source_identity_sha256") != self.source_identity_sha256
+                or row.get("registry_sha256") != self.registry_sha256):
+            raise CoProMemDynamicCheckpointError("run_reconciled identity mismatch")
+        predecessor = self._record_path(self.tasks[-1], "next_task_authorized")
+        if row.get("last_authorized_transition_file_sha256") != _file_hash(predecessor):
+            raise CoProMemDynamicCheckpointError("run_reconciled predecessor mismatch")
+        return row
 
     def _validate_record(self, task: str, transition: str) -> dict[str, Any]:
         row = _read(self._record_path(task, transition))

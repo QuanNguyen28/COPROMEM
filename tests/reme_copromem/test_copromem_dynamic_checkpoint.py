@@ -104,3 +104,19 @@ def test_fixed_drift_unsettled_ledger_and_reordered_task_fail_closed(tmp_path):
         manager.reconcile(ledger_reconciled=True, fixed_current_state={"mutated": True})
     with pytest.raises(CoProMemDynamicCheckpointError, match="outside"):
         manager.freeze_task_pre_state("not-registered", INITIAL)
+
+
+def test_run_reconciled_is_global_content_addressed_and_tamper_detected(tmp_path):
+    manager = _manager(tmp_path)
+    state = _complete_task(manager, "task-a", INITIAL)
+    _complete_task(manager, "task-b", state)
+    marker = manager.record_run_reconciled(
+        runtime_identity_file_sha256="runtime", terminal_reconciliation_sha256="terminal",
+        scored_artifact_inventory_sha256="artifacts", expected_trajectories=20,
+    )
+    assert manager.validate_run_reconciled() == marker
+    path = manager.run_reconciled_path
+    value = json.loads(path.read_text(encoding="utf-8")); value["expected_trajectories"] = 99
+    path.write_text(json.dumps(value), encoding="utf-8")
+    with pytest.raises(CoProMemDynamicCheckpointError, match="hash"):
+        manager.validate_run_reconciled()

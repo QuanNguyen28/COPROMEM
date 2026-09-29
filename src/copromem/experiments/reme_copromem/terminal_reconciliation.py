@@ -16,7 +16,7 @@ def _sha(path: Path) -> str:
 def validate_terminal_run(*, run_root: Path, manifest: Mapping[str, Any], runtime_verify: Callable[[], None],
                           copro_reconcile: Callable[[], Mapping[str, Any]], reme_dynamic_reconcile: Callable[[], Mapping[str, Any]],
                           reme_fixed_reconcile: Callable[[], Any], active_processes: Callable[[], bool],
-                          historical_exposure: float) -> dict[str, Any]:
+                          historical_exposure: float, additional_checks: Mapping[str, Callable[[], Any]] | None = None) -> dict[str, Any]:
     """Return every observable discrepancy without mutating any run evidence."""
     failures: list[dict[str, str]] = []
     root = run_root.resolve()
@@ -34,6 +34,11 @@ def validate_terminal_run(*, run_root: Path, manifest: Mapping[str, Any], runtim
             check()
         except Exception as exc:
             failures.append({"gate": gate, "reason": str(exc)})
+    for gate, check in sorted((additional_checks or {}).items()):
+        try:
+            check()
+        except Exception as exc:
+            failures.append({"gate": str(gate), "reason": str(exc)})
     try:
         evaluation = manifest["evaluation"]
         reconcile_artifacts(root / "artifacts", expected_tasks=evaluation["task_ids"], expected_seeds=evaluation["seeds"], require_evidence=True)

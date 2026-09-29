@@ -50,6 +50,7 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
     copro = tmp_path / "copro" / "fixed-bank.json"; copro.parent.mkdir(parents=True)
     copro.write_text(json.dumps({"contrastive_v6_schemas": {"s": {"terminal_effect": "x"}}}), encoding="utf-8")
     manifest = {
+        "git_commit": "shadow-source",
         "arms": list(mod.ARMS), "evaluation": {"task_ids": ["shadow-a", "shadow-b"], "seeds": [11, 12], "expected_trajectories": 20},
         "banks": {"reme_shared_sha256": semantic_bank_hash(shared),
                   "copromem_sha256": mod.digest({"contrastive_v6_schemas": {"s": {"terminal_effect": "x"}}})},
@@ -57,7 +58,17 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
         "storage_policy": {"launch_floor_gib": 5, "warning_gib": 4, "mandatory_stop_gib": 3},
     }
     write_json(run / "manifest.json", manifest); (run / "manifest.sha256").write_text(mod.file_sha(run / "manifest.json") + "\n")
+    write_json(run / "runtime-identity.json", {"runtime_identity_sha256": "shadow-runtime"})
     monkeypatch.setattr(mod, "load", lambda _run: manifest); monkeypatch.setattr(mod, "key", lambda: "local")
+    # The production flow is tested below with dedicated identity fixtures.
+    # This orchestration shadow isolates external process/task boundaries.
+    monkeypatch.setattr(mod, "_runtime_identity", lambda *_args: {"runtime_identity_sha256": "shadow-runtime"})
+    def runtime_checkpoint(_run, _manifest, stage):
+        path = run / "runtime-verifications" / f"{stage}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(path, {"stage": stage, "runtime_identity_sha256": "shadow-runtime"})
+        return path, {"stage": stage}
+    monkeypatch.setattr(mod, "_runtime_checkpoint", runtime_checkpoint)
     monkeypatch.setattr(mod, "COPRO", copro.parent); monkeypatch.setattr(mod, "CONSTRUCTION", tmp_path / "construction")
     monkeypatch.setattr(mod, "guard", lambda *_args: None)
     calls: list[str] = []
@@ -130,6 +141,11 @@ def test_full_shadow_uses_production_orchestration_and_refreshes_every_artifact(
     assert all(summary["arms"][arm]["Completed"] == 4 for arm in mod.ARMS)
     assert all(summary["arms"][arm]["ExecutorCalls"] == 4 for arm in mod.ARMS)
     assert json.loads((run / "runner-status.json").read_text())["state"] == "completed"
+    marker = json.loads((run / "copromem-dynamic-checkpoints" / "run-reconciled.json").read_text())
+    report = json.loads((run / "final-report.json").read_text())
+    assert marker["transition"] == "run_reconciled"
+    assert report["run_reconciled_sha256"] == marker["record_sha256"]
+    assert (run / "terminal-reconciliation.json").is_file()
     assert not (run / "runner.lock").exists()
 
 
@@ -149,3 +165,15 @@ def test_evaluation_005_sequence_has_two_durable_summaries_before_interrupt(monk
     assert summary["arms"]["no_memory"]["Completed"] == 1
     assert summary["arms"]["official_upstream_reme_fixed"]["Completed"] == 1
     assert summary["arms"]["no_memory"]["ExecutorCost"] > 0
+
+
+def test_terminal_reconciliation_failure_never_writes_marker_or_completed_report(monkeypatch, tmp_path):
+    mod, run, _calls = _shadow(monkeypatch, tmp_path)
+    monkeypatch.setattr(mod, "validate_terminal_run", lambda **_kwargs: {
+        "valid": False, "failures": [{"gate": "fixture", "reason": "tampered"}],
+    })
+    with pytest.raises(RuntimeError, match="terminal reconciliation failed"):
+        mod.run(run)
+    assert json.loads((run / "runner-status.json").read_text())["state"] == "failed"
+    assert not (run / "copromem-dynamic-checkpoints" / "run-reconciled.json").exists()
+    assert not (run / "final-report.json").exists()

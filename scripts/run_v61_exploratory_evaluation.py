@@ -14,6 +14,7 @@ from copromem.experiments.reme_copromem.live_summary import reconcile_ledger
 from copromem.experiments.reme_copromem.copromem_dynamic_checkpoint import CoProMemDynamicCheckpointManager
 from copromem.integrations.reme.fixed_checkpoint import ReMeFixedIntegrityManager
 from copromem.experiments.reme_copromem.runtime_identity import build_evaluation_runtime_identity, verify_runtime_identity, evaluation_runtime_inputs
+from copromem.experiments.reme_copromem.terminal_reconciliation import validate_terminal_run
 from copromem.experiments.reme_copromem.v61_custody import classify
 from scripts.run_v6_shared_acquisition import c_free_gib,file_sha,git_head
 
@@ -52,6 +53,50 @@ def _runtime_identity(run,m):
  verify_runtime_identity(record,content=content,trees=trees,labels=labels)
  if file_sha(record_path)!=m.get('runtime_identity_file_sha256') or record.get('runtime_identity_sha256')!=m.get('runtime_identity_sha256'):raise RuntimeError('manifest-bound runtime identity mismatch')
  return record
+def _runtime_checkpoint(run,m,stage):
+ """Recompute the content identity at every dispatch-capable boundary."""
+ record=_runtime_identity(run,m)
+ body={'version':'v6.2-runtime-verification-v1','stage':str(stage),'manifest_sha256':file_sha(run/'manifest.json'),'runtime_identity_sha256':record['runtime_identity_sha256'],'runtime_identity_file_sha256':file_sha(run/'runtime-identity.json')}
+ body['checkpoint_sha256']=digest(body)
+ path=run/'runtime-verifications'/f'{str(stage).replace("/","_")}.json'
+ if path.exists():
+  if json.loads(path.read_text(encoding='utf-8'))!=body:raise RuntimeError('runtime verification checkpoint conflict')
+ else:write_json(path,body)
+ return path,body
+def _inventory_hash(root):
+ """Hash file identities, never their (potentially sensitive) contents in logs."""
+ if not root.exists():return digest([])
+ return digest([{'path':str(path.relative_to(root.parent)).replace('\\','/'),'sha256':file_sha(path)} for path in sorted(root.rglob('*')) if path.is_file()])
+def _validate_terminal_retrieval_inventory(run,m):
+ """Ensure every CoProMem evidence-bearing trajectory retained its query record."""
+ for task in m['evaluation']['task_ids']:
+  for trial in range(1,len(m['evaluation']['seeds'])+1):
+   for arm in ('copromem_v6_1_fixed','copromem_v6_1_dynamic'):
+    path=run/'retrievals'/task/f'{arm}-{trial}.json'
+    if not path.is_file():raise RuntimeError(f'missing terminal retrieval record: {task}/{arm}/{trial}')
+    record=json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(record.get('task_query'),dict) or not record['task_query'].get('query_sha256'):
+     raise RuntimeError(f'invalid terminal retrieval query: {task}/{arm}/{trial}')
+def _write_final_reports(run,manifest,marker,marker_file_sha256):
+ marker_path=run/'copromem-dynamic-checkpoints'/'run-reconciled.json'
+ if not marker_path.is_file() or file_sha(marker_path)!=marker_file_sha256:raise RuntimeError('final report requires valid run_reconciled marker')
+ summary_path=run/'live-summary.json'
+ report={'version':'v6.2-terminal-report-v1','manifest_sha256':file_sha(run/'manifest.json'),'run_reconciled_sha256':marker['record_sha256'],'run_reconciled_file_sha256':marker_file_sha256,'live_summary_sha256':file_sha(summary_path),'exploratory_diagnostic_only':True,'expected_trajectories':manifest['evaluation']['expected_trajectories']}
+ write_json(run/'final-report.json',report)
+ (run/'FINAL_REPORT.md').write_text('# Exploratory diagnostic evaluation\n\nThis report is bound to `run_reconciled`; it is not an efficacy claim.\n',encoding='utf-8')
+ return report
+def _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint):
+ """Read-only reconciliation, then the only path to completed status."""
+ _runtime_checkpoint(run,m,'terminal')
+ summary(run,m,state='reconciling',final=True);st(run,'reconciling',manifest_sha256=file_sha(run/'manifest.json'))
+ report=validate_terminal_run(run_root=run,manifest=m,runtime_verify=lambda:_runtime_identity(run,m),copro_reconcile=lambda:copro_checkpoint.reconcile(ledger_reconciled=_ledger_reconciled(run/'ledger.jsonl'),fixed_current_state=copro_checkpoint.fixed_initial_state),reme_dynamic_reconcile=dynamic_checkpoint.reconcile,reme_fixed_reconcile=fixed_checkpoint.reconcile,active_processes=lambda:False,historical_exposure=HISTORICAL_EXPOSURE,additional_checks={'task_query_and_retrieval_inventory':lambda:_validate_terminal_retrieval_inventory(run,m)})
+ write_json(run/'terminal-reconciliation.json',report)
+ if not report['valid']:raise RuntimeError('terminal reconciliation failed: '+json.dumps(report['failures'],sort_keys=True))
+ runtime_path,_=_runtime_checkpoint(run,m,'terminal')
+ marker=copro_checkpoint.record_run_reconciled(manifest_sha256=file_sha(run/'manifest.json'),source_commit=m['git_commit'],runtime_identity_file_sha256=file_sha(run/'runtime-identity.json'),runtime_verification_file_sha256=file_sha(runtime_path),scored_artifact_inventory_sha256=_inventory_hash(run/'artifacts'),evidence_inventory_sha256=digest({'journals':_inventory_hash(run/'journals'),'scorer':_inventory_hash(run/'scorer')}),task_query_retrieval_inventory_sha256=_inventory_hash(run/'retrievals'),copromem_fixed_state_sha256=m['banks']['copromem_sha256'],copromem_dynamic_terminal_state_sha256=digest(copro_checkpoint.reconcile(ledger_reconciled=True,fixed_current_state=copro_checkpoint.fixed_initial_state)['dynamic_state']),reme_dynamic_checkpoint_chain_sha256=_inventory_hash(run/'reme-dynamic-checkpoints'),reme_fixed_checkpoint_chain_sha256=_inventory_hash(run/'reme-fixed-integrity'),ledger_sha256=file_sha(run/'ledger.jsonl'),live_summary_sha256=file_sha(run/'live-summary.json'),terminal_reconciliation_sha256=file_sha(run/'terminal-reconciliation.json'),expected_trajectories=m['evaluation']['expected_trajectories'],process_identity={'pid':os.getpid()})
+ _write_final_reports(run,m,marker,file_sha(copro_checkpoint.run_reconciled_path))
+ st(run,'completed',manifest_sha256=file_sha(run/'manifest.json'),run_reconciled_sha256=marker['record_sha256'])
+ return marker
 def prepare(run):
  if run.exists() and any(run.iterdir()):raise RuntimeError('run nonempty')
  report,gate=identities(); run.mkdir(parents=True)
@@ -128,7 +173,7 @@ def run(run):
  ledger=AppendOnlyLedger(run/'ledger.jsonl',100,m['budget']['call_limits']);
  if not _has_ledger_reservation(run/'ledger.jsonl','historical-construction-carry'):
   ledger.reserve('historical-construction-carry',HISTORICAL_EXPOSURE,{'role':'historical_carry_forward'});ledger.settle('historical-construction-carry',HISTORICAL_EXPOSURE,{'role':'historical_carry_forward'})
- k=key();st(run,'running',manifest_sha256=file_sha(run/'manifest.json')); fixed_state=json.loads((COPRO/'fixed-bank.json').read_text()); dynamic_state=json.loads(json.dumps(fixed_state,sort_keys=True)); registry=json.loads(REG.read_text())
+ _runtime_checkpoint(run,m,'startup');k=key();st(run,'running',manifest_sha256=file_sha(run/'manifest.json')); fixed_state=json.loads((COPRO/'fixed-bank.json').read_text()); dynamic_state=json.loads(json.dumps(fixed_state,sort_keys=True)); registry=json.loads(REG.read_text())
  if digest(fixed_state)!=digest(dynamic_state) or fixed_state is dynamic_state:raise RuntimeError('CoProMem Fixed/Dynamic initial state isolation failed')
  write_json(run/'copromem-state-identities.json',{'fixed_initial_sha256':digest(fixed_state),'dynamic_initial_sha256':digest(dynamic_state),'non_aliased':True})
  copro_checkpoint=CoProMemDynamicCheckpointManager(root=run/'copromem-dynamic-checkpoints',manifest_sha256=file_sha(run/'manifest.json'),source_identity_sha256=digest({'git_commit':m.get('git_commit','offline-shadow')}),registry_sha256=registry['registry_sha256'],ordered_tasks=m['evaluation']['task_ids'],fixed_initial_state=fixed_state,dynamic_initial_state=dynamic_state)
@@ -144,6 +189,7 @@ def run(run):
    dynamic_checkpoint.restore_latest()
    for task_position,task in enumerate(m['evaluation']['task_ids'],1):
     if task_position <= int(prefix['completed_task_count']): continue
+    _runtime_checkpoint(run,m,f'task-{task_position:04d}-before-open')
     guard(m,run,'task'); pre_dynamic_state=json.loads(json.dumps(dynamic_state,sort_keys=True)); copro=[]
     copro_checkpoint.freeze_task_pre_state(task,pre_dynamic_state)
     for trial,seed in enumerate(m['evaluation']['seeds'],1):
@@ -160,6 +206,7 @@ def run(run):
          if not retrieval_path.is_file():raise RuntimeError('completed CoProMem artifact lacks retrieval record')
          holder.update(json.loads(retrieval_path.read_text(encoding='utf-8')))
        else:
+        _runtime_checkpoint(run,m,f'dispatch-{task_position:04d}-{trial:02d}-{arm}')
         kwargs={};
         if arm.startswith('official_upstream_reme'):kwargs['memory_base_url']=svc['reme-fixed' if arm.endswith('fixed') else 'reme-dynamic'].base_url
         if arm=='official_upstream_reme_dynamic':kwargs.update({'post_score_update':dynamic_checkpoint.callback(path),'post_score_update_strict':True})
@@ -195,7 +242,7 @@ def run(run):
     if digest(fixed_state)!=m['banks']['copromem_sha256'] or fixed_state is dynamic_state:raise RuntimeError('CoProMem Fixed/Dynamic state isolation violated')
     fixed_marker=fixed_checkpoint.checkpoint(label=f'task-{task_position:04d}',predecessor_checkpoint_sha256=fixed_marker['checkpoint_sha256'])
     summary(run,m)
-  summary(run,m,state='completed',final=True);st(run,'completed')
+  _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint)
  except BaseException as exc:
   st(run,'failed',failure_class=type(exc).__name__,failure_message=str(exc)[:240])
   ev(run,'runner_failed',failure_class=type(exc).__name__)
