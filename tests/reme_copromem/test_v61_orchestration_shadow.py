@@ -81,7 +81,11 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
     def fake_batch(**kwargs):
         assert len(kwargs["artifacts"]) == 2
         post_state = {**kwargs["pre_state"], "shadow_updates": len(kwargs["artifacts"])}
-        return post_state, {"state": "committed"}, {"shadow": True}
+        plan = {"plan_sha256": "shadow-plan"}
+        return post_state, {"state": "committed", "winner_schema_id": "shadow-schema"}, {
+            "shadow": True, "plan": plan, "validation": {"passed": True},
+            "semantic_graph_audits": [{"semantic_projection_sha256": "shadow-1"}, {"semantic_projection_sha256": "shadow-2"},
+        ]}
     monkeypatch.setattr(mod, "semantic_task_batch_update", fake_batch)
     def fake_execute(**kwargs):
         arm, task, trial, seed = kwargs["arm"], kwargs["task_id"], kwargs["trial_id"], kwargs["seed"]
@@ -97,10 +101,17 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
         journal = run / "journals" / f"{arm}-{task}-{trial}.jsonl"; journal.parent.mkdir(exist_ok=True)
         if interrupt == "after_journal_creation": raise KeyboardInterrupt()
         journal.write_text('{"event":"response_attested"}\n', encoding="utf-8")
-        binding = bind(journal=journal, run_root=run, registry_sha256=json.loads(mod.REG.read_text())["registry_sha256"])
-        result = {"trajectory_id": f"evaluation:{arm}:{task}:trial={trial}:seed={seed}", "arm": arm, "task_id": task, "trial_id": trial, "seed": seed,
-                  "after_score": 1.0, "before_score": 0.0, "actions": 1, "history": [{"role": "assistant", "content": "local"}],
-                  "history_sha256": mod.digest([{ "role": "assistant", "content": "local"}]), **binding}
+        trajectory_id = f"evaluation:{arm}:{task}:trial={trial}:seed={seed}"
+        scorer = run / "scorer" / f"{arm}-{task}-{trial}.jsonl"
+        _rows(scorer, [{"event": "official_score", "trajectory_id": trajectory_id, "task_id": task,
+                        "pass_count": 1, "fail_count": 0}])
+        history = [{"role": "assistant", "content": "local"}]
+        binding = bind(journal=journal, run_root=run, registry_sha256=json.loads(mod.REG.read_text())["registry_sha256"],
+                       scorer_journal=scorer, trajectory_id=trajectory_id, task_id=task, after_score=1.0,
+                       history_sha256=mod.digest(history))
+        result = {"trajectory_id": trajectory_id, "arm": arm, "task_id": task, "trial_id": trial, "seed": seed,
+                  "after_score": 1.0, "before_score": 0.0, "actions": 1, "history": history,
+                  "history_sha256": mod.digest(history), **binding}
         write_json(kwargs["artifact_path"], result); append(kwargs["progress"], {"event": "trajectory_scored", "trajectory_id": result["trajectory_id"]})
         if interrupt == "after_scored_artifact": raise KeyboardInterrupt()
         if kwargs.get("post_score_update") is not None:

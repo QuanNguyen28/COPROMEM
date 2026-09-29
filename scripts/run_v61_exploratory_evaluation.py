@@ -10,6 +10,9 @@ from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, execute_
 from copromem.integrations.reme.dynamic_checkpoint import DynamicUpdateIdentity, ReMeDynamicCheckpointManager
 from copromem.experiments.reme_copromem.evidence_contract import validate as validate_execution_evidence
 from copromem.experiments.reme_copromem.live_summary import build_live_summary, write_live_summary
+from copromem.experiments.reme_copromem.live_summary import reconcile_ledger
+from copromem.experiments.reme_copromem.copromem_dynamic_checkpoint import CoProMemDynamicCheckpointManager
+from copromem.integrations.reme.fixed_checkpoint import ReMeFixedIntegrityManager
 from copromem.experiments.reme_copromem.v61_custody import classify
 from scripts.run_v6_shared_acquisition import c_free_gib,file_sha,git_head
 
@@ -45,7 +48,7 @@ def prepare(run):
  report,gate=identities(); run.mkdir(parents=True)
  limits={'executor':1800,'reme_lifecycle':256,'reme_embedding':1024,'copromem_decomposition':0}; budget=v5_budget_bound(call_limits=limits,historical_usd=HISTORICAL_EXPOSURE,lifecycle_input_ceiling=131072)
  if budget['all_in_usd']>100:raise RuntimeError('budget exceeds USD 100')
- m={'protocol':PROTOCOL,'exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'predecessor_evaluation_004_excluded':True,'predecessor_evaluation_005_excluded':True,'git_commit':source_commit(),'arms':ARMS,'evaluation':{'split':'dev','task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE,'evaluation_004_unresolved_retained_usd':0.0060078,'evaluation_005_unresolved_retained_usd':0.005946},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
+ m={'protocol':PROTOCOL,'exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'predecessor_evaluation_004_excluded':True,'predecessor_evaluation_005_excluded':True,'git_commit':source_commit(),'arms':ARMS,'evaluation':{'split':'dev','task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'stochastic_trial_ids':[11001,11002],'provider_seed':None,'trial_semantics':'ordered_stochastic_labels_not_provider_seeds','expected_trajectories':60},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':100,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE,'evaluation_004_unresolved_retained_usd':0.0060078,'evaluation_005_unresolved_retained_usd':0.005946},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
  write_json(run/'template.json',m)
 def freeze(run):
  m=json.loads((run/'template.json').read_text());
@@ -104,6 +107,8 @@ def _dynamic_checkpoint(run,manifest,dynamic,verifier):
 def _has_ledger_reservation(path,call_id):
  if not path.exists():return False
  return any(json.loads(line).get('event')=='reserve' and json.loads(line).get('id')==call_id for line in path.read_text(encoding='utf-8').splitlines())
+def _ledger_reconciled(path):
+ return not reconcile_ledger(path,historical_expected_usd=HISTORICAL_EXPOSURE).unresolved_reservation_ids
 def run(run):
  m=load(run); lock=run/'runner.lock';
  if lock.exists():raise RuntimeError('duplicate runner')
@@ -114,45 +119,69 @@ def run(run):
  k=key();st(run,'running',manifest_sha256=file_sha(run/'manifest.json')); fixed_state=json.loads((COPRO/'fixed-bank.json').read_text()); dynamic_state=json.loads(json.dumps(fixed_state,sort_keys=True)); registry=json.loads(REG.read_text())
  if digest(fixed_state)!=digest(dynamic_state) or fixed_state is dynamic_state:raise RuntimeError('CoProMem Fixed/Dynamic initial state isolation failed')
  write_json(run/'copromem-state-identities.json',{'fixed_initial_sha256':digest(fixed_state),'dynamic_initial_sha256':digest(dynamic_state),'non_aliased':True})
+ copro_checkpoint=CoProMemDynamicCheckpointManager(root=run/'copromem-dynamic-checkpoints',manifest_sha256=file_sha(run/'manifest.json'),source_identity_sha256=digest({'git_commit':m.get('git_commit','offline-shadow')}),registry_sha256=registry['registry_sha256'],ordered_tasks=m['evaluation']['task_ids'],fixed_initial_state=fixed_state,dynamic_initial_state=dynamic_state)
+ prefix=copro_checkpoint.reconcile(ledger_reconciled=_ledger_reconciled(run/'ledger.jsonl'),fixed_current_state=fixed_state);dynamic_state=prefix['dynamic_state']
  try:
   with services(run,run/'ledger.jsonl',run/'progress.jsonl',100,['reme-fixed','reme-dynamic','reme-dynamic-verifier'],lifecycle_input_ceiling=131072) as svc:
    shared=CONSTRUCTION/'reme/shared-bank.jsonl';
    for name in ('reme-fixed','reme-dynamic'): official_post(svc[name].base_url,'load_memory',{'load_file_path':str(shared),'clear_existing':True})
+   def dump_fixed(path): official_post(svc['reme-fixed'].base_url,'dump_memory',{'dump_file_path':str(path)})
+   fixed_checkpoint=ReMeFixedIntegrityManager(root=run/'reme-fixed-integrity',frozen_semantic_hash=m['banks']['reme_shared_sha256'],dump_current=dump_fixed)
+   fixed_marker=fixed_checkpoint.checkpoint(label='initial')
    dynamic_checkpoint=_dynamic_checkpoint(run,m,svc['reme-dynamic'],svc['reme-dynamic-verifier'])
    dynamic_checkpoint.restore_latest()
-   for task in m['evaluation']['task_ids']:
+   for task_position,task in enumerate(m['evaluation']['task_ids'],1):
+    if task_position <= int(prefix['completed_task_count']): continue
     guard(m,run,'task'); pre_dynamic_state=json.loads(json.dumps(dynamic_state,sort_keys=True)); copro=[]
+    copro_checkpoint.freeze_task_pre_state(task,pre_dynamic_state)
     for trial,seed in enumerate(m['evaluation']['seeds'],1):
      for arm in ARMS:
-      path=run/'artifacts'/task/arm/f'trial-{trial}.json';
-      if path.exists():
-       if arm=='official_upstream_reme_dynamic':
-        checkpoint_state=dynamic_checkpoint.reconcile(); identity=DynamicUpdateIdentity(f'evaluation:{arm}:{task}:trial={trial}:seed={seed}')
-        if _dynamic_order(m).index(identity)>=checkpoint_state['completed_count']:raise RuntimeError('scored ReMe Dynamic artifact lacks a completed durable update marker')
-       continue
-      kwargs={};
-      if arm.startswith('official_upstream_reme'):kwargs['memory_base_url']=svc['reme-fixed' if arm.endswith('fixed') else 'reme-dynamic'].base_url
-      if arm=='official_upstream_reme_dynamic':kwargs.update({'post_score_update':dynamic_checkpoint.callback(path),'post_score_update_strict':True})
-      if arm.startswith('copromem'):
-       retrieval_state=fixed_state if arm=='copromem_v6_1_fixed' else pre_dynamic_state
+       path=run/'artifacts'/task/arm/f'trial-{trial}.json';
        holder={}
-       def conditioned_memory(instruction, domain, tool_meta, *, state=retrieval_state, holder=holder):
-        query=derive_task_query(instruction,domain,tool_meta,registry); validate_task_query(query,instruction=instruction,public_tool_metadata=tool_meta,callable_registry=registry)
-        guidance,prov=retrieval_record(state=state,query_operations=query['query_operations'],registry_sha256=registry['registry_sha256'],task_query=query)
-        holder.update({'guidance':guidance,'provenance':prov,'query':query,'state_sha256':digest(state)})
-        return guidance
-       kwargs['memory_for_instruction']=conditioned_memory
-      result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256']},**kwargs)
-      if arm.startswith('copromem'):
-       if not holder:raise RuntimeError('task-conditioned retrieval callback was not invoked')
-       write_json(run/'retrievals'/task/f'{arm}-{trial}.json',{'pre_state_sha256':holder['state_sha256'],'guidance':holder['guidance'],'provenance':holder['provenance'],'task_query':holder['query']})
-       if arm=='copromem_v6_1_fixed' and digest(fixed_state)!=m['banks']['copromem_sha256']:raise RuntimeError('CoProMem Fixed state mutated')
-      if arm=='copromem_v6_1_dynamic':copro.append(result)
-      # The durable public status is refreshed immediately after every
-      # artifact, never deferred to the end of a five-arm trial batch.
-      summary(run,m)
-    post,marker,audit=semantic_task_batch_update(artifacts=copro,registry=registry,pre_state=pre_dynamic_state,evidence_paths=[r['execution_evidence_path'] for r in copro],run_root=run);write_json(run/'copromem-dynamic'/task/'update.json',{'pre_state_sha256':digest(pre_dynamic_state),'post_state_sha256':digest(post),'marker':marker,'audit':audit});dynamic_state=post
+       retrieval_path=run/'retrievals'/task/f'{arm}-{trial}.json'
+       if path.exists():
+        result=json.loads(path.read_text(encoding='utf-8'))
+        if arm=='official_upstream_reme_dynamic':
+         checkpoint_state=dynamic_checkpoint.reconcile(); identity=DynamicUpdateIdentity.from_result(result)
+         if _dynamic_order(m).index(identity)>=checkpoint_state['completed_count']:raise RuntimeError('scored ReMe Dynamic artifact lacks a completed durable update marker')
+        if arm.startswith('copromem'):
+         if not retrieval_path.is_file():raise RuntimeError('completed CoProMem artifact lacks retrieval record')
+         holder.update(json.loads(retrieval_path.read_text(encoding='utf-8')))
+       else:
+        kwargs={};
+        if arm.startswith('official_upstream_reme'):kwargs['memory_base_url']=svc['reme-fixed' if arm.endswith('fixed') else 'reme-dynamic'].base_url
+        if arm=='official_upstream_reme_dynamic':kwargs.update({'post_score_update':dynamic_checkpoint.callback(path),'post_score_update_strict':True})
+        if arm.startswith('copromem'):
+         retrieval_state=fixed_state if arm=='copromem_v6_1_fixed' else pre_dynamic_state
+         def conditioned_memory(instruction, domain, tool_meta, *, state=retrieval_state, holder=holder):
+          query=derive_task_query(instruction,domain,tool_meta,registry); validate_task_query(query,instruction=instruction,public_tool_metadata=tool_meta,callable_registry=registry)
+          guidance,prov=retrieval_record(state=state,query_operations=query['query_operations'],registry_sha256=registry['registry_sha256'],task_query=query)
+          holder.update({'guidance':guidance,'provenance':prov,'query':query,'state_sha256':digest(state)})
+          return guidance
+         kwargs['memory_for_instruction']=conditioned_memory
+        result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256']},**kwargs)
+       if arm.startswith('copromem'):
+        if not holder:raise RuntimeError('task-conditioned retrieval callback was not invoked')
+        if not retrieval_path.exists():write_json(retrieval_path,{'pre_state_sha256':holder['state_sha256'],'guidance':holder['guidance'],'provenance':holder['provenance'],'task_query':holder['query']})
+        if arm=='copromem_v6_1_fixed' and digest(fixed_state)!=m['banks']['copromem_sha256']:raise RuntimeError('CoProMem Fixed state mutated')
+       if arm=='copromem_v6_1_dynamic':copro.append(result)
+       # The durable public status is refreshed immediately after every
+       # artifact, never deferred to the end of a five-arm trial batch.
+       summary(run,m)
+    if len(copro)!=len(m['evaluation']['seeds']):raise RuntimeError('CoProMem Dynamic batch is incomplete after restart reconciliation')
+    retrieval_hashes=[]
+    for trial in range(1,len(m['evaluation']['seeds'])+1):
+     record=json.loads((run/'retrievals'/task/f'copromem_v6_1_dynamic-{trial}.json').read_text(encoding='utf-8'));retrieval_hashes.append(digest(record))
+    copro_checkpoint.record(task,'retrievals_materialized',task_query_hashes=[str(json.loads((run/'retrievals'/task/f'copromem_v6_1_dynamic-{trial}.json').read_text(encoding='utf-8'))['task_query']['query_sha256']) for trial in range(1,len(m['evaluation']['seeds'])+1)],retrieval_hashes=retrieval_hashes)
+    copro_checkpoint.record(task,'trajectories_complete',artifact_hashes=[digest(item) for item in copro],scorer_evidence_hashes=[str(item['official_scorer_evidence']['sha256']) for item in copro])
+    post,marker,audit=semantic_task_batch_update(artifacts=copro,registry=registry,pre_state=pre_dynamic_state,evidence_paths=[r['execution_evidence_path'] for r in copro],run_root=run)
+    copro_checkpoint.record(task,'batch_ready',semantic_projection_hashes=[item['semantic_projection_sha256'] for item in audit['semantic_graph_audits']])
+    plan=audit['plan'];validation=audit['validation'];copro_checkpoint.record(task,'semantic_plan_persisted',plan_sha256=plan['plan_sha256']);copro_checkpoint.record(task,'validation_persisted',validation_sha256=digest(validation),validation_passed=bool(validation['passed']))
+    copro_checkpoint.record(task,'commit_persisted',marker_sha256=digest(marker),state=marker['state'],winner_schema_id=marker.get('winner_schema_id'))
+    copro_checkpoint.snapshot_post_state(task,post,marker_sha256=digest(marker),plan_sha256=plan['plan_sha256'],validation_sha256=digest(validation));copro_checkpoint.record(task,'next_task_authorized',post_state_sha256=digest(post))
+    write_json(run/'copromem-dynamic'/task/'update.json',{'pre_state_sha256':digest(pre_dynamic_state),'post_state_sha256':digest(post),'marker':marker,'audit':audit});dynamic_state=post
     if digest(fixed_state)!=m['banks']['copromem_sha256'] or fixed_state is dynamic_state:raise RuntimeError('CoProMem Fixed/Dynamic state isolation violated')
+    fixed_marker=fixed_checkpoint.checkpoint(label=f'task-{task_position:04d}',predecessor_checkpoint_sha256=fixed_marker['checkpoint_sha256'])
     summary(run,m)
   summary(run,m,state='completed',final=True);st(run,'completed')
  except BaseException as exc:
