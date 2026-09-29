@@ -18,8 +18,11 @@ ARMS=['no_memory','official_upstream_reme_fixed','official_upstream_reme_dynamic
 FROZEN_TASK_IDS=['57c3486_2','4ec8de5_1','530b157_1','6bdbc26_2','b119b1f_2','6171bbc_1']
 # Evaluations 004 and 005 are audit-only.  The latter's settled exposure and
 # unresolved reservation maximum are retained once, never as live requests.
-HISTORICAL_EXPOSURE=2.376057964
-PROTOCOL='v6_1_exploratory_diagnostic_evaluation_006_clean_restart'
+# Evaluation 006 is immutable infrastructure-only evidence.  Its settled
+# exposure carries forward once, but no evaluation artifact or Dynamic state is
+# imported into this clean restart.
+HISTORICAL_EXPOSURE=2.416212543
+PROTOCOL='v6_1_exploratory_diagnostic_evaluation_007_clean_restart'
 def ev(run,n,**x): append(run/'progress.jsonl',{'event':n,'time_ns':time.time_ns(),**x})
 def st(run,s,**x): write_json(run/'runner-status.json',{'state':s,'pid':os.getpid(),'updated_ns':time.time_ns(),**x})
 def key():
