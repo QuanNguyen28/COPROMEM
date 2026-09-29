@@ -247,6 +247,12 @@ def _event(run: pathlib.Path, event: str, **extra: Any) -> None:
     append(run / "progress.jsonl", {"event": event, "time_ns": time.time_ns(), **extra})
 
 
+def _emit_reme_lifecycle(run: pathlib.Path, record: dict[str, Any]) -> None:
+    """Bridge upstream event payloads without colliding with our event name."""
+    payload = {key: value for key, value in record.items() if key != "event"}
+    _event(run, "reme_lifecycle", upstream_event=record.get("event"), **payload)
+
+
 def acquire_lock(run: pathlib.Path) -> pathlib.Path:
     """Allow a restart only after proving the prior runner PID is absent."""
     lock = run / "runner.lock"
@@ -320,7 +326,7 @@ def construct_reme(run: pathlib.Path, records: list[dict[str, Any],], ledger: Ap
     with services(run, run / "ledger.jsonl", run / "progress.jsonl", 100.0, names, lifecycle_input_ceiling=131072) as svc:
         snapshot, checkpoint = run / "reme" / "shared-bank.jsonl", run / "reme" / "construction.jsonl"
         shared_hash, count = construct_once(official_post, svc["reme-builder"].base_url, inputs, checkpoint, snapshot,
-                                             lambda record: _event(run, "reme_lifecycle", **record))
+                                             lambda record: _emit_reme_lifecycle(run, record))
         if count != len(inputs): raise RuntimeError("official ReMe did not consume every acquisition input")
         fixed_hash = load_clone(official_post, svc["reme-fixed"].base_url, snapshot, shared_hash)
         dynamic_hash = load_clone(official_post, svc["reme-dynamic"].base_url, snapshot, shared_hash)
