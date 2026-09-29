@@ -1,0 +1,51 @@
+{
+  "version": "v6.2-final-predispatch-audit-v1",
+  "audited_source_commit": "efebefa2054fda1477e9e1ec3763a5be693fc596",
+  "terminal_classification": "NO-GO",
+  "paid_or_benchmark_activity": false,
+  "evaluation_007": {
+    "immutable": true,
+    "classification": "INVALID-METHOD-INTEGRATION",
+    "retrieval_record_count": 24,
+    "static_query_hash": "f0b6d6152a6609c59a41f1f81cb341b795cc5e3801d1925b7c7ef264ad4a736d",
+    "static_guidance_hash": "7716f4c2303eda7d94c744114d698b4eb07ff3b34f0b8a90c781e913dd5eea6a",
+    "static_selected_schema_id": "schema_40460eb08c5f2b52"
+  },
+  "runtime_source_hashes": {
+    "runner": "309e613f82ff983f3249d4d0b563e26a0f04b6912ed965c941ff2d0deb4ae61f",
+    "task_query": "2257899d798d67b00a55be0f2ae06a2736d4e1792758b57cd40a64c6d22b79b6",
+    "semantic_lifecycle": "abde81ce8e863d893de47953343dc9536758a37bb29504c691d6a46929b719e6",
+    "copromem_prefix": "05ef430dd4f2f0d06892c7371d84b58f2759b2b54b5d60eed5c724e4e022c8be",
+    "runtime_identity_helper": "42dafc42ba1931f769c8839cbdaf4e6118d5ecfc5215c9cbe1557053eb6ba38b",
+    "terminal_validator": "a9264f4d37c901b80e3e9d93a8ed9e1e5d6444596d9f0c0dc1f82448bf0a55e6",
+    "reme_fixed_checker": "36295422def9b379899a0cba2e089f259d41a6497a1a645d89786a851d4bd0eb",
+    "protocol_decisions": "d122af462b9b343b0043e341fa7a7d67c596258d1433422163d78bd856695ad0"
+  },
+  "gates": {
+    "task_conditioned_retrieval": "pass_fixture",
+    "state_isolation": "pass_fixture",
+    "semantic_v61_lifecycle": "pass_fixture",
+    "scorer_and_evidence": "pass_fixture",
+    "copromem_restart_prefix": "pass_fixture",
+    "reme_integrity_helpers": "pass_fixture",
+    "runtime_identity_production_integration": "fail",
+    "terminal_reconciliation_production_integration": "fail",
+    "complete_terminal_chain": "fail",
+    "installed_runtime_identity_registration": "fail"
+  },
+  "blocking_defects": [
+    "runtime identity helper is not frozen or verified by the candidate runner",
+    "terminal validator is not invoked before runner completion",
+    "candidate runner does not emit run_reconciled or bind terminal completion to all integrity chains",
+    "complete installed ReMe/AppWorld/scorer/agent runtime identity set is not registered"
+  ],
+  "tests": {
+    "focused_result": "79 passed",
+    "compile_import": "passed",
+    "full_suite_environment_only_failures": [
+      "Windows-versus-WSL E-drive assertion",
+      "subprocess import-path setup",
+      "stale linked-worktree Git pointer"
+    ]
+  }
+}
