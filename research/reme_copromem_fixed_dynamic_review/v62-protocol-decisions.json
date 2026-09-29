@@ -1,0 +1,23 @@
+{
+  "version": "v6.2-protocol-decisions-v1",
+  "reme_dynamic": {
+    "official_upstream_semantics": "sequential_online_per_trajectory",
+    "reporting_label": "ordered_online_trials",
+    "within_task_independence_claim": false,
+    "same_pre_state_variant": "ReMe Dynamic Task-Batch Adaptation",
+    "variant_is_official_upstream_reme": false
+  },
+  "copromem": {
+    "v5": "winner_procedure_memory",
+    "v6_2": "semantic_contrastive_common_core_memory",
+    "winner_absence_is_defect": false
+  },
+  "structured_guidance": {
+    "proposed_version": "v6.3",
+    "is_v6_2_repair": false,
+    "requires_separate_ablation": true,
+    "must_be_empty_when_unsupported": true
+  },
+  "prohibited_claims": ["confirmatory_efficacy", "superiority", "broad_generalization", "independent_same_task_replicates_for_official_reme_dynamic"],
+  "paid_run_blockers": ["copromem_dynamic_prefix_restart", "reme_fixed_identity_gate", "runtime_content_pins", "trial_seed_semantics"]
+}
