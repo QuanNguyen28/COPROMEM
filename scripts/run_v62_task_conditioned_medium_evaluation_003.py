@@ -215,10 +215,11 @@ def main() -> None:
     parser.add_argument("command", choices=["prepare", "freeze", "recover", "preflight", "run"])
     parser.add_argument("--run", type=pathlib.Path, required=True)
     args = parser.parse_args(); args.run = args.run.resolve()
-    _configure(args.run)
     if args.command == "prepare":
         _prepare(args.run)
-    elif args.command == "freeze":
+        return
+    _configure(args.run)
+    if args.command == "freeze":
         base.freeze(args.run)
     elif args.command == "recover":
         recover(args.run)
