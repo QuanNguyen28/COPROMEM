@@ -1,0 +1,18 @@
+{
+  "classification": "INFRASTRUCTURE-INTERRUPTED: canonical zero-action terminal outcomes were rejected by the execution-evidence contract.",
+  "run": "v6_1_exploratory_diagnostic_evaluation_006_clean_restart",
+  "manifest_sha256": "711d6bf274f08cf7dfbc89cdc54ae3d20cf43028b5fccec5447426f8f5e546a1",
+  "source_commit": "e654d712f45387972edceb7aa04bfa7dc3d748e0",
+  "completed_scored_artifact_count": 14,
+  "failed_trajectory": "evaluation:copromem_v6_1_dynamic:4ec8de5_1:trial=1:seed=11001",
+  "failure": {
+    "termination": "truncation_termination",
+    "finish_reason": "length",
+    "completion_token_ceiling": 2048,
+    "submitted_action": false,
+    "tool_call_present": false,
+    "execution_evidence_journal_empty": true
+  },
+  "ledger": {"reservations": 318, "settlements": 318, "unresolved": 0, "settled_total_usd": 2.416212543},
+  "analysis": {"comparative_claim_valid": false, "all_evaluation_006_scores_excluded": true}
+}
