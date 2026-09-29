@@ -136,6 +136,14 @@ def construct_once(post: Post, base_url: str, trajectories: list[dict[str, Any]]
                "construction_count": len(trajectories), "snapshot_file_sha256": file_hash(dump_file)})
         return snapshot_hash, len(trajectories)
 
+    # A persisted checkpoint alone proves that a request reached the service,
+    # not that a fresh service can reconstruct its in-memory vector store.
+    # Continuing would skip the settled item and silently build an incomplete
+    # bank.  A durable dump/complete marker is therefore mandatory before a
+    # process restart may reuse persisted construction records.
+    if any(state == "persisted" for state in states.values()):
+        raise RuntimeError("partial ReMe checkpoint lacks a durable shared-bank snapshot; replay would duplicate settled lifecycle or embedding calls")
+
     for item in trajectories:
         trajectory_id = str(item["trajectory_id"])
         if states.get(trajectory_id) == "persisted":
