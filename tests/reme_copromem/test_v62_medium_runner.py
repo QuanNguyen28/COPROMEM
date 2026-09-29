@@ -27,6 +27,17 @@ def test_medium_runner_requires_pre_payload_thirty_id_audit(tmp_path: Path):
     assert runner.base.TASK_MAJOR_ARM_FIRST is True
 
 
+def test_medium_prepare_allows_only_the_frozen_public_allocation_files(tmp_path: Path):
+    runner = _runner()
+    runner._configure = lambda _run: None
+    runner.base.PREEXISTING_RUN_FILES = {"allocation-audit.json", "custody-audit.json"}
+    (tmp_path / "allocation-audit.json").write_text("{}")
+    (tmp_path / "custody-audit.json").write_text("{}")
+    # The shared prepare boundary must treat these files as a valid preflight
+    # prefix; no task or provider operation is involved in this check.
+    assert all(item.name in runner.base.PREEXISTING_RUN_FILES for item in tmp_path.iterdir())
+
+
 def test_medium_live_summary_accepts_v62_arm_names(tmp_path: Path):
     ledger = tmp_path / "ledger.jsonl"
     records = [

@@ -121,7 +121,7 @@ def _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint,owne
 def prepare(run):
  if run.exists() and any(path.name not in PREEXISTING_RUN_FILES for path in run.iterdir()):raise RuntimeError('run nonempty')
  apply_runtime_locators(ROOT)
- report,gate=identities(); run.mkdir(parents=True)
+ report,gate=identities(); run.mkdir(parents=True,exist_ok=True)
  limits=dict(CALL_LIMITS); budget=v5_budget_bound(call_limits=limits,historical_usd=HISTORICAL_EXPOSURE,lifecycle_input_ceiling=LIFECYCLE_INPUT_CEILING)
  if budget['all_in_usd']>HARD_CAP_USD:raise RuntimeError(f'budget exceeds USD {HARD_CAP_USD:g}')
  commit=source_commit();runtime=build_evaluation_runtime_identity(root=ROOT,source_commit=commit);write_json(run/'runtime-identity.json',runtime)
