@@ -5,8 +5,12 @@ from pathlib import Path
 from typing import Any, Mapping
 from ...benchmarks.appworld.execution_evidence import journal_records, partition_v6_graph_evidence, runtime_context_fields
 from ...contrastive_graph_v6 import build_graph, commit, digest, plan_task_batch, reproduce_retrieval, retrieve, validate_plan
+from ...semantic_graph_v61 import (POLICY_VERSION as SEMANTIC_POLICY_VERSION, build_semantic_graph,
+                                   semantic_plan, validate_semantic_plan)
+from .evidence_contract import SCORER, validate as validate_execution_evidence
 
 STATE_FORMAT = "copromem-v6-contrastive-state-v1"
+SEMANTIC_STATE_FORMAT = "copromem-v6.1-semantic-state-v1"
 
 def fresh_state() -> dict[str, Any]:
     return {"state_format": STATE_FORMAT, "contrastive_v6_schemas": {}}
@@ -42,6 +46,42 @@ def task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: Mapping[s
     plan, audit = plan_task_batch_from_artifacts(artifacts=artifacts, registry=registry, pre_state=pre_state, evidence_paths=evidence_paths)
     post, marker = commit_task_batch(pre_state, plan)
     return post, marker, {**audit, "post_state_sha256": digest(post), "marker": marker}
+
+
+def semantic_task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: Mapping[str, Any],
+                               pre_state: Mapping[str, Any], evidence_paths: list[str | Path],
+                               run_root: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """v6.1 semantic contrastive update over fully scorer-bound artifacts only."""
+    if len(artifacts) != len(evidence_paths) or len(artifacts) < 2:
+        raise ValueError("complete same-task semantic batch required")
+    if pre_state.get("state_format") not in {None, SEMANTIC_STATE_FORMAT}:
+        raise ValueError("raw v6 state cannot enter a v6.1 semantic bank")
+    semantic_graphs=[]; audits=[]
+    for artifact, evidence_path in zip(artifacts, evidence_paths):
+        if SCORER not in artifact:
+            raise ValueError("semantic learning requires scorer-bound artifact")
+        validate_execution_evidence(artifact, run_root=run_root, expected_registry_sha256=str(registry["registry_sha256"]))
+        records = journal_records(evidence_path)
+        partition, ingestion = partition_v6_graph_evidence(records, str(registry["registry_sha256"]),
+            runtime_context_fields=runtime_context_fields(registry))
+        graph, projection = build_semantic_graph(partition, registry)
+        semantic_graphs.append((graph, float(artifact["after_score"]) == 1.0))
+        audits.append({"artifact_trajectory_id":artifact.get("trajectory_id"), "original_graph_sha256": projection["original_graph_sha256"],
+                       "semantic_projection_sha256":projection["semantic_projection_sha256"], "projection":projection,
+                       "ingestion":ingestion})
+    success=[graph for graph, good in semantic_graphs if good]; failed=[graph for graph, good in semantic_graphs if not good]
+    plan=semantic_plan(success, failed, pre_state, [item["projection"] for item in audits])
+    validation=validate_semantic_plan(plan, registry)
+    post, marker=commit(pre_state, plan)
+    if marker["state"] == "committed":
+        post={**post,"state_format":SEMANTIC_STATE_FORMAT}
+        marker={**marker,"post_state_sha256":digest(post),"semantic_policy_version":SEMANTIC_POLICY_VERSION}
+    audit={"state_format":SEMANTIC_STATE_FORMAT,"semantic_policy_version":SEMANTIC_POLICY_VERSION,
+           "pre_state_sha256":digest(pre_state),"semantic_graph_audits":audits,"plan":plan,"validation":validation,
+           "marker":marker,"post_state_sha256":digest(post)}
+    if marker["state"] == "rejected" and post != dict(pre_state):
+        raise ValueError("semantic rejection mutated state")
+    return post, marker, audit
 
 def retrieval_record(*, state: Mapping[str, Any], query_operations: list[str], registry_sha256: str,
                      task_query: Mapping[str, Any] | None = None) -> tuple[str, dict[str, Any]]:

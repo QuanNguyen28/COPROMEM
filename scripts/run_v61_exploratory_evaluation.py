@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse, hashlib, json, os, pathlib, sys, time
 ROOT=pathlib.Path(__file__).resolve().parents[1]; sys.path[:0]=[str(ROOT),str(ROOT/'src')]
 from copromem.contrastive_graph_v6 import digest
-from copromem.experiments.reme_copromem.contrastive_v6_runner import retrieval_record, task_batch_update
+from copromem.experiments.reme_copromem.contrastive_v6_runner import retrieval_record, semantic_task_batch_update
 from copromem.experiments.reme_copromem.task_query import derive_task_query, validate_task_query
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, execute_trajectory, official_post, services, v5_budget_bound, write_json, append
 from copromem.integrations.reme.dynamic_checkpoint import DynamicUpdateIdentity, ReMeDynamicCheckpointManager
@@ -151,7 +151,7 @@ def run(run):
       # The durable public status is refreshed immediately after every
       # artifact, never deferred to the end of a five-arm trial batch.
       summary(run,m)
-    post,marker,audit=task_batch_update(artifacts=copro,registry=registry,pre_state=pre_dynamic_state,evidence_paths=[r['execution_evidence_path'] for r in copro]);write_json(run/'copromem-dynamic'/task/'update.json',{'pre_state_sha256':digest(pre_dynamic_state),'post_state_sha256':digest(post),'marker':marker,'audit':audit});dynamic_state=post
+    post,marker,audit=semantic_task_batch_update(artifacts=copro,registry=registry,pre_state=pre_dynamic_state,evidence_paths=[r['execution_evidence_path'] for r in copro],run_root=run);write_json(run/'copromem-dynamic'/task/'update.json',{'pre_state_sha256':digest(pre_dynamic_state),'post_state_sha256':digest(post),'marker':marker,'audit':audit});dynamic_state=post
     if digest(fixed_state)!=m['banks']['copromem_sha256'] or fixed_state is dynamic_state:raise RuntimeError('CoProMem Fixed/Dynamic state isolation violated')
     summary(run,m)
   summary(run,m,state='completed',final=True);st(run,'completed')
