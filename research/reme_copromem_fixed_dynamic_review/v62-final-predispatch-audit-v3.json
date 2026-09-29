@@ -1,0 +1,20 @@
+{
+  "version": "v6.2-final-predispatch-audit-v3",
+  "terminal_classification": "NO-GO",
+  "runtime_identity_production_wiring": "pass",
+  "terminal_reconciliation_production_wiring": "pass",
+  "run_reconciled_transition": "pass",
+  "completed_requires_reconciliation": "pass",
+  "focused_zero_provider_tests": "82 passed",
+  "unchanged_environment_only_failures": [
+    "Windows-versus-WSL E-drive assertion",
+    "subprocess import-path setup",
+    "stale linked-worktree Git pointer"
+  ],
+  "local_runtime_identity_coverage": "fail_closed_missing_configured_upstream_runtime",
+  "paid_or_benchmark_activity": false,
+  "remaining_blockers": [
+    "COPROMEM_REME_SOURCE and COPROMEM_APPWORLD_ROOT are not configured to complete deterministic source roots",
+    "the locally imported AppWorld distribution identity cannot yet be verified"
+  ]
+}
