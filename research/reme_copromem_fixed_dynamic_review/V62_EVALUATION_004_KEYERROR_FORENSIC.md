@@ -88,12 +88,13 @@ semantic_post_state_sha256 == semantic_pre_state_sha256
 ```
 
 The semantic bank contains 12 schema IDs before and after reconstruction;
-their ordered IDs and individual content hashes are identical.  Retrieval
-operates only on that unchanged semantic bank.  The candidate is present only
-inside the audit/plan object, has no committed schema entry, and therefore is
-quarantined from retrieval-visible guidance.  The only permissible new durable
-objects in a successor are the rejected-marker/checkpoint records; the failed
-run itself remains unchanged.
+their exact ordered IDs and individual content hashes are recorded in the
+machine-readable report under `semantic_state_comparison`.  Retrieval operates
+only on that unchanged semantic bank.  The candidate is present only inside the
+audit/plan object, has no committed schema entry, and therefore is quarantined
+from retrieval-visible guidance.  The only permissible new durable objects in
+a successor are the rejected-marker/checkpoint records; the failed run itself
+remains unchanged.
 - ReMe Dynamic has a complete ordered prefix of four reload-tested markers;
   its latest recorded post-update semantic hash is
   `5871658adb09f4c74fc730aaa8c5e5a1025d5bd51187393b3e0a1cf3f7401a2a`.

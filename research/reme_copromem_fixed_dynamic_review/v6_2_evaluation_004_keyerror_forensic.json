@@ -75,7 +75,39 @@
         "committed": false,
         "retrieval_visible": false
       },
-      "semantic_schema_count_before_after": [12, 12]
+      "semantic_state_comparison": {
+        "object_definition": "{state_format, contrastive_v6_schemas}; schema content values remain in the immutable bank and are represented here by canonical content hashes",
+        "schema_count_before_after": [12, 12],
+        "schema_ids_before_after": [
+          "schema_40460eb08c5f2b52",
+          "schema_4cd8d5125a1f4478",
+          "schema_58232919c89b63d0",
+          "schema_8035bac89a226b2d",
+          "schema_9a5136a3ab1e58b1",
+          "schema_a68721363f8c68b0",
+          "schema_b6202872e2a30512",
+          "schema_b727d661ba7a386b",
+          "schema_ca9ebcc9b13e82e1",
+          "schema_e539b1a9a26aaaed",
+          "schema_e98d3807c825daf7",
+          "schema_f1b571ea92b0cc0e"
+        ],
+        "schema_content_sha256_before_after": {
+          "schema_40460eb08c5f2b52": "40460eb08c5f2b52f0dfe6766f871fe856b2199fd666fdb2a5adf90a2f82f077",
+          "schema_4cd8d5125a1f4478": "4cd8d5125a1f44789d757efd92c308c1a38be61754a373333f7ed9292295bacf",
+          "schema_58232919c89b63d0": "58232919c89b63d0c754ce6b64330852b96f91808d2fa84c63645feec413122a",
+          "schema_8035bac89a226b2d": "8035bac89a226b2d4750fb09e9a4e2804ab5022bb323ebeac7527ad9bed89c15",
+          "schema_9a5136a3ab1e58b1": "9a5136a3ab1e58b170b1d370941b141a5e52fd97878b372afb1bb736fdc1061b",
+          "schema_a68721363f8c68b0": "a68721363f8c68b07750829f109951679a943ec7353c911bf9695dbd0f7dcdaf",
+          "schema_b6202872e2a30512": "b6202872e2a305124a3d7d47700bf6e8ffe783be6a7120224cb1974fd2cecf29",
+          "schema_b727d661ba7a386b": "b727d661ba7a386b03d50683126eb28e3b557f4b5c14e4a669afa5d173343ee3",
+          "schema_ca9ebcc9b13e82e1": "ca9ebcc9b13e82e1621dc8c160fa245078f40a0fdb56ca864207a0e7901b9d6d",
+          "schema_e539b1a9a26aaaed": "e539b1a9a26aaaed384ba0dffbf6db8e6ae6159ac7741ab314ab2559df71c2a3",
+          "schema_e98d3807c825daf7": "e98d3807c825daf720c9292d3b5b588bc6eb50ee5addbb24830a2bdd1c1e4d8e",
+          "schema_f1b571ea92b0cc0e": "f1b571ea92b0cc0e412f401cc12891b3af33305ef2beed58c8e7d4372a358776"
+        },
+        "retrieval_visible_state_sha256_before_after": "1cff4e8192f853d9e835e7e6054346867a7b53584f0c9d61ee13b757885d0b75"
+      }
     }
   },
   "reme_dynamic": {
