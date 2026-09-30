@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import pathlib
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -23,7 +25,37 @@ def _host_path(raw: str) -> pathlib.Path:
     """Read immutable E-backed source evidence on either Windows or WSL."""
     if raw.startswith("/mnt/e/") and pathlib.Path("E:/").exists():
         return pathlib.Path("E:/" + raw[len("/mnt/e/"):])
+    if os.name != "nt" and re.match(r"^[Ee]:[\\/]", raw):
+        return pathlib.Path("/mnt/e/" + raw[3:].replace("\\", "/"))
     return pathlib.Path(raw)
+
+
+def project_legacy_e_backed_path(value: str) -> str:
+    """Project one generated E-backed locator to the legacy Windows spelling."""
+    if value.startswith("/mnt/e/"):
+        return "E:\\" + value[len("/mnt/e/"):].replace("/", "\\")
+    return value
+
+
+def project_legacy_e_backed_paths(value: Any) -> Any:
+    """Canonicalize only equivalent E-backed root locators for custody hashes.
+
+    Earlier immutable markers were created by the Windows host and therefore
+    used ``E:\\...`` for paths assembled by pathlib.  The production split
+    runtime is WSL and sees those same files as ``/mnt/e/...``.  Evidence
+    content paths persisted inside artifacts are intentionally untouched; this
+    projection applies only to generated artifact, journal, scorer, and root
+    locators in custody preimages so either host derives the same legacy
+    identity.
+    """
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return [project_legacy_e_backed_paths(item) for item in value]
+    if isinstance(value, dict):
+        return {key: (project_legacy_e_backed_path(item) if (key == "source_run" or key.endswith("_path")) and isinstance(item, str)
+                      else project_legacy_e_backed_paths(item)) for key, item in value.items()}
+    return value
 
 
 def _load(path: pathlib.Path) -> dict[str, Any]:
@@ -151,7 +183,7 @@ def import_real_prefix(*, target_run: pathlib.Path, source_run: pathlib.Path, ex
                        successor_identity: Mapping[str, Any], recovery_bindings: Mapping[str, Any]) -> dict[str, Any]:
     """Materialize source bytes and successor envelopes through one atomic marker."""
     inventory = validate_real_prefix(source_run=source_run, expected_manifest_sha256=expected_manifest_sha256)
-    spec = {"version": VERSION, "source_run": str(source_run.resolve()), "source_manifest_sha256": expected_manifest_sha256,
+    spec = {"version": VERSION, "source_run": project_legacy_e_backed_path(str(source_run.resolve())), "source_manifest_sha256": expected_manifest_sha256,
             "expected_trajectory_ids": [x["trajectory_id"] for x in inventory], "successor_identity": dict(successor_identity),
             "recovery_bindings": dict(recovery_bindings), "inventory_sha256": canonical_sha256(inventory), "next": dict(NEXT)}
     def materialize(staging: pathlib.Path):
@@ -161,7 +193,7 @@ def import_real_prefix(*, target_run: pathlib.Path, source_run: pathlib.Path, ex
         for item in inventory:
             artifact_target=staging/"source-artifacts"/f"{item['position']:04d}.json"; journal_target=staging/"source-evidence"/f"{item['position']:04d}.journal.jsonl"; scorer_target=staging/"source-evidence"/f"{item['position']:04d}.scorer.jsonl"
             copy_evidence_file(pathlib.Path(item["artifact_path"]),artifact_target); copy_evidence_file(pathlib.Path(item["journal_path"]),journal_target); copy_evidence_file(pathlib.Path(item["scorer_path"]),scorer_target)
-            envelope={"version":VERSION,"source":item,"successor_identity":dict(successor_identity),"copied_artifact_sha256":file_sha256(artifact_target),"copied_journal_sha256":file_sha256(journal_target),"copied_scorer_sha256":file_sha256(scorer_target)}; envelope["envelope_sha256"]=canonical_sha256(envelope)
+            envelope={"version":VERSION,"source":project_legacy_e_backed_paths(item),"successor_identity":dict(successor_identity),"copied_artifact_sha256":file_sha256(artifact_target),"copied_journal_sha256":file_sha256(journal_target),"copied_scorer_sha256":file_sha256(scorer_target)}; envelope["envelope_sha256"]=canonical_sha256(envelope)
             envelope_path=staging/"import-envelopes"/f"{item['position']:04d}.json"; envelope_path.parent.mkdir(parents=True,exist_ok=True); envelope_path.write_text(json.dumps(envelope,ensure_ascii=False,sort_keys=True,separators=(',',':'))+'\n',encoding='utf-8')
             rows.append({"trajectory_id":item["trajectory_id"],"position":item["position"],"envelope_sha256":envelope["envelope_sha256"]})
         return rows

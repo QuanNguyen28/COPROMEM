@@ -6,7 +6,7 @@ import pathlib
 import pytest
 
 from copromem.experiments.reme_copromem.recovery_import import RecoveryImportError
-from copromem.experiments.reme_copromem.v62_recovery_prefix import import_real_prefix
+from copromem.experiments.reme_copromem.v62_recovery_prefix import import_real_prefix, project_legacy_e_backed_paths
 from copromem.experiments.reme_copromem.v62_recovery_state import (assemble, load_published, publish,
                                                                     validate_published_custody)
 from copromem.experiments.reme_copromem.v62_recovery_start import RecoveryStartError, admit
@@ -107,10 +107,34 @@ def test_read_only_admission_rebuilds_custody_mapping_against_immutable_sources(
         validate_published_custody(target, loaded)
 
 
+@pytest.mark.skipif(not SOURCE.is_dir(), reason="immutable local recovery evidence is not available")
+def test_new_successor_identity_gets_its_own_envelope_domain_but_same_source_domain(tmp_path):
+    target = tmp_path / "successor"
+    identity = {"protocol": "v6_2_task_conditioned_evaluation_005_recovery", "source_commit": "test"}
+    import_real_prefix(target_run=target, source_run=SOURCE, expected_manifest_sha256=MANIFEST,
+                       successor_identity=identity, recovery_bindings={"next": "09b0ee6_1"})
+    state = assemble(imported_root=target, source_run=SOURCE, forensic_json=FORENSIC,
+                     successor_identity=identity, historical_exposure=2.435839694,
+                     expected_envelope_inventory_sha256=None)
+    assert state["source_prefix_inventory_sha256"] == "c40daeba9baf334f073125a52f4aec5ff59bd86181e346983bd0f8250f33b122"
+    assert state["successor_envelope_inventory_sha256"] != "d1b26a6e0e497deaf9660d000e737893f6a666b60fe68d38db7375b6542d32be"
+    publish(root=target, state=state)
+    assert admit(marker_root=target, expected_source_identity=identity, expected_manifest_sha256=MANIFEST).imported_completed == 20
+
+
 def _write_marker(path: pathlib.Path, marker: dict) -> None:
     marker["inventory_sha256"] = canonical_sha256(marker["records"])
     marker["marker_sha256"] = canonical_sha256({key: value for key, value in marker.items() if key != "marker_sha256"})
     path.write_text(json.dumps(marker, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+
+
+def test_legacy_e_backed_custody_projection_is_host_spelling_invariant():
+    windows = {"artifact_path": r"E:\Project\AAMAS\artifact.json", "journal_path": "/mnt/e/Project/AAMAS/journal.jsonl"}
+    wsl = {"artifact_path": "/mnt/e/Project/AAMAS/artifact.json", "journal_path": "/mnt/e/Project/AAMAS/journal.jsonl"}
+    assert project_legacy_e_backed_paths(windows) == project_legacy_e_backed_paths(wsl)
+    # The custody preimage treats generated journal locators the same as
+    # generated artifact locators; journal bytes remain independently bound.
+    assert project_legacy_e_backed_paths(wsl)["journal_path"] == r"E:\Project\AAMAS\journal.jsonl"
 
 
 @pytest.mark.skipif(not SOURCE.is_dir(), reason="immutable local recovery evidence is not available")

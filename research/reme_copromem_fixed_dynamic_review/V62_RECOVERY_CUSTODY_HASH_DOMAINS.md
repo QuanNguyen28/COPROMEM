@@ -9,9 +9,12 @@
 - Serialization: JSON with `ensure_ascii=False`, lexicographically sorted
   mapping keys, list order retained, compact `,`/`:` separators, UTF-8
   encoding, and no newline included in the digest.
-- Path policy: the legacy source object retains its resolved E-backed source
-  paths exactly. It is consequently a source-custody identity, not a portable
-  filename-free schema hash.
+- Path policy: generated E-backed artifact/root locators are projected to the
+  legacy `E:\\...` spelling before hashing. This preserves the original
+  Windows marker identity when the same durable files are read from WSL as
+  `/mnt/e/...`; artifact-stored evidence paths and all content hashes remain
+  untouched. It is consequently a custody identity, not a filename-free
+  schema hash.
 - Included per item: position, trajectory identity, immutable artifact/hash,
   source run/manifest/runtime/commit, journal/scorer/registry identities, and
   source paths used to read those immutable files.
@@ -32,6 +35,10 @@
 - Excluded: the envelope body, source payloads, journals, and copied paths.
 - Count: 20. Reconstructed identity:
   `d1b26a6e0e497deaf9660d000e737893f6a666b60fe68d38db7375b6542d32be`.
+  This is specifically the legacy `protocol=shadow` successor. A later
+  versioned successor has a distinct envelope identity because its frozen
+  successor identity is part of each envelope; it is accepted only when the
+  read-only admission boundary rebuilds and matches that exact marker.
 
 ## Custody mapping
 

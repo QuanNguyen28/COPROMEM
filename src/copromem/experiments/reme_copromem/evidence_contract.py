@@ -209,6 +209,22 @@ def _validate_zero_action(row: Mapping[str, Any], *, run_root: pathlib.Path) -> 
     evidence = row.get(ZERO_ACTION)
     if not isinstance(evidence, Mapping) or evidence.get("version") != ZERO_ACTION_VERSION:
         raise EvidenceContractError("empty journal lacks canonical zero-action evidence")
+    carried = row.get("carried_completed_from")
+    if isinstance(carried, Mapping):
+        source_run = pathlib.Path(str(carried.get("source_run_path") or ""))
+        source_artifact = pathlib.Path(str(carried.get("source_artifact_path") or ""))
+        if (not source_run.is_absolute() or not source_artifact.is_absolute() or not source_artifact.is_file()
+                or not isinstance(carried.get("source_artifact_sha256"), str)
+                or hashlib.sha256(source_artifact.read_bytes()).hexdigest() != carried.get("source_artifact_sha256")):
+            raise EvidenceContractError("carried zero-action source identity is invalid")
+        source = load_artifact(source_artifact)
+        if (source.get("trajectory_id") != row.get("trajectory_id") or source.get("history_sha256") != row.get("history_sha256")
+                or source.get(ZERO_ACTION) != evidence):
+            raise EvidenceContractError("carried zero-action artifact differs from immutable source")
+        # Validate the original settlement/manifest/scorer binding in its
+        # owning run; no successor ledger row is inferred or synthesized.
+        validate(source, run_root=source_run)
+        return
     copy = dict(evidence); binding = copy.pop("binding_sha256", None)
     if not isinstance(binding, str) or binding != _digest(copy):
         raise EvidenceContractError("zero-action evidence binding hash mismatch")

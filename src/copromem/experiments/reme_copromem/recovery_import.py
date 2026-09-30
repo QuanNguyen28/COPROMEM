@@ -21,6 +21,7 @@ from .evidence_contract import (
     RELATIVE,
     ROWS,
     SCORER,
+    ZERO_ACTION,
     EvidenceContractError,
     load_artifact,
     validate,
@@ -171,9 +172,17 @@ def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib
     except EvidenceContractError as exc:
         raise RecoveryImportError("source scored artifact fails its evidence contract") from exc
     scorer = source.get(SCORER)
-    if not isinstance(scorer, Mapping):
-        raise RecoveryImportError("source scored artifact lacks scorer binding")
-    scorer_source = pathlib.Path(str(scorer.get("path") or ""))
+    zero = source.get(ZERO_ACTION)
+    if isinstance(scorer, Mapping) and isinstance(zero, Mapping):
+        raise RecoveryImportError("source scored artifact has conflicting scorer bindings")
+    if isinstance(scorer, Mapping):
+        scorer_source = pathlib.Path(str(scorer.get("path") or ""))
+        scorer_hash = str(scorer.get("sha256") or "")
+    elif isinstance(zero, Mapping):
+        scorer_source = pathlib.Path(str(zero.get("scorer_evidence_path") or ""))
+        scorer_hash = str(zero.get("scorer_evidence_sha256") or "")
+    else:
+        raise RecoveryImportError("source scored artifact lacks canonical scorer binding")
     if not scorer_source.is_absolute() or not scorer_source.is_file():
         raise RecoveryImportError("source scorer journal is absent")
     execution_target = target_run / "journals" / execution_source.name
@@ -187,12 +196,20 @@ def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib
     result[RELATIVE] = str(execution_target.resolve().relative_to(target_run))
     result[HASH] = file_sha256(execution_target)
     result[ROWS] = len(execution_target.read_bytes().splitlines())
-    result[SCORER] = {**dict(scorer), "path": str(scorer_target.resolve()), "sha256": file_sha256(scorer_target)}
-    result["carried_completed_from"] = {
+    carried = {
         "source_manifest_sha256": source_manifest_sha256,
         "source_artifact_sha256": file_sha256(source_artifact),
         "source_trajectory_id": source.get("trajectory_id"),
     }
+    if isinstance(scorer, Mapping):
+        result[SCORER] = {**dict(scorer), "path": str(scorer_target.resolve()), "sha256": file_sha256(scorer_target)}
+    else:
+        # Zero-action evidence is cryptographically bound to the original
+        # settled executor record, manifest, and scorer journal.  A successor
+        # cannot replace those source identities with a made-up local ledger
+        # row; the evidence contract follows the explicit immutable source.
+        carried.update({"source_run_path": str(source_run), "source_artifact_path": str(source_artifact.resolve())})
+    result["carried_completed_from"] = carried
     _atomic_json(target_artifact, result)
     try:
         validate(result, run_root=target_run)
@@ -203,5 +220,5 @@ def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib
         "target_artifact_sha256": file_sha256(target_artifact),
         "trajectory_id": str(result.get("trajectory_id") or ""),
         "execution_evidence_sha256": result[HASH],
-        "scorer_evidence_sha256": result[SCORER]["sha256"],
+        "scorer_evidence_sha256": file_sha256(scorer_target) if isinstance(scorer, Mapping) else scorer_hash,
     }

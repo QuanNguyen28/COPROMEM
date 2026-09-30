@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 from collections import Counter
 from typing import Any, Mapping
 
@@ -40,6 +41,8 @@ def _host_path(value: str) -> pathlib.Path:
     """Resolve immutable E-backed evidence on Windows and WSL without guessing."""
     if value.startswith("/mnt/e/") and pathlib.Path("E:/").exists():
         return pathlib.Path("E:/" + value[len("/mnt/e/"):])
+    if os.name != "nt" and re.match(r"^[Ee]:[\\/]", value):
+        return pathlib.Path("/mnt/e/" + value[3:].replace("\\", "/"))
     return pathlib.Path(value)
 
 
@@ -264,7 +267,7 @@ def _summary(envelopes: list[Mapping[str, Any]]) -> dict[str, Any]:
 def assemble(*, imported_root: pathlib.Path, source_run: pathlib.Path, forensic_json: pathlib.Path,
              successor_identity: Mapping[str, Any], historical_exposure: float,
              expected_source_inventory_sha256: str = LEGACY_SOURCE_SHA256,
-             expected_envelope_inventory_sha256: str = LEGACY_ENVELOPE_SHA256) -> dict[str, Any]:
+             expected_envelope_inventory_sha256: str | None = LEGACY_ENVELOPE_SHA256) -> dict[str, Any]:
     """Validate the full production prefix and return one canonical recovery state."""
     imported_root = imported_root.resolve()
     source_run = source_run.resolve()
@@ -354,9 +357,10 @@ def load_published(root: pathlib.Path) -> dict[str, Any]:
     expected = {key: item for key, item in value.items() if key != "recovery_state_sha256"}
     if value.get("version") != VERSION or value.get("recovery_state_sha256") != canonical_sha256(expected):
         raise RecoveryImportError("unified recovery-state marker is invalid")
+    envelope_hash = value.get("successor_envelope_inventory_sha256")
     if (value.get("next") != NEXT or value.get("progress", {}).get("completed") != 20
             or value.get("source_prefix_inventory_sha256") != LEGACY_SOURCE_SHA256
-            or value.get("successor_envelope_inventory_sha256") != LEGACY_ENVELOPE_SHA256
+            or not isinstance(envelope_hash, str) or len(envelope_hash) != 64
             or not isinstance(value.get("custody_mapping_sha256"), str)):
         raise RecoveryImportError("unified recovery-state continuation identity is invalid")
     mapping = value.get("custody_mapping")
@@ -385,7 +389,7 @@ def validate_published_custody(root: pathlib.Path, state: Mapping[str, Any] | No
         expected_manifest_sha256=str(source.get("manifest_sha256") or ""),
         imported_root=root,
         expected_source_inventory_sha256=LEGACY_SOURCE_SHA256,
-        expected_envelope_inventory_sha256=LEGACY_ENVELOPE_SHA256,
+        expected_envelope_inventory_sha256=str(published["successor_envelope_inventory_sha256"]),
     )
     if actual != published.get("custody_mapping"):
         raise RecoveryImportError("published custody mapping diverges from immutable evidence")

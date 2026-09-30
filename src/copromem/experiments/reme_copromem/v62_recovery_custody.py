@@ -11,7 +11,8 @@ import pathlib
 from typing import Any, Mapping
 
 from .recovery_import import RecoveryImportError, canonical_sha256, file_sha256
-from .v62_recovery_prefix import _host_path, _load, validate_real_prefix
+from .v62_recovery_prefix import (_host_path, _load, project_legacy_e_backed_path,
+                                  project_legacy_e_backed_paths, validate_real_prefix)
 
 
 VERSION = "v6.2-dual-domain-custody-v1"
@@ -64,7 +65,12 @@ def build_mapping(*, source_run: pathlib.Path, expected_manifest_sha256: str,
     """Bind every immutable source entry to exactly one successor envelope."""
     source = source_inventory(source_run=source_run, expected_manifest_sha256=expected_manifest_sha256)
     records, envelopes = envelope_inventory(imported_root=imported_root)
-    source_hash = canonical_sha256(source)
+    # The legacy Windows marker uses E-drive text for generated root paths;
+    # WSL observes the exact same E-backed bytes through /mnt/e.  The explicit
+    # projection prevents that non-semantic host spelling from changing the
+    # source custody identity.
+    projected_source = project_legacy_e_backed_paths(source)
+    source_hash = canonical_sha256(projected_source)
     envelope_hash = canonical_sha256(records)
     if expected_source_inventory_sha256 is not None and source_hash != expected_source_inventory_sha256:
         raise RecoveryImportError("source inventory hash does not match its declared domain")
@@ -77,7 +83,7 @@ def build_mapping(*, source_run: pathlib.Path, expected_manifest_sha256: str,
         source_identity = source_row["identity"]
         if (int(record.get("position", 0)) != position or int(source_row.get("position", 0)) != position
                 or record.get("trajectory_id") != source_row.get("trajectory_id")
-                or envelope.get("source") != source_row):
+                or envelope.get("source") != project_legacy_e_backed_paths(source_row)):
             raise RecoveryImportError("source/envelope ordering or provenance mismatch")
         artifact_path = _host_path(str(source_row["artifact_path"]))
         source_artifact = _load(artifact_path)
@@ -90,12 +96,12 @@ def build_mapping(*, source_run: pathlib.Path, expected_manifest_sha256: str,
             "position": position,
             "trajectory_id": source_row["trajectory_id"],
             "identity": dict(source_identity),
-            "source_inventory_entry_sha256": canonical_sha256(source_row),
+            "source_inventory_entry_sha256": canonical_sha256(project_legacy_e_backed_paths(source_row)),
             "original_artifact_sha256": source_row["artifact_sha256"],
             "history_sha256": source_artifact["history_sha256"],
             "journal_sha256": source_row["journal_sha256"],
             "normalized_scorer_sha256": source_row["normalized_scorer_sha256"],
-            "source_run": source_row["source_run"],
+            "source_run": project_legacy_e_backed_path(source_row["source_run"]),
             "source_manifest_sha256": source_row["source_manifest_sha256"],
             "source_runtime_sha256": source_row["source_runtime_sha256"],
             "source_commit": source_row["source_commit"],
