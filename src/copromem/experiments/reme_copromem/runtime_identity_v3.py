@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from .runtime_identity import RuntimeIdentityError
+from .runtime_identity import RuntimeIdentityError, content_hash, evaluation_runtime_inputs, tree_hash
 
 
 IDENTITY_VERSION = "runtime-content-identity-v3"
@@ -121,6 +121,17 @@ def _git(root: Path, args: Iterable[str]) -> bytes:
     """Never inherit a caller's GIT_DIR/GIT_WORK_TREE for another repository."""
     env = {key: value for key, value in os.environ.items() if key not in {"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"}}
     try:
+        pointer = root / ".git"
+        # Git-for-Windows follows the linked-worktree pointer directly.  WSL
+        # Git needs the Windows pointer translated, but only for this exact
+        # checkout; never inherit an unrelated caller's GIT_DIR.
+        if os.name == "posix" and pointer.is_file():
+            raw = pointer.read_text(encoding="utf-8").strip()
+            if raw.lower().startswith("gitdir: ") and len(raw) > 10 and raw[8:10].endswith(":/"):
+                drive, tail = raw[8], raw[10:]
+                env["GIT_DIR"] = f"/mnt/{drive.lower()}/{tail}"
+                env["GIT_WORK_TREE"] = str(root)
+                return subprocess.check_output(["git", *args], env=env)
         return subprocess.check_output(["git", "-C", str(root), *args], env=env)
     except (OSError, subprocess.CalledProcessError) as exc:
         raise RuntimeIdentityError("runtime v3 requires a readable Git checkout") from exc
@@ -233,3 +244,55 @@ def verify_manifest_identity(manifest: Mapping[str, Any], record: Mapping[str, A
     if manifest.get("runtime_identity_sha256") != observed["runtime_identity_sha256"]:
         raise RuntimeIdentityError("manifest-bound v3 runtime identity mismatch")
     return observed
+
+
+def evaluation_v3_inputs(*, root: Path, manifest: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """Derive the non-secret v3 component inputs used by the maintained runner.
+
+    This is the one production bridge from a frozen engineering manifest to
+    the five v3 components.  It reads metadata and installed-file identities
+    only; it never starts a service or contacts a provider.
+    """
+    execution = manifest.get("execution"); evaluation = manifest.get("evaluation"); banks = manifest.get("banks")
+    policy = manifest.get("method_policy")
+    if not all(isinstance(value, Mapping) for value in (execution, evaluation, banks, policy)):
+        raise RuntimeIdentityError("v3 manifest lacks semantic identity inputs")
+    registry_path = root / "research/reme_copromem_fixed_dynamic_review/appworld_public_tool_schema_registry_v5_3.json"
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        registry_sha256 = str(registry["registry_sha256"])
+        method_policy_sha256 = str(policy["policy_sha256"])
+        allocation_sha256 = str(evaluation["allocation_audit_sha256"])
+        task_ids = list(evaluation["task_ids"]); seeds = list(evaluation["seeds"])
+    except (OSError, KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise RuntimeIdentityError("v3 manifest scientific inputs are invalid") from exc
+    configuration = {
+        "model": execution.get("model"), "provider_route": execution.get("provider_only"),
+        "temperature": execution.get("temperature"),
+        "limits": {name: execution.get(name) for name in ("max_actions", "completion_token_ceiling", "context_token_ceiling")},
+        "arms": list(manifest.get("arms", ())), "retrieval_policy_sha256": method_policy_sha256,
+        "prompt_tool_interface": "v6.2.1-maintained", "scorer_contract": "official-appworld",
+        "ledger_policy": "append-only-hard-cap", "storage_policy": dict(manifest.get("storage_policy", {})),
+        "callable_registry_sha256": registry_sha256,
+    }
+    content, trees, labels = evaluation_runtime_inputs(root=root, source_commit=str(manifest.get("git_commit", "")))
+    external = {
+        "python_implementation": labels.get("python_implementation"), "python_version": labels.get("python_version"),
+        "appworld_distribution_version": labels.get("appworld_distribution_version"),
+        "reme_commit": labels.get("reme_git_commit"), "reme_dirty": labels.get("reme_git_dirty"),
+        "content": {name: content_hash(path) for name, path in sorted(content.items()) if name not in {"evaluation_runner"}},
+        "trees": {name: tree_hash(path) for name, path in sorted(trees.items())},
+    }
+    scientific = {
+        "copromem_initial_bank_sha256": banks.get("copromem_sha256"), "reme_initial_bank_sha256": banks.get("reme_shared_sha256"),
+        "callable_registry_sha256": registry_sha256, "allocation_sha256": allocation_sha256,
+        "method_policy_sha256": method_policy_sha256,
+        "task_trial_identity_sha256": canonical_hash({"task_ids": task_ids, "seeds": seeds}),
+    }
+    return {"runtime_configuration": configuration, "external_dependencies": external, "scientific_inputs": scientific}
+
+
+def build_evaluation_identity_v3(*, root: Path, manifest: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    inputs = evaluation_v3_inputs(root=root, manifest=manifest)
+    record = build_identity(root=root, executable_commit=str(manifest.get("git_commit", "")), **inputs)
+    return record, inputs

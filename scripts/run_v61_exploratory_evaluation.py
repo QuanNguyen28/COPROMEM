@@ -13,8 +13,8 @@ from copromem.experiments.reme_copromem.live_summary import build_live_summary, 
 from copromem.experiments.reme_copromem.live_summary import reconcile_ledger
 from copromem.experiments.reme_copromem.copromem_dynamic_checkpoint import CoProMemDynamicCheckpointManager
 from copromem.integrations.reme.fixed_checkpoint import ReMeFixedIntegrityManager
-from copromem.experiments.reme_copromem.runtime_identity import apply_runtime_locators, build_evaluation_runtime_identity, verify_runtime_identity, evaluation_runtime_inputs
-from copromem.experiments.reme_copromem.runtime_identity_v3 import IDENTITY_VERSION as RUNTIME_IDENTITY_V3, verify_manifest_identity as verify_runtime_identity_v3
+from copromem.experiments.reme_copromem.runtime_identity import RuntimeIdentityError, apply_runtime_locators, build_evaluation_runtime_identity, verify_runtime_identity, evaluation_runtime_inputs
+from copromem.experiments.reme_copromem.runtime_identity_v3 import IDENTITY_VERSION as RUNTIME_IDENTITY_V3, evaluation_v3_inputs, verify_manifest_identity as verify_runtime_identity_v3
 from copromem.experiments.reme_copromem.terminal_reconciliation import validate_terminal_run
 from copromem.experiments.reme_copromem.v61_custody import classify
 from scripts.run_v6_shared_acquisition import c_free_gib,file_sha,git_head
@@ -62,11 +62,10 @@ def _runtime_identity(run,m):
  if not record_path.is_file():raise RuntimeError('runtime identity record is absent')
  record=json.loads(record_path.read_text(encoding='utf-8'))
  if m.get('runtime_identity_version')==RUNTIME_IDENTITY_V3:
-  inputs=m.get('runtime_identity_inputs')
-  if not isinstance(inputs,dict):raise RuntimeError('v3 manifest runtime identity inputs are absent')
   try:
-   verify_runtime_identity_v3(m,record,root=ROOT,runtime_configuration=inputs['runtime_configuration'],external_dependencies=inputs['external_dependencies'],scientific_inputs=inputs['scientific_inputs'])
-  except (KeyError, TypeError) as exc:raise RuntimeError('v3 manifest runtime identity inputs are invalid') from exc
+   inputs=evaluation_v3_inputs(root=ROOT,manifest=m)
+   verify_runtime_identity_v3(m,record,root=ROOT,**inputs)
+  except (KeyError, TypeError, RuntimeIdentityError) as exc:raise RuntimeError('v3 manifest runtime identity inputs are invalid or drifted') from exc
   if file_sha(record_path)!=m.get('runtime_identity_file_sha256'):raise RuntimeError('manifest-bound v3 runtime identity file mismatch')
   return record
  content,trees,labels=evaluation_runtime_inputs(root=ROOT,source_commit=m['git_commit'])

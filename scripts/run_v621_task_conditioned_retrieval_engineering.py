@@ -21,6 +21,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "src")]
 os.environ.setdefault("COPROMEM_EVALUATION_RUNNER", str(pathlib.Path(__file__).resolve()))
 
 from copromem.experiments.reme_copromem.runner import write_json
+from copromem.experiments.reme_copromem.runtime_identity_v3 import IDENTITY_VERSION as RUNTIME_IDENTITY_V3, build_evaluation_identity_v3
 from copromem.experiments.reme_copromem.task_conditioned_retrieval_v621 import (
     POLICY_VERSION, derive_task_query, frozen_policy, reproduce_retrieval, retrieve,
     validate_task_query,
@@ -28,8 +29,8 @@ from copromem.experiments.reme_copromem.task_conditioned_retrieval_v621 import (
 from scripts import run_v61_exploratory_evaluation as base
 
 
-PROTOCOL = "v6_2_1_task_conditioned_retrieval_engineering_001"
-RUN_NAME = "v6_2_1_task_conditioned_retrieval_engineering_001"
+PROTOCOL = "v6_2_1_task_conditioned_retrieval_engineering_002"
+RUN_NAME = "v6_2_1_task_conditioned_retrieval_engineering_002"
 ARMS = ["no_memory", "official_upstream_reme_fixed", "official_upstream_reme_dynamic",
         "copromem_v6_2_1_fixed", "copromem_v6_2_1_dynamic"]
 CALL_LIMITS = {"executor": 900, "reme_lifecycle": 128, "reme_embedding": 512,
@@ -105,6 +106,15 @@ def prepare(run: pathlib.Path) -> None:
     })
     template["budget"].update({"historical_settled_exposure": HISTORICAL_EXPOSURE,
                                 "hard_cap_usd": HARD_CAP_USD})
+    # V3 is generated only after every semantic template field exists.  The
+    # record is then verified again by the maintained base runner at startup,
+    # restart, each pre-task checkpoint, and terminal reconciliation.
+    template["runtime_identity_version"] = RUNTIME_IDENTITY_V3
+    runtime, inputs = build_evaluation_identity_v3(root=ROOT, manifest=template)
+    write_json(run / "runtime-identity.json", runtime)
+    template["runtime_identity_inputs"] = inputs
+    template["runtime_identity_sha256"] = runtime["runtime_identity_sha256"]
+    template["runtime_identity_file_sha256"] = base.file_sha(run / "runtime-identity.json")
     write_json(template_path, template)
 
 

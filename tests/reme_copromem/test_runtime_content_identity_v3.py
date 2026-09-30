@@ -143,9 +143,11 @@ def test_maintained_runner_enforces_v3_at_start_restart_pre_task_and_terminal(tm
     (run / "manifest.json").write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
     runner = importlib.import_module("scripts.run_v61_exploratory_evaluation")
     monkeypatch.setattr(runner, "ROOT", root)
+    monkeypatch.setattr(runner, "evaluation_v3_inputs", lambda **_: {
+        "runtime_configuration": config, "external_dependencies": external, "scientific_inputs": scientific})
     for stage in ("startup", "restart", "pre-task", "terminal"):
         _, checkpoint = runner._runtime_checkpoint(run, manifest, stage)
         assert checkpoint["runtime_identity_sha256"] == record["runtime_identity_sha256"]
     (root / "src/copromem/runtime/engine.py").write_text("tampered", encoding="utf-8")
-    with pytest.raises(RuntimeIdentityError):
+    with pytest.raises(RuntimeError, match="v3 manifest runtime identity"):
         runner._runtime_identity(run, manifest)
