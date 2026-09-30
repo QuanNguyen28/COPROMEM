@@ -155,6 +155,8 @@ def import_real_prefix(*, target_run: pathlib.Path, source_run: pathlib.Path, ex
             "expected_trajectory_ids": [x["trajectory_id"] for x in inventory], "successor_identity": dict(successor_identity),
             "recovery_bindings": dict(recovery_bindings), "inventory_sha256": canonical_sha256(inventory), "next": dict(NEXT)}
     def materialize(staging: pathlib.Path):
+        (staging / "recovery-import-spec.json").write_text(
+            json.dumps(spec, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
         rows=[]
         for item in inventory:
             artifact_target=staging/"source-artifacts"/f"{item['position']:04d}.json"; journal_target=staging/"source-evidence"/f"{item['position']:04d}.journal.jsonl"; scorer_target=staging/"source-evidence"/f"{item['position']:04d}.scorer.jsonl"
