@@ -1,0 +1,57 @@
+{
+  "version": "v6.2-evaluation-004-keyerror-forensic-v1",
+  "mode": "zero_provider_read_only",
+  "source_run": "v6_2_task_conditioned_evaluation_004_recovery",
+  "manifest_sha256": "f93bbed7f2811fd736866d3d6ace3212e719007923e7cd5e672060aed24a803f",
+  "failure": {
+    "exception": "KeyError",
+    "missing_key": "official_scorer_evidence",
+    "phase": "checkpoint_writing",
+    "source": "scripts/run_v61_exploratory_evaluation.py:264",
+    "classification": "missing_optional_versioned_field_incorrectly_treated_as_required"
+  },
+  "trigger_trajectory": {
+    "arm": "copromem_v6_2_dynamic",
+    "task_id": "042a9fc_1",
+    "trial_id": 2,
+    "seed": 11002,
+    "actions": 30,
+    "official_score": 0.8,
+    "history_sha256": "ce55ef3da0e8419024acf7ccb2a8d07a3bce04cdadf33b59e85099cc05e3bd5c"
+  },
+  "scored_prefix": {
+    "unique_valid_scored_trajectories": 20,
+    "imported_task_024c982_2": 10,
+    "new_task_042a9fc_1": 10,
+    "history_hashes_valid": 20,
+    "journal_bindings_valid": 20,
+    "scorer_bindings_valid": 20,
+    "canonical_zero_action_artifacts": 1
+  },
+  "copromem_dynamic": {
+    "completed_task_id": "024c982_2",
+    "completed_post_state_sha256": "1cff4e8192f853d9e835e7e6054346867a7b53584f0c9d61ee13b757885d0b75",
+    "failed_boundary_task_id": "042a9fc_1",
+    "failed_boundary_transition": "trajectories_complete",
+    "failed_boundary_pre_state_sha256": "1cff4e8192f853d9e835e7e6054346867a7b53584f0c9d61ee13b757885d0b75",
+    "offline_reconstruction": {
+      "deterministic": true,
+      "marker_state": "rejected",
+      "pre_state_unchanged": true,
+      "post_state_sha256": "0aaf10c98e595c54deb97678a26554eb3efa22b0f3b691c62c654490a781ce9c",
+      "plan_sha256": "c4239fd9ab4e72f055b9b459eea9ca0f77821c8fc05a2acb7dcfd3e62bc94141",
+      "validation_passed": false
+    }
+  },
+  "reme_dynamic": {
+    "completed_marker_count": 4,
+    "latest_post_state_sha256": "5871658adb09f4c74fc730aaa8c5e5a1025d5bd51187393b3e0a1cf3f7401a2a",
+    "latest_snapshot_sha256": "b4327fb0f75e035cbfad210db149c4d175911262ed338d45ca55f440613819b6"
+  },
+  "ledger": {
+    "reservations": 268,
+    "settlements": 268,
+    "unresolved": 0
+  },
+  "continuation": "separately_versioned_successor_only"
+}

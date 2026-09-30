@@ -40,7 +40,9 @@ def _rows(path: pathlib.Path, rows: list[dict]) -> None:
 
 
 def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None,
-            interrupt_on_call_number: int | None = None):
+            interrupt_on_call_number: int | None = None,
+            zero_action_dynamic: bool = False,
+            stop_after_first_copro_batch: bool = False):
     mod = _module(); run = tmp_path / "shadow"; run.mkdir()
     shared = tmp_path / "construction" / "reme" / "shared-bank.jsonl"
     initial_rows = [{"memory_id": "m0", "memory": "initial", "vector": [0.1, 0.2]}]
@@ -89,8 +91,19 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
     monkeypatch.setattr(lifecycle, "dynamic_post_trial_update", local_dynamic_update)
     def fake_retrieval(**_kwargs): return "shadow guidance", {"shadow": True}
     monkeypatch.setattr(mod, "retrieval_record", fake_retrieval)
+    class BoundaryReached(RuntimeError):
+        """Proves the production runner reached the semantic batch boundary."""
+
     def fake_batch(**kwargs):
         assert len(kwargs["artifacts"]) == 2
+        # This assertion is deliberately in the production-runner shadow.  It
+        # guards the exact integration boundary that failed in evaluation 004:
+        # the versioned zero-action attestation is a valid scorer identity, not
+        # an absent ordinary scorer binding.
+        from copromem.experiments.reme_copromem.contrastive_v6_runner import scorer_evidence_sha256
+        assert all(scorer_evidence_sha256(item) for item in kwargs["artifacts"])
+        if stop_after_first_copro_batch:
+            raise BoundaryReached("production runner reached semantic batch")
         post_state = {**kwargs["pre_state"], "shadow_updates": len(kwargs["artifacts"])}
         plan = {"plan_sha256": "shadow-plan"}
         return post_state, {"state": "committed", "winner_schema_id": "shadow-schema"}, {
@@ -123,6 +136,17 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
         result = {"trajectory_id": trajectory_id, "arm": arm, "task_id": task, "trial_id": trial, "seed": seed,
                   "after_score": 1.0, "before_score": 0.0, "actions": 1, "history": history,
                   "history_sha256": mod.digest(history), **binding}
+        if zero_action_dynamic and arm == mod.COPRO_DYNAMIC_ARM and task == "shadow-a" and trial == 1:
+            scorer_hash = result.pop("official_scorer_evidence")["sha256"]
+            result.update({
+                "actions": 0,
+                "after_score": 0.0,
+                "termination": "truncation_termination",
+                "zero_action_evidence": {
+                    "version": "canonical-zero-action-evidence-v1",
+                    "scorer_evidence_sha256": scorer_hash,
+                },
+            })
         write_json(kwargs["artifact_path"], result); append(kwargs["progress"], {"event": "trajectory_scored", "trajectory_id": result["trajectory_id"]})
         if interrupt == "after_scored_artifact": raise KeyboardInterrupt()
         if kwargs.get("post_score_update") is not None:
@@ -130,11 +154,11 @@ def _shadow(monkeypatch, tmp_path: pathlib.Path, *, interrupt: str | None = None
         calls.append(result["trajectory_id"])
         return result
     monkeypatch.setattr(mod, "execute_trajectory", fake_execute)
-    return mod, run, calls
+    return mod, run, calls, BoundaryReached
 
 
 def test_full_shadow_uses_production_orchestration_and_refreshes_every_artifact(monkeypatch, tmp_path):
-    mod, run, calls = _shadow(monkeypatch, tmp_path)
+    mod, run, calls, _ = _shadow(monkeypatch, tmp_path)
     mod.run(run)
     summary = json.loads((run / "live-summary.json").read_text())
     assert len(calls) == 20 and summary["completed"] == summary["expected"] == 20
@@ -151,14 +175,14 @@ def test_full_shadow_uses_production_orchestration_and_refreshes_every_artifact(
 
 @pytest.mark.parametrize("point", ["before_reservation", "after_reservation", "after_journal_creation", "after_scored_artifact"])
 def test_shadow_interruptions_are_terminal_and_never_mark_dead_runner_running(monkeypatch, tmp_path, point):
-    mod, run, _calls = _shadow(monkeypatch, tmp_path, interrupt=point)
+    mod, run, _calls, _ = _shadow(monkeypatch, tmp_path, interrupt=point)
     with pytest.raises(KeyboardInterrupt): mod.run(run)
     assert json.loads((run / "runner-status.json").read_text())["state"] == "failed"
     assert not (run / "runner.lock").exists()
 
 
 def test_evaluation_005_sequence_has_two_durable_summaries_before_interrupt(monkeypatch, tmp_path):
-    mod, run, _calls = _shadow(monkeypatch, tmp_path, interrupt_on_call_number=3)
+    mod, run, _calls, _ = _shadow(monkeypatch, tmp_path, interrupt_on_call_number=3)
     with pytest.raises(KeyboardInterrupt): mod.run(run)
     summary = json.loads((run / "live-summary.json").read_text())
     assert summary["completed"] == 2
@@ -168,7 +192,7 @@ def test_evaluation_005_sequence_has_two_durable_summaries_before_interrupt(monk
 
 
 def test_terminal_reconciliation_failure_never_writes_marker_or_completed_report(monkeypatch, tmp_path):
-    mod, run, _calls = _shadow(monkeypatch, tmp_path)
+    mod, run, _calls, _ = _shadow(monkeypatch, tmp_path)
     monkeypatch.setattr(mod, "validate_terminal_run", lambda **_kwargs: {
         "valid": False, "failures": [{"gate": "fixture", "reason": "tampered"}],
     })
@@ -180,9 +204,35 @@ def test_terminal_reconciliation_failure_never_writes_marker_or_completed_report
 
 
 def test_completed_shadow_is_read_only_on_restart(monkeypatch, tmp_path):
-    mod, run, calls = _shadow(monkeypatch, tmp_path)
+    mod, run, calls, _ = _shadow(monkeypatch, tmp_path)
     mod.run(run)
     completed = len(calls)
     mod.run(run)
     assert len(calls) == completed
     assert not (run / "runner.lock").exists()
+
+
+def test_production_runner_accepts_canonical_zero_action_at_task_boundary(monkeypatch, tmp_path):
+    """Regression for evaluation 004's post-score KeyError.
+
+    This intentionally uses the production ``run`` function.  The external
+    executor and semantic transaction are local fakes, but the artifact reload
+    and ``trajectories_complete`` checkpoint are the maintained production
+    code.  A boundary sentinel proves we get past the formerly failing lookup
+    without mutating a semantic plan.
+    """
+    mod, run, _calls, BoundaryReached = _shadow(
+        monkeypatch, tmp_path, zero_action_dynamic=True, stop_after_first_copro_batch=True,
+    )
+    # The shadow artifact deliberately models the valid alternate scorer
+    # binding.  Summary validation is covered separately by the canonical
+    # evidence-contract fixture; this test focuses on the runner checkpoint.
+    monkeypatch.setattr(mod, "summary", lambda *_args, **_kwargs: None)
+    with pytest.raises(BoundaryReached, match="semantic batch"):
+        mod.run(run)
+    checkpoint = json.loads((run / "copromem-dynamic-checkpoints" / "tasks" / "0001-shadow-a" /
+                             "03-trajectories_complete.json").read_text())
+    assert len(checkpoint["scorer_evidence_hashes"]) == 2
+    assert all(checkpoint["scorer_evidence_hashes"])
+    assert not (run / "copromem-dynamic-checkpoints" / "tasks" / "0001-shadow-a" /
+                "05-semantic_plan_persisted.json").exists()

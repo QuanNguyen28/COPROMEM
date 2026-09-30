@@ -11,7 +11,7 @@ from copromem.experiments.reme_copromem.copromem_dynamic_checkpoint import (
 )
 
 
-TASKS = ("task-a", "task-b")
+TASKS = ("task-a", "task-b", "task-c")
 INITIAL = {"state_format": "copromem-v6.1-semantic-state-v1", "semantic_schemas": {}}
 
 
@@ -109,7 +109,8 @@ def test_fixed_drift_unsettled_ledger_and_reordered_task_fail_closed(tmp_path):
 def test_run_reconciled_is_global_content_addressed_and_tamper_detected(tmp_path):
     manager = _manager(tmp_path)
     state = _complete_task(manager, "task-a", INITIAL)
-    _complete_task(manager, "task-b", state)
+    state = _complete_task(manager, "task-b", state)
+    _complete_task(manager, "task-c", state)
     marker = manager.record_run_reconciled(
         runtime_identity_file_sha256="runtime", terminal_reconciliation_sha256="terminal",
         scored_artifact_inventory_sha256="artifacts", expected_trajectories=20,
@@ -126,3 +127,31 @@ def test_run_reconciled_is_global_content_addressed_and_tamper_detected(tmp_path
     path.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(CoProMemDynamicCheckpointError, match="hash"):
         manager.validate_run_reconciled()
+
+
+def test_three_consecutive_task_boundaries_reconcile_at_every_durable_stage(tmp_path):
+    """A restart reads one exact prefix across three independent task batches.
+
+    This regression is intentionally provider/scorer free.  It exercises the
+    production checkpoint namespace through pre-state, plan/validation/commit,
+    post-state, and authorization transitions rather than an isolated in-memory
+    helper representation.
+    """
+    manager = _manager(tmp_path)
+    state = INITIAL
+    for index, task in enumerate(TASKS, 1):
+        manager.freeze_task_pre_state(task, state)
+        assert _manager(tmp_path).reconcile(ledger_reconciled=True, fixed_current_state=INITIAL)["next_transition"] == "retrievals_materialized"
+        manager.record(task, "retrievals_materialized", task_query_hashes=[f"q{index}"], retrieval_hashes=[f"r{index}a", f"r{index}b"])
+        manager.record(task, "trajectories_complete", artifact_hashes=[f"a{index}a", f"a{index}b"], scorer_evidence_hashes=[f"s{index}a", f"s{index}b"])
+        manager.record(task, "batch_ready", semantic_projection_hashes=[f"g{index}a", f"g{index}b"])
+        manager.record(task, "semantic_plan_persisted", plan_sha256=f"p{index}")
+        manager.record(task, "validation_persisted", validation_sha256=f"v{index}", validation_passed=True)
+        manager.record(task, "commit_persisted", marker_sha256=f"c{index}", state="committed", winner_schema_id=f"schema-{index}")
+        state = {**state, "semantic_schemas": {**state["semantic_schemas"], task: {"id": task}}}
+        manager.snapshot_post_state(task, state, marker_sha256=f"c{index}", plan_sha256=f"p{index}", validation_sha256=f"v{index}")
+        assert _manager(tmp_path).reconcile(ledger_reconciled=True, fixed_current_state=INITIAL)["next_transition"] == "next_task_authorized"
+        manager.record(task, "next_task_authorized", post_state_sha256=digest(state))
+        restored = _manager(tmp_path).reconcile(ledger_reconciled=True, fixed_current_state=INITIAL)
+        assert restored["completed_task_count"] == index
+        assert restored["dynamic_state"] == state
