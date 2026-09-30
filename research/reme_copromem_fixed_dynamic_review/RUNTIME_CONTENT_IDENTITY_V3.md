@@ -12,7 +12,11 @@ The executable inventory is controlled by
 under the policy roots and the maintained entry points are content-addressed.
 Dirty checking compares those exact tracked files to the declared commit and
 rejects untracked executable/configuration files under a runtime source root.
-Publication-only files and untracked reports are not runtime dirt.
+Publication-only files and untracked reports are not runtime dirt. The policy
+only admits textual runtime formats; their source hashes use LF-normalized
+Git-equivalent bytes, so a clean CRLF Windows checkout and a clean LF checkout
+remain the same executable source. Artifact and scientific-input hashes retain
+their exact raw-content semantics.
 
 V2 records remain readable for historical audit. A manifest requiring v3 never
 accepts a v2 record. A future runner must call the shared manifest verifier at

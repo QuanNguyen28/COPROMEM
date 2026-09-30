@@ -78,6 +78,13 @@ def test_order_timestamps_and_publication_only_files_do_not_change_identity(tmp_
     assert _identity(root, commit) == baseline
 
 
+def test_clean_crlf_checkout_is_equivalent_to_git_lf_content(tmp_path: Path):
+    root, commit = _fixture_root(tmp_path); baseline = _identity(root, commit)
+    path = root / "src/copromem/runtime/engine.py"
+    path.write_bytes(b"VALUE = 'stable'\r\n")
+    assert _identity(root, commit) == baseline
+
+
 def test_untracked_reports_are_ignored_but_runtime_files_fail_closed(tmp_path: Path):
     root, commit = _fixture_root(tmp_path); baseline = _identity(root, commit)
     (root / "src/copromem/runtime/reports").mkdir(); (root / "src/copromem/runtime/reports/a.json").write_text("{}", encoding="utf-8")

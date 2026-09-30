@@ -41,6 +41,24 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _source_bytes(path: Path) -> bytes:
+    """Canonical tracked-source bytes across Git's Windows CRLF checkout filter.
+
+    The policy is limited to textual Python/configuration formats.  Git stores
+    their canonical LF content while a clean Windows checkout may materialize
+    CRLF.  Comparing the materialized bytes would incorrectly call a clean
+    checkout dirty, so v3 compares the Git-equivalent logical bytes.  This is
+    deliberately not used for banks, journals, or other scientific artifacts.
+    """
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
+def _source_sha256(path: Path) -> str:
+    if not path.is_file():
+        raise RuntimeIdentityError(f"required runtime content is absent: {path.name}")
+    return hashlib.sha256(_source_bytes(path)).hexdigest()
+
+
 def _repo_relative(root: Path, path: Path) -> str:
     try:
         return path.resolve().relative_to(root.resolve()).as_posix()
@@ -95,7 +113,7 @@ def executable_paths(root: Path, policy: Mapping[str, Any]) -> list[Path]:
 
 
 def executable_inventory(root: Path, policy: Mapping[str, Any]) -> list[dict[str, Any]]:
-    return [{"path": _repo_relative(root, path), "sha256": sha256_file(path), "size": path.stat().st_size}
+    return [{"path": _repo_relative(root, path), "sha256": _source_sha256(path), "size": len(_source_bytes(path))}
             for path in executable_paths(root, policy)]
 
 
@@ -121,8 +139,8 @@ def dirty_state(root: Path, policy: Mapping[str, Any], executable_commit: str) -
     changed: list[dict[str, Any]] = []
     for path in executable_paths(root, policy):
         relative = _repo_relative(root, path)
-        actual = path.read_bytes()
-        expected = _git_blob(root, executable_commit, relative)
+        actual = _source_bytes(path)
+        expected = _git_blob(root, executable_commit, relative).replace(b"\r\n", b"\n")
         if actual != expected:
             changed.append({"path": relative, "expected_sha256": hashlib.sha256(expected).hexdigest(),
                             "observed_sha256": hashlib.sha256(actual).hexdigest(), "size": len(actual)})
@@ -139,7 +157,7 @@ def dirty_state(root: Path, policy: Mapping[str, Any], executable_commit: str) -
             relative = _repo_relative(root, path)
             if _is_ignored(Path(relative), policy) or relative in tracked:
                 continue
-            untracked.append({"path": relative, "sha256": sha256_file(path), "size": path.stat().st_size})
+            untracked.append({"path": relative, "sha256": _source_sha256(path), "size": len(_source_bytes(path))})
     changed.sort(key=lambda item: item["path"]); untracked.sort(key=lambda item: item["path"])
     payload = {"tracked_changed": changed, "untracked_runtime": untracked}
     return {"runtime_relevant_dirty": bool(changed or untracked), **payload,
@@ -170,7 +188,7 @@ def build_identity(*, root: Path, executable_commit: str, runtime_configuration:
     if actual_commit != executable_commit:
         raise RuntimeIdentityError("declared executable commit differs from runtime checkout")
     inventory = executable_inventory(root, policy)
-    executable = component("executable_source", {"policy_sha256": sha256_file(policy_path or root / POLICY_RELATIVE_PATH),
+    executable = component("executable_source", {"policy_sha256": _source_sha256(policy_path or root / POLICY_RELATIVE_PATH),
                                                     "inventory": inventory,
                                                     "inventory_sha256": canonical_hash(inventory),
                                                     "dirty_state": dirty_state(root, policy, executable_commit)})
