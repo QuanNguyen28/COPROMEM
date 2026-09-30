@@ -1,0 +1,216 @@
+{
+  "arms": [
+    "no_memory",
+    "official_upstream_reme_fixed",
+    "official_upstream_reme_dynamic",
+    "copromem_v6_2_1_fixed",
+    "copromem_v6_2_1_dynamic"
+  ],
+  "banks": {
+    "copromem_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+    "reme_shared_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0"
+  },
+  "budget": {
+    "all_in_usd": 23.761563210849996,
+    "call_limits": {
+      "copromem_decomposition": 0,
+      "executor": 900,
+      "reme_embedding": 512,
+      "reme_lifecycle": 128
+    },
+    "copromem_decomposition_calls": 0,
+    "copromem_decomposition_usd": 0.0,
+    "dispatchable_usd": 20.662228878999997,
+    "embedding_calls": 512,
+    "embedding_usd": 0.8388608,
+    "evaluation_004_unresolved_retained_usd": 0.0060078,
+    "evaluation_005_unresolved_retained_usd": 0.005946,
+    "executor_calls": 900,
+    "executor_usd": 11.0592,
+    "hard_cap_usd": 300,
+    "historical_charged_or_reserved_usd": 3.416430479,
+    "historical_settled_exposure": 3.416430479,
+    "non_dispatchable_contingency_usd": 3.0993343318499993,
+    "reme_lifecycle_calls": 128,
+    "reme_lifecycle_usd": 5.347737599999999
+  },
+  "clean_restart_from_original_initial_banks": true,
+  "evaluation": {
+    "allocation_audit_sha256": "c3593dfe1a07664d56d241fd9a33c991ef126f9d6b343da8e6cbfe6f07a54ac9",
+    "compatible_task_count": 2,
+    "expected_trajectories": 30,
+    "negative_control_count": 1,
+    "provider_seed": null,
+    "seeds": [
+      11001,
+      11002
+    ],
+    "split": "test_normal",
+    "stochastic_trial_ids": [
+      11001,
+      11002
+    ],
+    "task_ids": [
+      "3aa1a22_2",
+      "3aa1a22_3",
+      "024c982_3"
+    ],
+    "trial_semantics": "ordered_stochastic_labels_not_provider_seeds"
+  },
+  "execution": {
+    "completion_token_ceiling": 2048,
+    "context_token_ceiling": 32768,
+    "max_actions": 30,
+    "model": "deepseek/deepseek-v4.1-flash",
+    "provider_only": "deepseek",
+    "temperature": 0.7,
+    "top_p": 1.0
+  },
+  "exploratory_diagnostic_only": true,
+  "git_commit": "5a9decb5c05060443bdce1d797578e1d078e4d16",
+  "method": {
+    "analysis_scope": "engineering integration validation; not efficacy or superiority evidence",
+    "copromem": "copromem-v6.2.1-task-conditioned-retrieval",
+    "retrieval": "public task terminal-effect compatibility with committed response-attested prerequisites"
+  },
+  "method_policy": {
+    "canonical_namespace_parser": "apis.<underscore_preserving_app>.<underscore_tokenized_callable>",
+    "compatibility_requirements": [
+      "exact_registry_hash",
+      "registry_declared_alias_only",
+      "committed_v61_schema_only",
+      "terminal_effect_in_public_query",
+      "public_app_relevance",
+      "positive_successes_at_least_2",
+      "typed_public_constraints",
+      "no_reversed_public_dependency",
+      "no_infrastructure_auth_supervisor_operation"
+    ],
+    "dynamic": "exact_durable_pre_task_prefix_only",
+    "fixed": "read_only",
+    "guidance": "ordered_unique_schema_spine_with_audit_only_repeat_multiplicity_and_failure_precondition_warnings",
+    "policy_sha256": "6b284bfadc4de843cf4ab8759b87503a4c51cd182592059875946add94dbca95",
+    "policy_version": "copromem-v6.2.1-task-conditioned-retrieval",
+    "public_http_action_classes": {
+      "DELETE": [
+        "clear",
+        "delete",
+        "remove"
+      ],
+      "GET": [
+        "find",
+        "get",
+        "list",
+        "read",
+        "search",
+        "show",
+        "view"
+      ],
+      "PATCH": [
+        "change",
+        "edit",
+        "modify",
+        "update"
+      ],
+      "POST": [
+        "add",
+        "attach",
+        "create",
+        "initiate",
+        "make",
+        "request",
+        "send",
+        "upload"
+      ],
+      "PUT": [
+        "change",
+        "edit",
+        "modify",
+        "update"
+      ]
+    },
+    "query_evidence": [
+      "visible_instruction",
+      "public_app_descriptions",
+      "frozen_callable_registry"
+    ],
+    "query_exclusions": [
+      "hidden_state",
+      "scorer",
+      "current_or_future_actions",
+      "task_answers",
+      "task_specific_rules"
+    ],
+    "reproduction": "canonical_JSON_UTF8_SHA256_and_full_provenance_equality",
+    "selection": "score descending then schema_id ascending"
+  },
+  "predecessor_evaluation_002_excluded": true,
+  "predecessor_evaluation_004_excluded": true,
+  "predecessor_evaluation_005_excluded": true,
+  "protocol": "v6_2_1_task_conditioned_retrieval_engineering_002",
+  "runtime_identity_file_sha256": "ccfa1b2a6d8110bee8d46cf988a893f4e5f1f755d56560d02c163d1745c09d24",
+  "runtime_identity_inputs": {
+    "external_dependencies": {
+      "appworld_distribution_version": "0.1.3.post1",
+      "content": {
+        "appworld_official_evaluator": "4e773fb91cdad3ad10deeacde2d0b1f717454be599e6758419e8e1bb88b75cba",
+        "appworld_package_identity": "cf69e62b1dc3f6274332ae5bcebc6331a4de92319a95ab7f4d2356e428bd62ba",
+        "appworld_python_executable": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+        "reme_python_executable": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+        "upstream_appworld_agent": "e6f2353e8c2d0780037762a983b18f67288c273e23b0a0144c4321e9349cde1c"
+      },
+      "python_implementation": "CPython",
+      "python_version": "3.12.3",
+      "reme_commit": "2f37a159b72a04ac1885a7db7f1a663a833e7791",
+      "reme_dirty": true,
+      "reme_dirty_content_sha256": "a718284ce61076e13644c7b9ae4c639a2b07e8974f9d8575d8aecdeb87ee7d98",
+      "trees": {
+        "appworld_protocol_package": "ba1ef74547c910b9017fa1d1fe42d658277458c033e51c79c1f3013479f0062d",
+        "upstream_reme_tree": "a718284ce61076e13644c7b9ae4c639a2b07e8974f9d8575d8aecdeb87ee7d98"
+      }
+    },
+    "runtime_configuration": {
+      "arms": [
+        "no_memory",
+        "official_upstream_reme_fixed",
+        "official_upstream_reme_dynamic",
+        "copromem_v6_2_1_fixed",
+        "copromem_v6_2_1_dynamic"
+      ],
+      "callable_registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423",
+      "ledger_policy": "append-only-hard-cap",
+      "limits": {
+        "completion_token_ceiling": 2048,
+        "context_token_ceiling": 32768,
+        "max_actions": 30
+      },
+      "model": "deepseek/deepseek-v4.1-flash",
+      "prompt_tool_interface": "v6.2.1-maintained",
+      "provider_route": "deepseek",
+      "retrieval_policy_sha256": "6b284bfadc4de843cf4ab8759b87503a4c51cd182592059875946add94dbca95",
+      "scorer_contract": "official-appworld",
+      "storage_policy": {
+        "launch_floor_gib": 5,
+        "mandatory_stop_gib": 3,
+        "warning_gib": 4
+      },
+      "temperature": 0.7
+    },
+    "scientific_inputs": {
+      "allocation_sha256": "c3593dfe1a07664d56d241fd9a33c991ef126f9d6b343da8e6cbfe6f07a54ac9",
+      "callable_registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423",
+      "copromem_initial_bank_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "method_policy_sha256": "6b284bfadc4de843cf4ab8759b87503a4c51cd182592059875946add94dbca95",
+      "reme_initial_bank_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0",
+      "task_trial_identity_sha256": "1ff9f17a59e76617774f548970bdd5fb5cc7a4e5e8eb4bf12a44420578930abe"
+    }
+  },
+  "runtime_identity_sha256": "1598649ffc70bcbc6d1caa2a14b6ba7d7723f99f2645cae352d85c8d7da0ed0d",
+  "runtime_identity_version": "runtime-content-identity-v3",
+  "scientific_protocol_unchanged": true,
+  "storage_policy": {
+    "launch_floor_gib": 5,
+    "mandatory_stop_gib": 3,
+    "warning_gib": 4
+  }
+}
