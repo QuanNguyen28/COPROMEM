@@ -127,8 +127,8 @@ def _git(root: Path, args: Iterable[str]) -> bytes:
         # checkout; never inherit an unrelated caller's GIT_DIR.
         if os.name == "posix" and pointer.is_file():
             raw = pointer.read_text(encoding="utf-8").strip()
-            if raw.lower().startswith("gitdir: ") and len(raw) > 10 and raw[8:10].endswith(":/"):
-                drive, tail = raw[8], raw[10:]
+            if raw.lower().startswith("gitdir: ") and len(raw) > 11 and raw[8].isalpha() and raw[9:11] == ":/":
+                drive, tail = raw[8], raw[11:]
                 env["GIT_DIR"] = f"/mnt/{drive.lower()}/{tail}"
                 env["GIT_WORK_TREE"] = str(root)
                 return subprocess.check_output(["git", *args], env=env)
