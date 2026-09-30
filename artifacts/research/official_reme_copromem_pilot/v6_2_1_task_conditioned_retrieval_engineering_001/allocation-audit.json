@@ -1,0 +1,222 @@
+{
+  "compatible_task_count": 2,
+  "negative_control_count": 1,
+  "negative_control_rejection_reasons": [
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query"
+      ],
+      "schema_id": "schema_40460eb08c5f2b52",
+      "schema_operation_apps": [
+        "phone",
+        "venmo"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.phone.show_contact_relationships",
+      "terminal_effect_supported": false
+    },
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query"
+      ],
+      "schema_id": "schema_4cd8d5125a1f4478",
+      "schema_operation_apps": [
+        "simple_note"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.simple_note.update_note",
+      "terminal_effect_supported": false
+    },
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query"
+      ],
+      "schema_id": "schema_58232919c89b63d0",
+      "schema_operation_apps": [
+        "venmo"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.venmo.create_transaction",
+      "terminal_effect_supported": false
+    },
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query"
+      ],
+      "schema_id": "schema_8035bac89a226b2d",
+      "schema_operation_apps": [
+        "phone"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.phone.delete_voice_message",
+      "terminal_effect_supported": false
+    },
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query"
+      ],
+      "schema_id": "schema_9a5136a3ab1e58b1",
+      "schema_operation_apps": [
+        "phone",
+        "venmo"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.venmo.show_transactions",
+      "terminal_effect_supported": false
+    },
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query"
+      ],
+      "schema_id": "schema_a68721363f8c68b0",
+      "schema_operation_apps": [
+        "spotify"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.spotify.show_song",
+      "terminal_effect_supported": false
+    },
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query"
+      ],
+      "schema_id": "schema_b6202872e2a30512",
+      "schema_operation_apps": [
+        "spotify"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.spotify.show_song",
+      "terminal_effect_supported": false
+    },
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query"
+      ],
+      "schema_id": "schema_b727d661ba7a386b",
+      "schema_operation_apps": [
+        "spotify"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.spotify.review_song",
+      "terminal_effect_supported": false
+    },
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query"
+      ],
+      "schema_id": "schema_ca9ebcc9b13e82e1",
+      "schema_operation_apps": [
+        "venmo"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.venmo.create_transaction",
+      "terminal_effect_supported": false
+    },
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query",
+        "schema_has_reversed_public_dependency"
+      ],
+      "schema_id": "schema_e539b1a9a26aaaed",
+      "schema_operation_apps": [
+        "simple_note"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.simple_note.update_note",
+      "terminal_effect_supported": false
+    },
+    {
+      "compatible": false,
+      "negative_failure_count": 0,
+      "ordered_unique_operations": null,
+      "positive_success_count": 2,
+      "rejection_reason": "terminal_effect_not_supported_by_public_query",
+      "rejection_reasons": [
+        "terminal_effect_not_supported_by_public_query"
+      ],
+      "schema_id": "schema_e98d3807c825daf7",
+      "schema_operation_apps": [
+        "phone"
+      ],
+      "semantic_relevance_passed": null,
+      "terminal_effect": "apis.phone.delete_voice_message",
+      "terminal_effect_supported": false
+    }
+  ],
+  "payloads_opened": false,
+  "registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423",
+  "screening_results_sha256": "51b308fb977d2a2c493458731fc22c9d283d321986adc4f5f22a409cb3c0bb71",
+  "selected_compatible_schema_ids": [
+    [
+      "schema_8035bac89a226b2d"
+    ],
+    [
+      "schema_8035bac89a226b2d"
+    ],
+    []
+  ],
+  "selected_descriptor_sha256s": [
+    "6dbd72a997af20139fcbe2ede899a5af798802990d0df530f80515edbc76bf80",
+    "6dbd72a997af20139fcbe2ede899a5af798802990d0df530f80515edbc76bf80",
+    "d3589aa66f8123bfea144d71a85b5470cd6e8612c79fe80bd69eee794c4288af"
+  ],
+  "selected_task_ids": [
+    "3aa1a22_2",
+    "3aa1a22_3",
+    "024c982_3"
+  ],
+  "selection_source": "public_pre_execution_metadata_only",
+  "source_commit": "b021b4cab51156df3657d3b4334de7a93e9c2df4",
+  "split": "test_normal",
+  "version": "v6.2.1-engineering-allocation-v1"
+}

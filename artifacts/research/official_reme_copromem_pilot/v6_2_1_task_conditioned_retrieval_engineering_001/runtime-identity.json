@@ -1,0 +1,97 @@
+{
+  "entries": {
+    "appworld_official_evaluator": {
+      "kind": "file",
+      "sha256": "4e773fb91cdad3ad10deeacde2d0b1f717454be599e6758419e8e1bb88b75cba"
+    },
+    "appworld_package_identity": {
+      "kind": "file",
+      "sha256": "cf69e62b1dc3f6274332ae5bcebc6331a4de92319a95ab7f4d2356e428bd62ba"
+    },
+    "appworld_protocol_package": {
+      "kind": "tree",
+      "sha256": "ba1ef74547c910b9017fa1d1fe42d658277458c033e51c79c1f3013479f0062d"
+    },
+    "appworld_python_executable": {
+      "kind": "file",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    "appworld_worker": {
+      "kind": "file",
+      "sha256": "2c3c7c0bafbade456ebd7ffccd7df7948e45e2eace8a02c5fdcb5a1ac1009cdb"
+    },
+    "copromem_checkpoint": {
+      "kind": "file",
+      "sha256": "bb9842ebd09495f44f70573ad03ae71b3a068c82149330e28fa8f40017913bf5"
+    },
+    "dependency_lock": {
+      "kind": "file",
+      "sha256": "43dd3973371f521936130c939360d4b48c027ea348b402732af113b6989bc38c"
+    },
+    "evaluation_runner": {
+      "kind": "file",
+      "sha256": "accd4579876d6ef022731357da313fc47c619949ef12ace8dc5b58bb348f2f10"
+    },
+    "evidence_contract": {
+      "kind": "file",
+      "sha256": "fddc68246061eddedbd06e9a672030945349f51e9a05654b2f404e4b9fea1da6"
+    },
+    "protocol_decisions": {
+      "kind": "file",
+      "sha256": "d122af462b9b343b0043e341fa7a7d67c596258d1433422163d78bd856695ad0"
+    },
+    "public_callable_registry": {
+      "kind": "file",
+      "sha256": "a30ec5f000dba95278d038641d4b4a60b23edf4d8fae9e2ede87c77cd740deeb"
+    },
+    "reme_bridge_service": {
+      "kind": "file",
+      "sha256": "3e21fab714078f78553675b0530860acadbba0e4b9baf9e93d95ab3dd7c1f335"
+    },
+    "reme_dynamic_checkpoint": {
+      "kind": "file",
+      "sha256": "347292117cb36b45b5a8974867a599a7cc13a64d851bd34c76949c9e4f0e5fbe"
+    },
+    "reme_fixed_checkpoint": {
+      "kind": "file",
+      "sha256": "36295422def9b379899a0cba2e089f259d41a6497a1a645d89786a851d4bd0eb"
+    },
+    "reme_python_executable": {
+      "kind": "file",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    "semantic_lifecycle": {
+      "kind": "file",
+      "sha256": "81ab22bd71b20625ce55978ba53d706711c7214e4ab10f5c6403f9b34884c820"
+    },
+    "task_query": {
+      "kind": "file",
+      "sha256": "2257899d798d67b00a55be0f2ae06a2736d4e1792758b57cd40a64c6d22b79b6"
+    },
+    "terminal_reconciliation": {
+      "kind": "file",
+      "sha256": "042dc563c214c858fba42df33b95b6465b2c0c5eaa79120fe3b4b08e746c9123"
+    },
+    "upstream_appworld_agent": {
+      "kind": "file",
+      "sha256": "e6f2353e8c2d0780037762a983b18f67288c273e23b0a0144c4321e9349cde1c"
+    },
+    "upstream_reme_tree": {
+      "kind": "tree",
+      "sha256": "a718284ce61076e13644c7b9ae4c639a2b07e8974f9d8575d8aecdeb87ee7d98"
+    }
+  },
+  "labels": {
+    "appworld_distribution_version": "0.1.3.post1",
+    "copromem_git_commit": "b021b4cab51156df3657d3b4334de7a93e9c2df4",
+    "copromem_git_dirty": "true",
+    "copromem_git_dirty_content_sha256": "2b8db55087f47f8af89dd5625f7227b1e894c9eb889ee9de2d62465c502944a6",
+    "python_implementation": "CPython",
+    "python_version": "3.12.3",
+    "reme_git_commit": "b021b4cab51156df3657d3b4334de7a93e9c2df4",
+    "reme_git_dirty": "true",
+    "reme_git_dirty_content_sha256": "f396ae48a8fee97785c2747cbd844d258bbc9712fb0964c9b6d0920106801d2c"
+  },
+  "runtime_identity_sha256": "29e7370730cc37f29a9b4ff1eb0c76fc04689c222a71de7436c8772bac991d5f",
+  "version": "runtime-content-identity-v2"
+}
