@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from .runtime_identity import RuntimeIdentityError, content_hash, evaluation_runtime_inputs, tree_hash
+from .runtime_identity import RuntimeIdentityError, _distribution_version, content_hash, resolve_runtime_locators, tree_hash
 
 
 IDENTITY_VERSION = "runtime-content-identity-v3"
@@ -275,12 +275,32 @@ def evaluation_v3_inputs(*, root: Path, manifest: Mapping[str, Any]) -> dict[str
         "ledger_policy": "append-only-hard-cap", "storage_policy": dict(manifest.get("storage_policy", {})),
         "callable_registry_sha256": registry_sha256,
     }
-    content, trees, labels = evaluation_runtime_inputs(root=root, source_commit=str(manifest.get("git_commit", "")))
+    locators = resolve_runtime_locators(root)
+    reme = Path(locators["reme_source"]); appworld = Path(locators["appworld_root"])
+    reme_python = Path(locators["reme_python"]); appworld_python = Path(locators["appworld_python"])
+    if not reme.is_dir() or not appworld.is_dir() or not reme_python.is_file() or not appworld_python.is_file():
+        raise RuntimeIdentityError("v3 external dependency locators are unavailable")
+    packages = sorted(appworld.glob("venv/lib/python*/site-packages/appworld"))
+    if len(packages) != 1:
+        raise RuntimeIdentityError("v3 installed AppWorld package is unavailable")
+    package = packages[0]; evaluator = package / "evaluator.py"; agent = reme / "benchmark/appworld/appworld_react_agent.py"
+    if not evaluator.is_file() or not agent.is_file():
+        raise RuntimeIdentityError("v3 external protocol source is unavailable")
+    reme_commit = _git(reme, ["rev-parse", "HEAD"]).decode("utf-8").strip()
+    reme_status = _git(reme, ["status", "--porcelain=v1", "--untracked-files=no"]).decode("utf-8")
+    reme_tree = tree_hash(reme)
+    content = {
+        "appworld_package_identity": package / "__init__.py", "appworld_official_evaluator": evaluator,
+        "appworld_python_executable": appworld_python, "reme_python_executable": reme_python,
+        "upstream_appworld_agent": agent,
+    }
+    trees = {"appworld_protocol_package": package, "upstream_reme_tree": reme}
     external = {
-        "python_implementation": labels.get("python_implementation"), "python_version": labels.get("python_version"),
-        "appworld_distribution_version": labels.get("appworld_distribution_version"),
-        "reme_commit": labels.get("reme_git_commit"), "reme_dirty": labels.get("reme_git_dirty"),
-        "content": {name: content_hash(path) for name, path in sorted(content.items()) if name not in {"evaluation_runner"}},
+        "python_implementation": __import__("platform").python_implementation(), "python_version": __import__("platform").python_version(),
+        "appworld_distribution_version": _distribution_version(appworld_python, "appworld"),
+        "reme_commit": reme_commit, "reme_dirty": bool(reme_status.strip()),
+        "reme_dirty_content_sha256": reme_tree if reme_status.strip() else "clean",
+        "content": {name: content_hash(path) for name, path in sorted(content.items())},
         "trees": {name: tree_hash(path) for name, path in sorted(trees.items())},
     }
     scientific = {
