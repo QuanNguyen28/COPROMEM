@@ -4,8 +4,10 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from copromem.experiments.reme_copromem.evidence_contract import VERSION, bind
-from copromem.experiments.reme_copromem.recovery_import import import_scored_artifact
+from copromem.experiments.reme_copromem.recovery_import import RecoveryImportError, import_scored_artifact, publish_atomic_import
 from copromem.experiments.reme_copromem.live_summary import reconcile_ledger
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger
 
@@ -59,3 +61,20 @@ def test_recovery_import_uses_one_historical_carry_and_does_not_recharge_prefix(
     assert not recovered.unresolved_reservation_ids
     assert float(recovered.historical_settled_exposure) == 2.435839694
     assert float(recovered.settled_evaluation_cost) == 0.0
+
+
+def test_atomic_import_publishes_only_complete_ordered_inventory_and_is_idempotent(tmp_path: Path):
+    run = tmp_path / "run"; spec = {"expected_trajectory_ids": ["one", "two"], "source": "immutable"}
+    def materialize(staging: Path):
+        (staging / "artifacts").mkdir(); (staging / "artifacts" / "one.json").write_text("{}")
+        return [{"trajectory_id": "one", "sha256": "a"}, {"trajectory_id": "two", "sha256": "b"}]
+    marker = publish_atomic_import(target_run=run, specification=spec, materialize=materialize)
+    assert marker["imported_count"] == 2 and (run / "recovery_import_complete.json").is_file()
+    assert publish_atomic_import(target_run=run, specification=spec, materialize=lambda _: (_ for _ in ()).throw(AssertionError())) == marker
+
+
+def test_atomic_import_rejects_partial_or_reordered_inventory(tmp_path: Path):
+    run = tmp_path / "run"; spec = {"expected_trajectory_ids": ["one", "two"]}
+    with pytest.raises(RecoveryImportError, match="incomplete"):
+        publish_atomic_import(target_run=run, specification=spec, materialize=lambda _: [{"trajectory_id": "two"}])
+    assert (run / ".recovery-import-staging").exists()
