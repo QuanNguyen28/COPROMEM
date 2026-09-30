@@ -116,6 +116,27 @@ def test_v6_negative_controls_fail_closed_and_fixed_retrieval_does_not_mutate():
     assert "abstract-value" not in repr(state)
 
 
+def test_rejected_batch_preserves_semantic_and_snapshot_container_identities():
+    """A rejected candidate is audit-only, not an alternate semantic state.
+
+    The checkpoint snapshot has a different *object shape* from the semantic
+    state (it carries the duplicated semantic identity), so this test names
+    and verifies both hashes explicitly.  A caller must never mistake the
+    container hash for a post-update semantic bank hash.
+    """
+    registry = fixture_registry(); state = fresh_state()
+    graph = build_graph([_event(registry, operation="apis.demo.inspect", index=0)], registry)
+    plan = plan_task_batch([graph], [], state)
+    post, marker = commit(state, plan)
+    snapshot_before = {"state": state, "semantic_state_sha256": digest(state)}
+    snapshot_after = {"state": post, "semantic_state_sha256": digest(post)}
+    assert marker["state"] == "rejected"
+    assert digest(post) == digest(state)
+    assert snapshot_after == snapshot_before
+    assert digest(snapshot_after) == digest(snapshot_before)
+    assert plan.get("schema_id") not in state["contrastive_v6_schemas"]
+
+
 def test_partition_reclassifies_only_frozen_global_runtime_context_legacy_rows():
     registry = fixture_registry()
     legacy = {"version": VERSION, "parent_program_id": "legacy", "monotonic_index": 0,

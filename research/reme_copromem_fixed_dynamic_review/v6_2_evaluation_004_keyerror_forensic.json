@@ -38,9 +38,44 @@
       "deterministic": true,
       "marker_state": "rejected",
       "pre_state_unchanged": true,
-      "post_state_sha256": "0aaf10c98e595c54deb97678a26554eb3efa22b0f3b691c62c654490a781ce9c",
-      "plan_sha256": "c4239fd9ab4e72f055b9b459eea9ca0f77821c8fc05a2acb7dcfd3e62bc94141",
-      "validation_passed": false
+      "semantic_pre_state": {
+        "object_definition": "{state_format, contrastive_v6_schemas}",
+        "sha256": "1cff4e8192f853d9e835e7e6054346867a7b53584f0c9d61ee13b757885d0b75"
+      },
+      "semantic_post_state": {
+        "object_definition": "reconstructed rejected post_state",
+        "sha256": "1cff4e8192f853d9e835e7e6054346867a7b53584f0c9d61ee13b757885d0b75"
+      },
+      "pre_snapshot_container": {
+        "object_definition": "{state: semantic_pre_state, semantic_state_sha256: semantic_pre_state_sha256}",
+        "sha256": "0aaf10c98e595c54deb97678a26554eb3efa22b0f3b691c62c654490a781ce9c"
+      },
+      "post_snapshot_container": {
+        "persisted_in_failed_run": false,
+        "expected_if_written": "byte-identical to pre_snapshot_container",
+        "expected_sha256": "0aaf10c98e595c54deb97678a26554eb3efa22b0f3b691c62c654490a781ce9c"
+      },
+      "rejected_marker": {
+        "object_definition": "{state, winner_schema_id, before_state_sha256, after_state_sha256, validation}",
+        "sha256": "25eec1d0e44f93d3e0a42aaaa1af855c2a2ab1368b3457bebf7801af2697487c"
+      },
+      "plan": {
+        "plan_sha256": "d3ad04d7de47a183f36b27cd6fb8600d2dc1c5e9ff51012a908a6f6bf8dfef7e",
+        "container_sha256": "dc28ff9c3607f05d7ced59a000da39991e4dc4ee13f9545297257e5ac5e12421"
+      },
+      "validation": {
+        "sha256": "873fe663aa1fbd33abc315bd6b259073a1db4f3f8a4be54a980fbc757382edd7",
+        "passed": false,
+        "reason": "no_domain_operation"
+      },
+      "audit_container_sha256": "213967a352eb3365fb94b90c39291c80d96926506d721aafad6fabfc2091487d",
+      "candidate_schema": {
+        "schema_id": "schema_387a563b934a0f12",
+        "sha256": "387a563b934a0f123327dbb69b29943ed6bc43869fe49ae324a68188e19c9252",
+        "committed": false,
+        "retrieval_visible": false
+      },
+      "semantic_schema_count_before_after": [12, 12]
     }
   },
   "reme_dynamic": {
