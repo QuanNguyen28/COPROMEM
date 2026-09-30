@@ -12,6 +12,31 @@ from .evidence_contract import SCORER, validate as validate_execution_evidence
 STATE_FORMAT = "copromem-v6-contrastive-state-v1"
 SEMANTIC_STATE_FORMAT = "copromem-v6.1-semantic-state-v1"
 
+
+class SemanticBatchEvidenceError(ValueError):
+    """A scored artifact lacks the evidence identity required for batch state."""
+
+
+def scorer_evidence_sha256(artifact: Mapping[str, Any]) -> str:
+    """Return the one canonical scorer-evidence identity for a scored artifact.
+
+    Ordinary trajectories use the standard scorer binding.  A genuine
+    zero-action termination instead has the stricter, versioned zero-action
+    attestation, which carries its own scorer hash.  This is an explicit
+    schema normalization, not a fabricated default: any other shape fails
+    before a semantic plan or checkpoint is written.
+    """
+    ordinary = artifact.get(SCORER)
+    if isinstance(ordinary, Mapping) and isinstance(ordinary.get("sha256"), str) and ordinary["sha256"]:
+        return str(ordinary["sha256"])
+    zero = artifact.get("zero_action_evidence")
+    if (int(artifact.get("actions", -1)) == 0 and isinstance(zero, Mapping)
+            and zero.get("version") == "canonical-zero-action-evidence-v1"
+            and isinstance(zero.get("scorer_evidence_sha256"), str)
+            and zero["scorer_evidence_sha256"]):
+        return str(zero["scorer_evidence_sha256"])
+    raise SemanticBatchEvidenceError("semantic batch requires ordinary or canonical zero-action scorer evidence")
+
 def fresh_state() -> dict[str, Any]:
     return {"state_format": STATE_FORMAT, "contrastive_v6_schemas": {}}
 
@@ -86,8 +111,7 @@ def semantic_task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: 
         raise ValueError("raw v6 state cannot enter a v6.1 semantic bank")
     semantic_graphs=[]; audits=[]
     for artifact, evidence_path in zip(artifacts, evidence_paths):
-        if SCORER not in artifact:
-            raise ValueError("semantic learning requires scorer-bound artifact")
+        scorer_evidence_sha256(artifact)
         validate_execution_evidence(artifact, run_root=run_root, expected_registry_sha256=str(registry["registry_sha256"]))
         records = journal_records(evidence_path)
         partition, ingestion = partition_v6_graph_evidence(records, str(registry["registry_sha256"]),

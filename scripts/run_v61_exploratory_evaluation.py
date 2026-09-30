@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse, hashlib, json, os, pathlib, sys, time
 ROOT=pathlib.Path(__file__).resolve().parents[1]; sys.path[:0]=[str(ROOT),str(ROOT/'src')]
 from copromem.contrastive_graph_v6 import digest
-from copromem.experiments.reme_copromem.contrastive_v6_runner import retrieval_record, semantic_task_batch_update
+from copromem.experiments.reme_copromem.contrastive_v6_runner import retrieval_record, semantic_task_batch_update, scorer_evidence_sha256
 from copromem.experiments.reme_copromem.task_query import derive_task_query, validate_task_query
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, execute_trajectory, official_post, services, v5_budget_bound, write_json, append
 from copromem.integrations.reme.dynamic_checkpoint import DynamicUpdateIdentity, ReMeDynamicCheckpointManager
@@ -248,6 +248,12 @@ def run(run):
           return guidance
          kwargs['memory_for_instruction']=conditioned_memory
         result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256']},**kwargs)
+        # The artifact is the only admissible boundary between execution and a
+        # task-batch state transition.  Reload it so a zero-action evidence
+        # attestation and every scorer binding are interpreted identically on
+        # first execution and restart.
+        if not path.is_file(): raise RuntimeError('executor returned without a durable scored artifact')
+        result=json.loads(path.read_text(encoding='utf-8'))
        if arm.startswith('copromem'):
         if not holder:raise RuntimeError('task-conditioned retrieval callback was not invoked')
         if not retrieval_path.exists():write_json(retrieval_path,{'pre_state_sha256':holder['state_sha256'],'guidance':holder['guidance'],'provenance':holder['provenance'],'task_query':holder['query']})
@@ -261,7 +267,7 @@ def run(run):
     for trial in range(1,len(m['evaluation']['seeds'])+1):
      record=json.loads((run/'retrievals'/task/f'{COPRO_DYNAMIC_ARM}-{trial}.json').read_text(encoding='utf-8'));retrieval_hashes.append(digest(record))
     copro_checkpoint.record(task,'retrievals_materialized',task_query_hashes=[str(json.loads((run/'retrievals'/task/f'{COPRO_DYNAMIC_ARM}-{trial}.json').read_text(encoding='utf-8'))['task_query']['query_sha256']) for trial in range(1,len(m['evaluation']['seeds'])+1)],retrieval_hashes=retrieval_hashes)
-    copro_checkpoint.record(task,'trajectories_complete',artifact_hashes=[digest(item) for item in copro],scorer_evidence_hashes=[str(item['official_scorer_evidence']['sha256']) for item in copro])
+    copro_checkpoint.record(task,'trajectories_complete',artifact_hashes=[digest(item) for item in copro],scorer_evidence_hashes=[scorer_evidence_sha256(item) for item in copro])
     post,marker,audit=semantic_task_batch_update(artifacts=copro,registry=registry,pre_state=pre_dynamic_state,evidence_paths=[r['execution_evidence_path'] for r in copro],run_root=run)
     copro_checkpoint.record(task,'batch_ready',semantic_projection_hashes=[item['semantic_projection_sha256'] for item in audit['semantic_graph_audits']])
     plan=audit['plan'];validation=audit['validation'];copro_checkpoint.record(task,'semantic_plan_persisted',plan_sha256=plan['plan_sha256']);copro_checkpoint.record(task,'validation_persisted',validation_sha256=digest(validation),validation_passed=bool(validation['passed']))

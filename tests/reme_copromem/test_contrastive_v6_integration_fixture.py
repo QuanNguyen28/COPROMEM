@@ -19,7 +19,9 @@ from copromem.experiments.reme_copromem.contrastive_v6_integration_fixture impor
 )
 from copromem.experiments.reme_copromem.contrastive_v6_runner import (
     SEMANTIC_STATE_FORMAT,
+    SemanticBatchEvidenceError,
     fresh_state,
+    scorer_evidence_sha256,
     semantic_state_compatibility,
 )
 from copromem.semantic_graph_v61 import POLICY_VERSION as SEMANTIC_POLICY_VERSION
@@ -31,6 +33,18 @@ def _root(name: str) -> Path:
     root = Path(__file__).resolve().parents[2] / "artifacts" / "zero-cost-validation" / f"{name}-{uuid.uuid4().hex}"
     assert str(root).startswith("/mnt/e/")
     return root
+
+
+def test_semantic_batch_normalizes_only_versioned_zero_action_scorer_evidence():
+    ordinary = {"actions": 1, "official_scorer_evidence": {"sha256": "ordinary"}}
+    zero = {"actions": 0, "zero_action_evidence": {
+        "version": "canonical-zero-action-evidence-v1", "scorer_evidence_sha256": "zero"}}
+    assert scorer_evidence_sha256(ordinary) == "ordinary"
+    assert scorer_evidence_sha256(zero) == "zero"
+    with pytest.raises(SemanticBatchEvidenceError):
+        scorer_evidence_sha256({"actions": 0, "zero_action_evidence": {"version": "unknown"}})
+    with pytest.raises(SemanticBatchEvidenceError):
+        scorer_evidence_sha256({"actions": 1})
 
 
 def test_v6_fixture_proves_production_lifecycle_restart_and_a_to_b_retrieval():
