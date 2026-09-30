@@ -12,7 +12,7 @@ from typing import Any, Mapping
 
 from .recovery_import import RecoveryImportError, canonical_sha256
 from .v62_recovery_prefix import NEXT
-from .v62_recovery_state import load_published
+from .v62_recovery_state import load_published, validate_published_custody
 
 
 class RecoveryStartError(RuntimeError):
@@ -38,6 +38,7 @@ def admit(*, marker_root: Path, expected_source_identity: Mapping[str, Any],
     """Read and validate recovery state without creating any runtime object."""
     try:
         state = load_published(marker_root)
+        validate_published_custody(marker_root, state)
     except RecoveryImportError as exc:
         raise RecoveryStartError(str(exc)) from exc
     if dict(state.get("successor_identity", {})) != dict(expected_source_identity):

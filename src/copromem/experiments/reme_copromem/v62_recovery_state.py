@@ -14,6 +14,8 @@ from typing import Any, Mapping
 
 from ...contrastive_graph_v6 import digest
 from .recovery_import import RecoveryImportError, canonical_sha256, file_sha256
+from .v62_recovery_custody import (LEGACY_ENVELOPE_SHA256, LEGACY_SOURCE_SHA256,
+                                   build_mapping, validate_mapping)
 from .v62_recovery_prefix import NEXT
 
 VERSION = "v6.2-recovery-state-v1"
@@ -260,7 +262,9 @@ def _summary(envelopes: list[Mapping[str, Any]]) -> dict[str, Any]:
 
 
 def assemble(*, imported_root: pathlib.Path, source_run: pathlib.Path, forensic_json: pathlib.Path,
-             successor_identity: Mapping[str, Any], historical_exposure: float) -> dict[str, Any]:
+             successor_identity: Mapping[str, Any], historical_exposure: float,
+             expected_source_inventory_sha256: str = LEGACY_SOURCE_SHA256,
+             expected_envelope_inventory_sha256: str = LEGACY_ENVELOPE_SHA256) -> dict[str, Any]:
     """Validate the full production prefix and return one canonical recovery state."""
     imported_root = imported_root.resolve()
     source_run = source_run.resolve()
@@ -282,6 +286,10 @@ def assemble(*, imported_root: pathlib.Path, source_run: pathlib.Path, forensic_
             raise RecoveryImportError("recovery envelope hash mismatch")
         envelopes.append(envelope)
     envelope_index = _envelope_by_identity(envelopes)
+    custody = build_mapping(source_run=source_run, expected_manifest_sha256=str(spec.get("source_manifest_sha256") or ""),
+                            imported_root=imported_root, expected_source_inventory_sha256=expected_source_inventory_sha256,
+                            expected_envelope_inventory_sha256=expected_envelope_inventory_sha256)
+    validate_mapping(custody)
     forensic = _load(forensic_json)
     task1 = _verify_task1(source_run, envelope_index)
     task2 = _verify_task2(source_run, forensic, envelope_index)
@@ -297,7 +305,10 @@ def assemble(*, imported_root: pathlib.Path, source_run: pathlib.Path, forensic_
     state = {
         "version": VERSION,
         "import_marker_sha256": marker.get("marker_sha256"),
-        "prefix_inventory_sha256": spec.get("inventory_sha256"),
+        "source_prefix_inventory_sha256": custody["source_inventory"]["sha256"],
+        "successor_envelope_inventory_sha256": custody["successor_envelope_inventory"]["sha256"],
+        "custody_mapping_sha256": custody["custody_mapping_sha256"],
+        "custody_mapping": custody,
         "source": {"run": str(source_run), "manifest_sha256": spec.get("source_manifest_sha256"),
                    "runtime_sha256": envelopes[0]["source"].get("source_runtime_sha256")},
         "envelope_hashes": [item["envelope_sha256"] for item in envelopes],
@@ -343,6 +354,39 @@ def load_published(root: pathlib.Path) -> dict[str, Any]:
     expected = {key: item for key, item in value.items() if key != "recovery_state_sha256"}
     if value.get("version") != VERSION or value.get("recovery_state_sha256") != canonical_sha256(expected):
         raise RecoveryImportError("unified recovery-state marker is invalid")
-    if value.get("next") != NEXT or value.get("progress", {}).get("completed") != 20:
+    if (value.get("next") != NEXT or value.get("progress", {}).get("completed") != 20
+            or value.get("source_prefix_inventory_sha256") != LEGACY_SOURCE_SHA256
+            or value.get("successor_envelope_inventory_sha256") != LEGACY_ENVELOPE_SHA256
+            or not isinstance(value.get("custody_mapping_sha256"), str)):
         raise RecoveryImportError("unified recovery-state continuation identity is invalid")
+    mapping = value.get("custody_mapping")
+    if (not isinstance(mapping, Mapping) or mapping.get("custody_mapping_sha256") != value.get("custody_mapping_sha256")
+            or mapping.get("source_inventory", {}).get("sha256") != value.get("source_prefix_inventory_sha256")
+            or mapping.get("successor_envelope_inventory", {}).get("sha256") != value.get("successor_envelope_inventory_sha256")):
+        raise RecoveryImportError("unified recovery-state custody mapping binding is invalid")
+    validate_mapping(mapping)
     return value
+
+
+def validate_published_custody(root: pathlib.Path, state: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Rebuild the two custody domains before admitting a recovered prefix.
+
+    ``load_published`` checks the marker's own content identity.  This second,
+    read-only step also compares it with the immutable source artifacts and
+    copied envelopes, preventing a self-consistent but source-divergent marker
+    from becoming a runnable continuation.
+    """
+    root = root.resolve()
+    published = dict(state) if state is not None else load_published(root)
+    source = published.get("source", {})
+    source_run = _host_path(str(source.get("run") or ""))
+    actual = build_mapping(
+        source_run=source_run,
+        expected_manifest_sha256=str(source.get("manifest_sha256") or ""),
+        imported_root=root,
+        expected_source_inventory_sha256=LEGACY_SOURCE_SHA256,
+        expected_envelope_inventory_sha256=LEGACY_ENVELOPE_SHA256,
+    )
+    if actual != published.get("custody_mapping"):
+        raise RecoveryImportError("published custody mapping diverges from immutable evidence")
+    return actual
