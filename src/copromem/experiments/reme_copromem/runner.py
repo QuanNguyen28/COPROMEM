@@ -186,6 +186,40 @@ def invoke_post_score_update(callback: Callable[..., None], agent: Any, result: 
             raise
 
 
+def _observe_upstream_retrieval(response: Any) -> dict[str, Any]:
+    """Return redacted ReMe retrieval provenance without altering its response.
+
+    The official agent still owns request shape, retrieval ordering and prompt
+    rendering.  This observer merely hashes the response returned by its
+    existing ``get_memory`` method so aggregate reports cannot confuse an
+    empty CoProMem callback with an empty upstream ReMe retrieval.
+    """
+    memory_list: list[Any] = []
+    answer = ""
+    if isinstance(response, dict):
+        metadata = response.get("metadata")
+        if isinstance(metadata, dict) and isinstance(metadata.get("memory_list"), list):
+            memory_list = list(metadata["memory_list"])
+        if isinstance(response.get("answer"), str):
+            answer = str(response["answer"])
+    stable_hashes = [digest(item) for item in memory_list]
+    # This is the same text transformation the pinned upstream prompt method
+    # uses; it is computed after the response has been returned, not supplied
+    # back to the agent.
+    rendered = __import__("re").sub(r"\bMemory\s*(\d+)\s*[:]", r"Experience \1:", answer) if memory_list else ""
+    return {"retrieved_memory_count": len(memory_list), "retrieved_memory_sha256s": stable_hashes,
+            "ordered_retrieval_sha256": digest(stable_hashes),
+            "prompt_memory_sha256": digest(rendered), "retrieval_empty": not bool(memory_list),
+            "retrieval_response_sha256": digest(response) if response is not None else digest(None)}
+
+
+def _copromem_prompt_memory_text(guidance: str) -> str:
+    """Render exactly one source-agent ``previous_memories`` item."""
+    if not guidance:
+        return ""
+    return "Experience 1:\n When to use: Retrieved procedural guidance\n Content: " + guidance + "\n"
+
+
 def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: AppendOnlyLedger,
                        api_key: str, all_task_ids: list[str], arm: str, task_id: str,
                        trial_id: int, seed: int, max_actions: int, temperature: float,
@@ -236,12 +270,25 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
             before = agent.get_reward(world)
             injected = ""
             previous: list[dict[str, str]] = []
+            upstream_retrieval: dict[str, Any] | None = None
             if memory_for_instruction is not None:
                 tool_meta = {"app_descriptions": world.task.app_descriptions, "supervisor": world.task.supervisor}
                 injected = memory_for_instruction(world.task.instruction, "appworld", tool_meta)
                 if injected:
                     previous = [{"when_to_use": "Retrieved procedural guidance", "content": injected}]
+            elif arm.startswith("official_upstream_reme"):
+                # Passive only: the wrapper delegates the unchanged response
+                # object to the upstream agent.  It never adds, removes or
+                # rewrites a memory or prompt token.
+                original_get_memory = agent.get_memory
+                def observed_get_memory(query: str) -> Any:
+                    nonlocal upstream_retrieval
+                    response = original_get_memory(query)
+                    upstream_retrieval = _observe_upstream_retrieval(response)
+                    return response
+                agent.get_memory = observed_get_memory
             agent.prompt_messages(0, 0, previous, world)
+            initial_prompt_messages_sha256 = digest(agent.history[0][0])
             termination = "completed"
             last_tokens: int | None = None
             terminal_executor: dict[str, Any] | None = None
@@ -276,7 +323,17 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                       "termination": termination, "history": agent.history[0][0],
                       "history_sha256": digest(agent.history[0][0]), "injected_memory_sha256": digest(injected),
                       "injected_memory_nonempty": bool(injected),
+                      "initial_prompt_messages_sha256": initial_prompt_messages_sha256,
                       "execution_evidence_path": str(journal.with_suffix(".execution-evidence.jsonl")) if execution_evidence else None}
+            if memory_for_instruction is not None:
+                result.update({"copromem_callback_guidance_sha256": digest(injected),
+                               "copromem_callback_guidance_nonempty": bool(injected),
+                               "prompt_memory_injection_sha256": digest(_copromem_prompt_memory_text(injected))})
+            if arm.startswith("official_upstream_reme"):
+                result["reme_retrieval_provenance"] = upstream_retrieval or {
+                    "retrieved_memory_count": 0, "retrieved_memory_sha256s": [],
+                    "ordered_retrieval_sha256": digest([]), "prompt_memory_sha256": digest(""),
+                    "retrieval_empty": True, "retrieval_response_sha256": digest(None)}
             if execution_evidence is not None:
                 evidence_path = pathlib.Path(str(result["execution_evidence_path"]))
                 if result["actions"] == 0 and terminal_executor is not None:
