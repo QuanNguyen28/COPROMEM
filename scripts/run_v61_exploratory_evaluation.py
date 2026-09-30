@@ -243,7 +243,7 @@ def run(run):
          retrieval_state=fixed_state if arm==COPRO_FIXED_ARM else pre_dynamic_state
          def conditioned_memory(instruction, domain, tool_meta, *, state=retrieval_state, holder=holder):
           query=derive_task_query(instruction,domain,tool_meta,registry); validate_task_query(query,instruction=instruction,public_tool_metadata=tool_meta,callable_registry=registry)
-          guidance,prov=retrieval_record(state=state,query_operations=query['query_operations'],registry_sha256=registry['registry_sha256'],task_query=query)
+          guidance,prov=retrieval_record(state=state,query_operations=query['query_operations'],registry_sha256=registry['registry_sha256'],task_query=query,callable_registry=registry)
           holder.update({'guidance':guidance,'provenance':prov,'query':query,'state_sha256':digest(state)})
           return guidance
          kwargs['memory_for_instruction']=conditioned_memory
@@ -256,7 +256,19 @@ def run(run):
         result=json.loads(path.read_text(encoding='utf-8'))
        if arm.startswith('copromem'):
         if not holder:raise RuntimeError('task-conditioned retrieval callback was not invoked')
-        if not retrieval_path.exists():write_json(retrieval_path,{'pre_state_sha256':holder['state_sha256'],'guidance':holder['guidance'],'provenance':holder['provenance'],'task_query':holder['query']})
+        retrieval_payload={'pre_state_sha256':holder['state_sha256'],'guidance':holder['guidance'],'provenance':holder['provenance'],'task_query':holder['query'],
+                          'copromem_callback_guidance_sha256':digest(holder['guidance']),'copromem_callback_guidance_nonempty':bool(holder['guidance']),
+                          'prompt_injection_sha256':result.get('prompt_memory_injection_sha256',digest(holder['guidance'])),
+                          'initial_prompt_messages_sha256':result.get('initial_prompt_messages_sha256')}
+        if not retrieval_path.exists():write_json(retrieval_path,retrieval_payload)
+        # The executor persists its scorer-bound artifact before this point.
+        # Add only deterministic retrieval identities; this does not alter its
+        # history, score, native actions, or model-visible prompt.
+        result.update({'copromem_retrieval_record_sha256':digest(retrieval_payload),
+                       'copromem_callback_guidance_sha256':digest(holder['guidance']),
+                       'copromem_callback_guidance_nonempty':bool(holder['guidance']),
+                       'prompt_memory_injection_sha256':result.get('prompt_memory_injection_sha256',digest(holder['guidance']))})
+        write_json(path,result)
         if arm==COPRO_FIXED_ARM and digest(fixed_state)!=m['banks']['copromem_sha256']:raise RuntimeError('CoProMem Fixed state mutated')
        if arm==COPRO_DYNAMIC_ARM:copro.append(result)
        # The durable public status is refreshed immediately after every

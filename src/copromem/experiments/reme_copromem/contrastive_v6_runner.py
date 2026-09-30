@@ -137,7 +137,16 @@ def semantic_task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: 
     return post, marker, audit
 
 def retrieval_record(*, state: Mapping[str, Any], query_operations: list[str], registry_sha256: str,
-                     task_query: Mapping[str, Any] | None = None) -> tuple[str, dict[str, Any]]:
+                     task_query: Mapping[str, Any] | None = None,
+                     callable_registry: Mapping[str, Any] | None = None) -> tuple[str, dict[str, Any]]:
+    """Return the legacy v6 retrieval record.
+
+    ``callable_registry`` is deliberately accepted as a no-op compatibility
+    seam.  Versioned runners can use the same call boundary while selecting a
+    stricter, separately registered retrieval implementation; the legacy v6
+    predicate continues to depend only on its frozen registry digest.
+    """
+    del callable_registry
     guidance, provenance = retrieve(state, query_operations, registry_sha256)
     if guidance != reproduce_retrieval(state, query_operations, provenance):
         raise ValueError("v6 guidance is not reproducible")

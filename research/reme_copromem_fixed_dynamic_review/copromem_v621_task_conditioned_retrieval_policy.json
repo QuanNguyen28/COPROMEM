@@ -1,0 +1,71 @@
+{
+  "canonical_namespace_parser": "apis.<underscore_preserving_app>.<underscore_tokenized_callable>",
+  "compatibility_requirements": [
+    "exact_registry_hash",
+    "registry_declared_alias_only",
+    "committed_v61_schema_only",
+    "terminal_effect_in_public_query",
+    "public_app_relevance",
+    "positive_successes_at_least_2",
+    "typed_public_constraints",
+    "no_reversed_public_dependency",
+    "no_infrastructure_auth_supervisor_operation"
+  ],
+  "dynamic": "exact_durable_pre_task_prefix_only",
+  "fixed": "read_only",
+  "guidance": "ordered_unique_schema_spine_with_audit_only_repeat_multiplicity_and_failure_precondition_warnings",
+  "policy_sha256": "6b284bfadc4de843cf4ab8759b87503a4c51cd182592059875946add94dbca95",
+  "policy_version": "copromem-v6.2.1-task-conditioned-retrieval",
+  "public_http_action_classes": {
+    "DELETE": [
+      "clear",
+      "delete",
+      "remove"
+    ],
+    "GET": [
+      "find",
+      "get",
+      "list",
+      "read",
+      "search",
+      "show",
+      "view"
+    ],
+    "PATCH": [
+      "change",
+      "edit",
+      "modify",
+      "update"
+    ],
+    "POST": [
+      "add",
+      "attach",
+      "create",
+      "initiate",
+      "make",
+      "request",
+      "send",
+      "upload"
+    ],
+    "PUT": [
+      "change",
+      "edit",
+      "modify",
+      "update"
+    ]
+  },
+  "query_evidence": [
+    "visible_instruction",
+    "public_app_descriptions",
+    "frozen_callable_registry"
+  ],
+  "query_exclusions": [
+    "hidden_state",
+    "scorer",
+    "current_or_future_actions",
+    "task_answers",
+    "task_specific_rules"
+  ],
+  "reproduction": "canonical_JSON_UTF8_SHA256_and_full_provenance_equality",
+  "selection": "score descending then schema_id ascending"
+}
