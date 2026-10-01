@@ -46,7 +46,17 @@ def file_sha(path: Path) -> str:
 
 
 def source_commit() -> str:
-    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    # Managed Windows worktrees store an absolute ``E:/...`` gitdir pointer.
+    # Linux AppWorld workers must translate it explicitly, never fall back to
+    # an unrelated current directory or a mutable checkout.
+    environment = dict(os.environ)
+    pointer = ROOT / ".git"
+    if pointer.is_file():
+        match = re.fullmatch(r"gitdir:\s*([A-Za-z]):/(.+)", pointer.read_text(encoding="utf-8").strip())
+        if match:
+            environment["GIT_DIR"] = f"/mnt/{match.group(1).lower()}/{match.group(2)}"
+            environment["GIT_WORK_TREE"] = str(ROOT)
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, env=environment).strip()
 
 
 def _public_inventory_path() -> Path:
