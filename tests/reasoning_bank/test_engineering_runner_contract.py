@@ -4,6 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 
 def _runner():
     path = Path(__file__).parents[2] / "scripts" / "run_reasoningbank_appworld_engineering.py"
@@ -37,6 +39,25 @@ def test_prepare_freezes_the_actual_shared_backbone_and_embedding_path(monkeypat
                                                     "reasoningbank_extraction": 6, "reasoningbank_embedding": 12}
     assert manifest["allocation"]["payloads_opened"] is False
     assert manifest["allocation"]["test_normal_used"] is False
+
+
+def test_prepare_freezes_separate_historical_infrastructure_exposure(monkeypatch, tmp_path):
+    runner = _runner()
+    inventory = tmp_path / "public-dev.json"
+    inventory.write_text(json.dumps({"split": "dev", "public_only": True, "tasks": [
+        {"task_id": "aaaaaaa_1", "instruction": "List top 3 indie songs", "app_descriptions": {}},
+        {"task_id": "aaaaaaa_2", "instruction": "List top 4 rock songs", "app_descriptions": {}},
+        {"task_id": "bbbbbbb_1", "instruction": "Create a note for tomorrow", "app_descriptions": {}},
+    ]}), encoding="utf-8")
+    monkeypatch.setenv("REASONINGBANK_PUBLIC_DEV_DESCRIPTORS", str(inventory))
+    monkeypatch.setenv("REASONINGBANK_HISTORICAL_EXPOSURE_USD", "0.020932692")
+    monkeypatch.setattr(runner, "_hard_exposed_task_ids", lambda: (set(), {}))
+    run = tmp_path / "run"; runner.prepare(run)
+    manifest = json.loads((run / "template.json").read_text(encoding="utf-8"))
+    assert manifest["historical_infrastructure_exposure_usd"] == 0.020932692
+    assert manifest["budget"]["historical_exposure_usd"] == 0.020932692
+    assert manifest["budget"]["all_in_usd"] == pytest.approx(manifest["budget"]["dispatchable_usd"]
+                                                                + manifest["budget"]["contingency_usd"] + .020932692)
 
 
 def test_runner_source_wires_strict_dynamic_callback_and_no_reme_boundary():

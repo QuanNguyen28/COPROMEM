@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 import time
+import math
 from typing import Any, Iterable, Mapping
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -132,8 +133,8 @@ def _hard_exposed_task_ids() -> tuple[set[str], dict[str, list[str]]]:
         # Limit custody evidence to durable execution/scoring namespaces.  A
         # broad all-JSON traversal would both mistake public reports for runs
         # and needlessly parse large unrelated local test fixtures.
-        candidates = list(root.glob("research/**/artifacts/**/trial-*.json"))
-        candidates += list(root.glob("research/**/evaluation/**/trial-*.json"))
+        candidates = list(root.glob("**/artifacts/**/trial-*.json"))
+        candidates += list(root.glob("**/evaluation/**/trial-*.json"))
         for path in candidates:
             # Runtime payloads/DBs are never parsed by this custody scanner.
             if any(part in {"data", "databases", "payloads"} for part in path.parts):
@@ -196,7 +197,18 @@ def _allocation() -> dict[str, Any]:
             "selected": selected}
 
 
-def _budget() -> dict[str, Any]:
+def _historical_exposure() -> float:
+    raw = os.environ.get("REASONINGBANK_HISTORICAL_EXPOSURE_USD", "0")
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise RuntimeError("ReasoningBank historical exposure is malformed") from exc
+    if not math.isfinite(value) or value < 0:
+        raise RuntimeError("ReasoningBank historical exposure must be finite and nonnegative")
+    return value
+
+
+def _budget(historical_exposure_usd: float) -> dict[str, Any]:
     limits = {"executor": 12 * 30, "reasoningbank_judge": 6,
               "reasoningbank_extraction": 6, "reasoningbank_embedding": 12}
     chat = 32768 * INPUT_PRICE + MAX_OUTPUT_TOKENS * OUTPUT_PRICE
@@ -206,8 +218,9 @@ def _budget() -> dict[str, Any]:
                     "extractor_usd": limits["reasoningbank_extraction"] * chat,
                     "embedding_usd": limits["reasoningbank_embedding"] * embedding}
     dispatchable = sum(contribution.values()); contingency = dispatchable * .15
-    return {"call_limits": limits, **contribution, "dispatchable_usd": dispatchable,
-            "contingency_usd": contingency, "all_in_usd": dispatchable + contingency,
+    return {"call_limits": limits, **contribution, "historical_exposure_usd": historical_exposure_usd,
+            "dispatchable_usd": dispatchable, "contingency_usd": contingency,
+            "all_in_usd": historical_exposure_usd + dispatchable + contingency,
             "hard_cap_usd": HARD_CAP}
 
 
@@ -226,7 +239,8 @@ def prepare(run: Path) -> None:
         _fsync_json(audit_path, audit)
     if allocation["selected"] is None:
         raise RuntimeError("no unexecuted public development A/B/N allocation exists")
-    budget = _budget()
+    historical_exposure = _historical_exposure()
+    budget = _budget(historical_exposure)
     if budget["all_in_usd"] > HARD_CAP:
         raise RuntimeError("registered conservative bound exceeds the hard cap")
     registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
@@ -243,7 +257,8 @@ def prepare(run: Path) -> None:
                               "storage_policy_gib": {"launch": 5, "warning": 4, "stop": 3}},
                 "embedding": protocol_record()["embedding"], "registry_sha256": registry["registry_sha256"],
                 "initial_bank": ReasoningBank().state(), "initial_bank_sha256": ReasoningBank().state()["semantic_state_sha256"],
-                "allocation": allocation, "budget": budget}
+                "allocation": allocation, "budget": budget,
+                "historical_infrastructure_exposure_usd": historical_exposure}
     _fsync_json(run / "template.json", template)
 
 
@@ -284,7 +299,7 @@ def _status(run: Path, state: str, **extra: Any) -> None:
 def _summary(run: Path, manifest: Mapping[str, Any], state: str, final: bool = False) -> None:
     summary = build_live_summary(ledger_path=run / "ledger.jsonl", artifact_root=run / "artifacts",
                                  expected_tasks=manifest["evaluation"]["task_ids"], expected_seeds=SEEDS,
-                                 historical_expected_usd=0.0, state=state, final=final,
+                                 historical_expected_usd=float(manifest["historical_infrastructure_exposure_usd"]), state=state, final=final,
                                  expected_trajectories=12, registered_arms=ARMS)
     write_live_summary(run / "live-summary.json", summary)
 
@@ -321,12 +336,13 @@ def run(run: Path, *, preflight: bool = False) -> None:
     try:
         key = _credential(); _storage_guard("launch")
         ledger = AppendOnlyLedger(run / "ledger.jsonl", HARD_CAP, manifest["budget"]["call_limits"])
-        # The reconciler requires a single historical record even when the
-        # engineering pilot has zero carried exposure.  It creates the ledger
-        # before any payload is opened or provider boundary is reached.
+        # The reconciler requires a single carried-exposure record.  This is
+        # created before any payload is opened or provider boundary is reached
+        # and is never attributed to an Engineering result arm.
         if not (run / "ledger.jsonl").exists():
-            ledger.reserve("historical-construction-carry", 0.0, {"role": "historical_carry_forward"})
-            ledger.settle("historical-construction-carry", 0.0, {"role": "historical_carry_forward"})
+            historical = float(manifest["historical_infrastructure_exposure_usd"])
+            ledger.reserve("historical-infrastructure-carry", historical, {"role": "historical_carry_forward"})
+            ledger.settle("historical-infrastructure-carry", historical, {"role": "historical_carry_forward"})
         initial = ReasoningBank.restore(manifest["initial_bank"])
         checkpoint = ReasoningBankDynamicCheckpoints(root=run / "reasoningbank-dynamic-checkpoints",
                                                      expected_trajectory_ids=[f"evaluation:reasoningbank_dynamic:{task}:trial={trial}:seed={seed}"
