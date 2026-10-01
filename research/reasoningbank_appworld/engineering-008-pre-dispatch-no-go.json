@@ -1,0 +1,26 @@
+{
+  "version": "reasoningbank-appworld-engineering-008-pre-dispatch-no-go-v1",
+  "classification": "INVALID_METHOD_INTEGRATION_PRE_DISPATCH",
+  "run_name": "reasoningbank_appworld_engineering_008_exposed_provenance_replay",
+  "manifest_sha256": "df13823405b689e611dafa6e6e468ef9a79e895eead17d559ce7db94e8779376",
+  "executable_commit": "5d14f4eea0ba401c5dfbbec847ef12bf30e19244",
+  "publication_commit": "5da504b6e902be32606d6e9e3812f66cdee2e0ec",
+  "dispatch": {
+    "payloads_opened": false,
+    "ledger_created": false,
+    "artifacts_created": false,
+    "retrievals_created": false,
+    "provider_calls": 0,
+    "appworld_calls": 0,
+    "scorer_calls": 0
+  },
+  "production_callback_fixture": {
+    "pinned_lifecycle_callback_sha256": "229d9ab324f3e1a33c01365ff3faf2dda5c369f45fee23d5c30820330fac18ee",
+    "pinned_lifecycle_callback_length": 342,
+    "provenance_callback_sha256": "4b548a43c5eb21f0759257139d15c87a6351c85da4fe9993684a598d6fbb0768",
+    "provenance_callback_length": 56,
+    "byte_identical": false,
+    "first_failed_invariant": "provenance-bound callback bytes must equal the pinned lifecycle callback bytes"
+  },
+  "disposition": "Do not launch. Repair exact rendered-guidance provenance in a new executable commit and freeze a separately versioned successor."
+}
