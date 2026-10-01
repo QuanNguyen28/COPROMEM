@@ -26,6 +26,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "src")]
 from copromem.experiments.reme_copromem.evidence_contract import validate as validate_evidence
 from copromem.experiments.reme_copromem.live_summary import build_live_summary, write_live_summary
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, append, execute_trajectory, write_json
+from copromem.experiments.reme_copromem.runtime_identity_binding import read as read_runtime_identity_binding
 from copromem.integrations.reasoning_bank.appworld import ReasoningBank, sha256
 from copromem.integrations.reasoning_bank.appworld_protocol import protocol_record, validate_protocol
 from copromem.integrations.reasoning_bank.checkpoints import ReasoningBankDynamicCheckpoints
@@ -312,7 +313,17 @@ def _runtime_identity(run: Path, manifest: Mapping[str, Any]) -> str:
             raise RuntimeError("runtime-content identity differs from the frozen manifest")
     else:
         _fsync_json(path, record)
-    return file_sha(path)
+    record_sha256 = file_sha(path)
+    binding = {"runtime_identity_sha256": expected, "runtime_identity_record_sha256": record_sha256}
+    binding_path = run / "runtime-identity.binding.json"
+    if binding_path.exists():
+        try: observed_binding = json.loads(binding_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc: raise RuntimeError("runtime identity binding is malformed") from exc
+        if observed_binding != binding:
+            raise RuntimeError("runtime identity binding differs from the frozen record")
+    else:
+        _fsync_json(binding_path, binding)
+    return expected
 
 
 def _verify_python_runtime_identity(run: Path, manifest: Mapping[str, Any]) -> None:
@@ -570,7 +581,9 @@ def _reconciled_marker(run: Path, manifest: Mapping[str, Any]) -> dict[str, Any]
     payload = {"version": RUN_VERSION, "transition": "run_reconciled", "manifest_sha256": file_sha(run / "manifest.json"),
                "source_commit": manifest["git_commit"], "artifact_inventory_sha256": sha256(sorted(file_sha(path) for path in (run / "artifacts").glob("**/*.json"))),
                "checkpoint_inventory_sha256": sha256(sorted(file_sha(path) for path in (run / "reasoningbank-dynamic-checkpoints").glob("**/*.json"))),
-               "ledger_sha256": file_sha(run / "ledger.jsonl"), "live_summary_sha256": file_sha(run / "live-summary.json")}
+               "ledger_sha256": file_sha(run / "ledger.jsonl"), "live_summary_sha256": file_sha(run / "live-summary.json"),
+               "runtime_identity_sha256": manifest["runtime_identity_sha256"],
+               "runtime_identity_record_sha256": read_runtime_identity_binding(run)["runtime_identity_record_sha256"]}
     if manifest.get("recovery_import"):
         payload.update({"recovery_envelope_sha256": manifest["recovery_import"]["envelope_sha256"],
                         "recovery_import_marker_sha256": file_sha(run / "recovery-import-completed.json")})
@@ -593,6 +606,7 @@ def run(run: Path, *, preflight: bool = False) -> None:
     manifest = load(run)
     _verify_python_runtime_identity(run, manifest)
     runtime_identity_sha256 = _runtime_identity(run, manifest)
+    runtime_identity_record_sha256 = read_runtime_identity_binding(run)["runtime_identity_record_sha256"]
     _status(run, "preflight_passed", manifest_sha256=file_sha(run / "manifest.json"))
     if preflight:
         return
@@ -637,9 +651,11 @@ def run(run: Path, *, preflight: bool = False) -> None:
                                               run_root=run, registry_sha256=manifest["registry_sha256"],
                                               manifest_sha256=file_sha(run / "manifest.json"),
                                               runtime_identity_sha256=runtime_identity_sha256,
+                                              runtime_identity_record_sha256=runtime_identity_record_sha256,
                                               embedding_identity=manifest["embedding"])
         evidence = {"registry_path": str(REGISTRY.resolve()), "registry_sha256": manifest["registry_sha256"],
-                    "runtime_identity_sha256": runtime_identity_sha256}
+                    "runtime_identity_sha256": runtime_identity_sha256,
+                    "runtime_identity_record_sha256": runtime_identity_record_sha256}
         _status(run, "running", manifest_sha256=file_sha(run / "manifest.json"), completed_update_prefix=len(prefix.completed))
         for task in manifest["evaluation"]["task_ids"]:
             for arm in ARMS:

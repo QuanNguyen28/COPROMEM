@@ -261,6 +261,12 @@ class ReasoningBankDynamicCheckpoints:
                 raise DynamicCheckpointError("Dynamic checkpoint version mismatch")
             if intent.get("ordered_update_index") != index or intent.get("trajectory_id") != trajectory_id:
                 raise DynamicCheckpointError("Dynamic intent has wrong order or trajectory")
+            if (not isinstance(intent.get("runtime_identity_sha256"), str) or
+                    not isinstance(intent.get("runtime_identity_record_sha256"), str) or
+                    intent["runtime_identity_sha256"] == intent["runtime_identity_record_sha256"] or
+                    marker.get("runtime_identity_sha256") != intent["runtime_identity_sha256"] or
+                    marker.get("runtime_identity_record_sha256") != intent["runtime_identity_record_sha256"]):
+                raise DynamicCheckpointError("Dynamic checkpoint runtime identity domains are inconsistent")
             if intent.get("pre_update_semantic_state_sha256") != bank.state()["semantic_state_sha256"]:
                 raise DynamicCheckpointError("Dynamic intent predecessor state mismatch")
             if intent.get("predecessor_completion_marker_sha256") != predecessor:
@@ -311,6 +317,10 @@ class ReasoningBankDynamicCheckpoints:
             raise DynamicCheckpointError("attempted Dynamic update is not the next frozen trajectory")
         if not evidence_journal_sha256:
             raise DynamicCheckpointError("Dynamic update requires an evidence-journal hash")
+        semantic = trajectory.get("runtime_identity_sha256")
+        record = trajectory.get("runtime_identity_record_sha256")
+        if (not isinstance(semantic, str) or not isinstance(record, str) or len(semantic) != 64 or len(record) != 64 or semantic == record):
+            raise DynamicCheckpointError("Dynamic update requires distinct semantic and record runtime identities")
         if state.restored_bank.state()["semantic_state_sha256"] != bank.state()["semantic_state_sha256"]:
             raise DynamicCheckpointError("in-memory Dynamic bank differs from its verified durable prefix")
         index = state.next_index
@@ -324,6 +334,7 @@ class ReasoningBankDynamicCheckpoints:
             "seed": int(trajectory.get("seed")), "scored_artifact_sha256": _artifact_hash(trajectory),
             "evidence_journal_sha256": evidence_journal_sha256,
             "retrieval_record_sha256": sha256(dict(retrieval_record)),
+            "runtime_identity_sha256": semantic, "runtime_identity_record_sha256": record,
             "pre_update_semantic_state_sha256": bank.state()["semantic_state_sha256"],
             "predecessor_completion_marker_sha256": predecessor,
             "ledger_byte_offset": self._ledger_offset(),
@@ -359,6 +370,7 @@ class ReasoningBankDynamicCheckpoints:
             "scored_artifact_sha256": intent["scored_artifact_sha256"],
             "evidence_journal_sha256": evidence_journal_sha256,
             "retrieval_record_sha256": intent["retrieval_record_sha256"],
+            "runtime_identity_sha256": semantic, "runtime_identity_record_sha256": record,
             "pre_update_semantic_state_sha256": intent["pre_update_semantic_state_sha256"],
             "post_update_semantic_state_sha256": post,
             "source_snapshot": snapshot_path.name, "source_snapshot_sha256": snapshot_hash,

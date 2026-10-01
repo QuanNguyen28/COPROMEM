@@ -11,6 +11,7 @@ import json
 import pathlib
 from collections.abc import Mapping
 from typing import Any
+from .runtime_identity_binding import RuntimeIdentityBindingError, verify as verify_runtime_identity_binding
 
 
 VERSION = "scored-execution-evidence-v1"
@@ -159,7 +160,7 @@ def bind_zero_action(*, journal: pathlib.Path, scorer_journal: pathlib.Path, run
                      termination: str, executor_record: Mapping[str, Any],
                      manifest_sha256: str, source_commit: str, task_id: str,
                      arm: str, trial_id: int, seed: int, history_sha256: str,
-                     runtime_identity_sha256: str) -> dict[str, Any]:
+                     runtime_identity_sha256: str, runtime_identity_record_sha256: str) -> dict[str, Any]:
     """Bind the sole permitted empty telemetry journal outcome.
 
     This is deliberately restricted to a settled, length-truncated executor
@@ -198,6 +199,7 @@ def bind_zero_action(*, journal: pathlib.Path, scorer_journal: pathlib.Path, run
         "scorer_score_phase": scorer["score_phase"],
         "manifest_sha256": manifest_sha256, "source_commit": source_commit,
         "runtime_identity_sha256": runtime_identity_sha256,
+        "runtime_identity_record_sha256": runtime_identity_record_sha256,
     }
     evidence["binding_sha256"] = _digest(evidence)
     return {PATH: str(journal), HASH: hashlib.sha256(payload).hexdigest(), ROWS: 0,
@@ -247,9 +249,10 @@ def _validate_zero_action(row: Mapping[str, Any], *, run_root: pathlib.Path) -> 
         raise EvidenceContractError("zero-action manifest is unreadable") from exc
     if not manifest_commit or evidence.get("source_commit") != manifest_commit:
         raise EvidenceContractError("zero-action source-commit binding mismatch")
-    runtime = run_root / "runtime-identity.json"
-    if not runtime.is_file() or evidence.get("runtime_identity_sha256") != hashlib.sha256(runtime.read_bytes()).hexdigest():
-        raise EvidenceContractError("zero-action runtime-identity binding mismatch")
+    try:
+        verify_runtime_identity_binding(run_root, evidence)
+    except RuntimeIdentityBindingError as exc:
+        raise EvidenceContractError("zero-action runtime semantic/record identity binding mismatch") from exc
     settlement = _ledger_settlement(run_root, str(evidence.get("executor_settlement_id") or ""))
     if evidence.get("executor_settlement_sha256") != _digest(settlement):
         raise EvidenceContractError("zero-action settlement hash mismatch")
@@ -286,6 +289,15 @@ def validate(row: Mapping[str, Any], *, run_root: pathlib.Path,
         raise EvidenceContractError("scored artifact execution-evidence contract version mismatch")
     if any(field not in row for field in FIELDS):
         raise EvidenceContractError("scored artifact has missing execution-evidence binding fields")
+    has_semantic = "runtime_identity_sha256" in row
+    has_record = "runtime_identity_record_sha256" in row
+    if has_semantic != has_record:
+        raise EvidenceContractError("scored artifact has a partial runtime identity binding")
+    if has_semantic:
+        try:
+            verify_runtime_identity_binding(run_root, row)
+        except RuntimeIdentityBindingError as exc:
+            raise EvidenceContractError("scored artifact runtime semantic/record identity binding mismatch") from exc
     raw_path = row.get(PATH)
     if not isinstance(raw_path, str) or not raw_path:
         raise EvidenceContractError("scored artifact has no absolute execution-evidence path")

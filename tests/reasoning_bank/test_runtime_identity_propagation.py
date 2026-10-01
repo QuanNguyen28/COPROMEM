@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from copromem.experiments.reme_copromem.runtime_identity_binding import RuntimeIdentityBindingError, verify
 
 
 def _runner():
@@ -95,10 +96,27 @@ def test_runtime_identity_changes_when_python_dependency_identity_changes():
     assert first["runtime_identity_sha256"] != second["runtime_identity_sha256"]
 
 
+def test_engineering_013_semantic_and_container_identity_substitution_fails_closed(tmp_path):
+    # These are the recorded Engineering 013 values.  Its artifact carried
+    # the container hash in the semantic field, which must never be accepted.
+    semantic = "37ea47f69b296e8a3dd9a311b046c7318e0c4bdf3a2529051e19fc861354314a"
+    historical_container = "21a88d3f40e656912e9b49339080662d17aad1e6c32031c61c0376f3edfa71c1"
+    runtime = tmp_path / "runtime-identity.json"
+    runtime.write_text(json.dumps({"runtime_identity_sha256": semantic}), encoding="utf-8")
+    actual_container = __import__("hashlib").sha256(runtime.read_bytes()).hexdigest()
+    (tmp_path / "runtime-identity.binding.json").write_text(json.dumps({"runtime_identity_sha256": semantic,
+        "runtime_identity_record_sha256": actual_container}), encoding="utf-8")
+    with pytest.raises(RuntimeIdentityBindingError, match="different domains"):
+        verify(tmp_path, {"runtime_identity_sha256": historical_container,
+                          "runtime_identity_record_sha256": historical_container})
+    assert verify(tmp_path, {"runtime_identity_sha256": semantic,
+                             "runtime_identity_record_sha256": actual_container})["runtime_identity_sha256"] == semantic
+
+
 def test_execution_boundary_rejects_a_missing_or_mismatched_runtime_identity_before_agent_load():
     path = Path(__file__).parents[2] / "src" / "copromem" / "experiments" / "reme_copromem" / "runner.py"
     source = path.read_text(encoding="utf-8")
     boundary = source[source.index("def execute_trajectory"):]
-    assert "execution evidence runtime identity is absent or differs from its frozen record" in source
+    assert "execution evidence runtime identity is absent or uses the wrong domain" in source
     assert boundary.index("execution evidence runtime identity") < boundary.index("load_official_agent")
     assert "result[\"runtime_identity_sha256\"] = runtime_identity_sha256" in source

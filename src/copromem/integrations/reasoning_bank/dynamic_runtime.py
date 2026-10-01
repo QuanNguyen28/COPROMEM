@@ -31,6 +31,7 @@ class ReasoningBankDynamicRuntime:
     def __init__(self, *, lifecycle: ReasoningBankLifecycle, initial_bank: ReasoningBank,
                  checkpoints: ReasoningBankDynamicCheckpoints, run_root: Path,
                  registry_sha256: str, manifest_sha256: str = "", runtime_identity_sha256: str = "",
+                 runtime_identity_record_sha256: str = "",
                  embedding_identity: Mapping[str, Any] | None = None) -> None:
         self.lifecycle = lifecycle
         self.initial_bank = ReasoningBank.restore(initial_bank.state())
@@ -39,6 +40,7 @@ class ReasoningBankDynamicRuntime:
         self.registry_sha256 = registry_sha256
         self.manifest_sha256 = manifest_sha256
         self.runtime_identity_sha256 = runtime_identity_sha256
+        self.runtime_identity_record_sha256 = runtime_identity_record_sha256
         self.embedding_identity = dict(embedding_identity or {})
         self.store = ContentAddressedStore(self.run_root / "reasoningbank-retrieval-objects")
 
@@ -113,6 +115,10 @@ class ReasoningBankDynamicRuntime:
                     raise RuntimeError(f"ReasoningBank Dynamic artifact identity mismatch: {field}")
             if durable.get("runtime_identity_sha256") != identity["runtime_identity_sha256"]:
                 raise RuntimeError("ReasoningBank Dynamic artifact runtime identity mismatch")
+            if durable.get("runtime_identity_record_sha256") != self.runtime_identity_record_sha256:
+                raise RuntimeError("ReasoningBank Dynamic artifact runtime record identity mismatch")
+            if durable.get("runtime_identity_sha256") == durable.get("runtime_identity_record_sha256"):
+                raise RuntimeError("ReasoningBank Dynamic artifact substituted runtime identity domains")
             if durable.get("execution_evidence_registry_sha256") != identity["registry_sha256"]:
                 raise RuntimeError("ReasoningBank Dynamic artifact registry identity mismatch")
             manifest_path = self.run_root / "manifest.json"

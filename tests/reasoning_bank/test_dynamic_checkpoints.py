@@ -29,7 +29,8 @@ def _append_update_settlements(ledger: Path, prefix: str) -> None:
 def _trajectory(index: int) -> dict[str, object]:
     return {"trajectory_id": f"evaluation:reasoningbank_dynamic:t{index}:trial=1:seed={index}",
             "task_id": f"t{index}", "trial_id": 1, "seed": index,
-            "history": [{"role": "user", "content": "public"}], "after_score": 1.0}
+            "history": [{"role": "user", "content": "public"}], "after_score": 1.0,
+            "runtime_identity_sha256": "a" * 64, "runtime_identity_record_sha256": "b" * 64}
 
 
 def _experience(index: int):
