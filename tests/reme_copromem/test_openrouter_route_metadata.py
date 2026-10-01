@@ -1,0 +1,111 @@
+import json
+
+import pytest
+
+from copromem.integrations.reme import transport
+
+
+class _Response:
+    status = 200
+    headers = {}
+
+    def __init__(self, payload):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
+    def read(self):
+        return json.dumps(self.payload).encode()
+
+
+def _payload(*, provider="DeepSeek", model=transport.MODEL, reasoning=0):
+    return {
+        "id": "generation-test",
+        "model": model,
+        "openrouter_metadata": {
+            "endpoints": {
+                "available": [{"model": model, "provider": provider, "selected": True}],
+                "total": 1,
+            },
+            "requested": transport.MODEL,
+        },
+        "choices": [{"finish_reason": "stop", "message": {"content": "ok"}}],
+        "usage": {"prompt_tokens": 2, "completion_tokens": 1, "cost": 0.000001,
+                  "completion_tokens_details": {"reasoning_tokens": reasoning}},
+    }
+
+
+def _client(tmp_path):
+    ledger = transport.AppendOnlyLedger(tmp_path / "ledger.jsonl", 1.0)
+    return transport.LockedChatCompletions("secret", ledger, tmp_path / "progress.jsonl", "executor:test"), ledger
+
+
+def test_current_openrouter_metadata_is_required_and_provider_is_selected(monkeypatch, tmp_path):
+    seen = {}
+
+    def urlopen(request, timeout):
+        seen["metadata_header"] = request.get_header("X-openrouter-metadata")
+        return _Response(_payload())
+
+    monkeypatch.setattr(transport, "count_chat_tokens", lambda *_: 10)
+    monkeypatch.setattr(transport.urllib.request, "urlopen", urlopen)
+    client, _ = _client(tmp_path)
+    result = client.create(model=transport.MODEL, messages=[{"role": "user", "content": "x"}])
+
+    assert seen["metadata_header"] == "enabled"
+    assert result.model == transport.MODEL
+    assert client.last_record["provider"] == transport.PROVIDER
+    assert client.last_record["provider_evidence"] == "openrouter_metadata.selected_endpoint"
+    progress = [json.loads(line) for line in (tmp_path / "progress.jsonl").read_text().splitlines()]
+    assert progress[-1]["event"] == "call_settled"
+    assert progress[-1]["provider_evidence"] == "openrouter_metadata.selected_endpoint"
+
+
+def test_legacy_top_level_provider_remains_supported(monkeypatch, tmp_path):
+    payload = _payload()
+    payload.pop("openrouter_metadata")
+    payload["provider"] = "DeepSeek"
+    monkeypatch.setattr(transport, "count_chat_tokens", lambda *_: 10)
+    monkeypatch.setattr(transport.urllib.request, "urlopen", lambda *_args, **_kwargs: _Response(payload))
+    client, _ = _client(tmp_path)
+
+    client.create(model=transport.MODEL, messages=[{"role": "user", "content": "x"}])
+    assert client.last_record["provider_evidence"] == "legacy_top_level"
+
+
+def test_route_rejection_is_diagnostic_and_ledger_settled(monkeypatch, tmp_path):
+    monkeypatch.setattr(transport, "count_chat_tokens", lambda *_: 10)
+    monkeypatch.setattr(transport.urllib.request, "urlopen",
+                        lambda *_args, **_kwargs: _Response(_payload(provider="Other", reasoning=3)))
+    client, _ = _client(tmp_path)
+
+    with pytest.raises(transport.DispatchFailure):
+        client.create(model=transport.MODEL, messages=[{"role": "user", "content": "x"}])
+
+    ledger = [json.loads(line) for line in (tmp_path / "ledger.jsonl").read_text().splitlines()]
+    assert [row["event"] for row in ledger] == ["reserve", "settle"]
+    assert ledger[-1]["outcome"] == "route_rejected"
+    progress = [json.loads(line) for line in (tmp_path / "progress.jsonl").read_text().splitlines()]
+    rejected = progress[-1]
+    assert rejected["rejection_reasons"] == ["provider", "reasoning_tokens"]
+    assert rejected["resolved_provider"] == "other"
+    assert rejected["reasoning_tokens"] == 3
+
+
+def test_ambiguous_selected_endpoints_fail_closed(monkeypatch, tmp_path):
+    payload = _payload()
+    payload["openrouter_metadata"]["endpoints"]["available"].append(
+        {"model": transport.MODEL, "provider": "DeepSeek", "selected": True})
+    monkeypatch.setattr(transport, "count_chat_tokens", lambda *_: 10)
+    monkeypatch.setattr(transport.urllib.request, "urlopen", lambda *_args, **_kwargs: _Response(payload))
+    client, _ = _client(tmp_path)
+
+    with pytest.raises(transport.DispatchFailure):
+        client.create(model=transport.MODEL, messages=[{"role": "user", "content": "x"}])
+    rejected = json.loads((tmp_path / "progress.jsonl").read_text().splitlines()[-1])
+    assert rejected["rejection_reasons"] == ["provider"]
+    assert rejected["provider_evidence"] == "absent"

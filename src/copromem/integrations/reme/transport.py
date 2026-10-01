@@ -235,6 +235,31 @@ class LockedChatCompletions:
         with self.progress.open("a", encoding="utf-8") as handle:
             handle.write(line); handle.flush(); os.fsync(handle.fileno())
 
+    @staticmethod
+    def _resolved_provider(data: dict[str, Any]) -> tuple[str, str]:
+        """Return the selected provider and its evidence domain.
+
+        OpenRouter historically emitted a top-level ``provider`` field.  Its
+        current Chat Completions contract exposes routing evidence under
+        ``openrouter_metadata`` when the caller opts in with
+        ``X-OpenRouter-Metadata: enabled``.  Accept only an explicitly selected
+        endpoint from that structure; never infer a provider from the model
+        name, summary prose, or the request itself.
+        """
+        metadata = data.get("openrouter_metadata")
+        if isinstance(metadata, dict):
+            endpoints = metadata.get("endpoints")
+            available = endpoints.get("available") if isinstance(endpoints, dict) else None
+            if isinstance(available, list):
+                selected = [item for item in available
+                            if isinstance(item, dict) and item.get("selected") is True]
+                if len(selected) == 1:
+                    provider = str(selected[0].get("provider") or "").strip().lower()
+                    if provider:
+                        return provider, "openrouter_metadata.selected_endpoint"
+        legacy = str(data.get("provider") or "").strip().lower()
+        return (legacy, "legacy_top_level") if legacy else ("", "absent")
+
     def create(self, *, model: str, messages: list[dict[str, Any]], stream: bool = False,
                max_tokens: int | None = None, tools: list[dict[str, Any]] | None = None,
                tool_choice: str | dict[str, Any] | None = None,
@@ -284,7 +309,8 @@ class LockedChatCompletions:
         started = time.perf_counter()
         try:
             request = urllib.request.Request(URL, data=json.dumps(body).encode(), method="POST",
-                headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"})
+                headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json",
+                         "X-OpenRouter-Metadata": "enabled"})
             with urllib.request.urlopen(request, timeout=90) as response:
                 data = json.loads(response.read().decode("utf-8"))
         except Exception as exc:
@@ -294,24 +320,46 @@ class LockedChatCompletions:
         choice = (data.get("choices") or [{}])[0]
         message = choice.get("message") or {}
         usage = data.get("usage") or {}
-        provider = str(data.get("provider") or "").lower()
+        provider, provider_evidence = self._resolved_provider(data)
         returned_model = str(data.get("model") or "")
         reasoning = int((usage.get("completion_tokens_details") or {}).get("reasoning_tokens") or 0)
-        if returned_model != MODEL or provider != PROVIDER or reasoning != 0 or message.get("reasoning"):
-            self._progress({"event": "call_route_rejected", "id": call_id, "role": self.role})
-            raise DispatchFailure("locked route/model/provider/reasoning validation failed")
+        rejection_reasons = []
+        if returned_model != MODEL: rejection_reasons.append("model")
+        if provider != PROVIDER: rejection_reasons.append("provider")
+        if reasoning != 0: rejection_reasons.append("reasoning_tokens")
+        if message.get("reasoning"): rejection_reasons.append("reasoning_content")
         actual = float(usage.get("cost") if usage.get("cost") is not None else bound)
-        self.ledger.settle(call_id, actual, {"role": self.role, "model": returned_model, "provider": provider})
+        if rejection_reasons:
+            # A successful provider response can be billable even when its
+            # route metadata violates the frozen contract.  Settle it before
+            # failing closed so the append-only ledger never leaves a phantom
+            # reservation or hides paid exposure.
+            self.ledger.settle(call_id, actual, {"role": self.role, "model": returned_model or None,
+                                                 "provider": provider or None,
+                                                 "outcome": "route_rejected"})
+            self._progress({"event": "call_route_rejected", "id": call_id, "role": self.role,
+                            "expected_model": MODEL, "resolved_model": returned_model or None,
+                            "expected_provider": PROVIDER, "resolved_provider": provider or None,
+                            "provider_evidence": provider_evidence,
+                            "reasoning_tokens": reasoning,
+                            "reasoning_content_present": bool(message.get("reasoning")),
+                            "rejection_reasons": rejection_reasons, "cost": actual})
+            raise DispatchFailure("locked route/model/provider/reasoning validation failed")
+        self.ledger.settle(call_id, actual, {"role": self.role, "model": returned_model,
+                                             "provider": provider,
+                                             "provider_evidence": provider_evidence})
         latency = time.perf_counter() - started
         content = message.get("content") or ""
         self._progress({"event": "call_settled", "id": call_id, "role": self.role, "model": returned_model,
-                        "provider": provider, "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+                        "provider": provider, "provider_evidence": provider_evidence,
+                        "prompt_tokens": int(usage.get("prompt_tokens") or 0),
                         "completion_tokens": int(usage.get("completion_tokens") or 0),
                         "reasoning_tokens": reasoning, "latency": latency, "cost": actual,
                         "finish_reason": choice.get("finish_reason"), "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
                         "content_length":len(content), "tool_call_present":bool(message.get("tool_calls"))})
         self.last_record = {"id": call_id, "role": self.role, "model": returned_model,
-                            "provider": provider, "finish_reason": choice.get("finish_reason"),
+                            "provider": provider, "provider_evidence": provider_evidence,
+                            "finish_reason": choice.get("finish_reason"),
                             "prompt_tokens": int(usage.get("prompt_tokens") or 0),
                             "completion_tokens": int(usage.get("completion_tokens") or 0),
                             "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
