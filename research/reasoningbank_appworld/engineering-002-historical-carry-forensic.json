@@ -1,0 +1,13 @@
+{
+  "version": "reasoningbank-engineering-002-historical-carry-forensic-v1",
+  "classification": "INFRASTRUCTURE-FAILED — historical carry ID reconciliation",
+  "manifest_sha256": "dfe5418729d5f867955415ae14fb5d6e7834263729f41ad038e370d790bb9753",
+  "ledger_sha256": "0522f1e6e02f3fba01c76f507bb9f363c7b302833f413399ef8fdbc28452ec91",
+  "scored_artifact_count": 1,
+  "scored_artifact_sha256": "6dae6fab4531e70151701e26633c3570aac8ec5b3276ee7687dea8942d04114e",
+  "failure": "LedgerReconciliationError: unexpected historical carry-forward call ID",
+  "root_cause": "summary did not pass the manifest-declared historical carry ID into the generic ledger reconciler",
+  "provider_calls_after_scored_artifact": false,
+  "dynamic_update_started": false,
+  "repair": "manifest-pinned historical carry ID is supplied to live-summary ledger reconciliation"
+}

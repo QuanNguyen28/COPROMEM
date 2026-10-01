@@ -39,6 +39,7 @@ RUN_VERSION = "reasoningbank-appworld-engineering-v1"
 ARMS = ["no_memory", "reasoningbank_dynamic"]
 SEEDS = [9701, 9702]
 HARD_CAP = 50.0
+HISTORICAL_CARRY_ID = "historical-infrastructure-carry"
 REGISTRY = ROOT / "research" / "reme_copromem_fixed_dynamic_review" / "appworld_public_tool_schema_registry_v5_3.json"
 
 
@@ -280,7 +281,8 @@ def prepare(run: Path) -> None:
                 "embedding": protocol_record()["embedding"], "registry_sha256": registry["registry_sha256"],
                 "initial_bank": ReasoningBank().state(), "initial_bank_sha256": ReasoningBank().state()["semantic_state_sha256"],
                 "allocation": allocation, "budget": budget,
-                "historical_infrastructure_exposure_usd": historical_exposure}
+                "historical_infrastructure_exposure_usd": historical_exposure,
+                "historical_carry_forward_id": HISTORICAL_CARRY_ID}
     _fsync_json(run / "template.json", template)
 
 
@@ -319,9 +321,12 @@ def _status(run: Path, state: str, **extra: Any) -> None:
 
 
 def _summary(run: Path, manifest: Mapping[str, Any], state: str, final: bool = False) -> None:
+    historical = float(manifest["historical_infrastructure_exposure_usd"])
+    historical_id = str(manifest.get("historical_carry_forward_id") or
+                        (HISTORICAL_CARRY_ID if historical else "historical-construction-carry"))
     summary = build_live_summary(ledger_path=run / "ledger.jsonl", artifact_root=run / "artifacts",
                                  expected_tasks=manifest["evaluation"]["task_ids"], expected_seeds=SEEDS,
-                                 historical_expected_usd=float(manifest["historical_infrastructure_exposure_usd"]), state=state, final=final,
+                                 historical_expected_usd=historical, historical_id=historical_id, state=state, final=final,
                                  expected_trajectories=12, registered_arms=ARMS)
     write_live_summary(run / "live-summary.json", summary)
 
@@ -363,8 +368,10 @@ def run(run: Path, *, preflight: bool = False) -> None:
         # and is never attributed to an Engineering result arm.
         if not (run / "ledger.jsonl").exists():
             historical = float(manifest["historical_infrastructure_exposure_usd"])
-            ledger.reserve("historical-infrastructure-carry", historical, {"role": "historical_carry_forward"})
-            ledger.settle("historical-infrastructure-carry", historical, {"role": "historical_carry_forward"})
+            historical_id = str(manifest.get("historical_carry_forward_id") or
+                                (HISTORICAL_CARRY_ID if historical else "historical-construction-carry"))
+            ledger.reserve(historical_id, historical, {"role": "historical_carry_forward"})
+            ledger.settle(historical_id, historical, {"role": "historical_carry_forward"})
         initial = ReasoningBank.restore(manifest["initial_bank"])
         checkpoint = ReasoningBankDynamicCheckpoints(root=run / "reasoningbank-dynamic-checkpoints",
                                                      expected_trajectory_ids=[f"evaluation:reasoningbank_dynamic:{task}:trial={trial}:seed={seed}"

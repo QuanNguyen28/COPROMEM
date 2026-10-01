@@ -239,6 +239,7 @@ def reconcile_artifacts(artifact_root: pathlib.Path, *, expected_tasks: Iterable
 
 def build_live_summary(*, ledger_path: pathlib.Path, artifact_root: pathlib.Path, expected_tasks: Iterable[str],
                        expected_seeds: Iterable[int], historical_expected_usd: float | Decimal,
+                       historical_id: str = "historical-construction-carry",
                        state: str, final: bool = False, require_evidence: bool = True,
                        expected_trajectories: int | None = None,
                        registered_arms: Iterable[str] = ARMS) -> Mapping[str, Any]:
@@ -246,6 +247,7 @@ def build_live_summary(*, ledger_path: pathlib.Path, artifact_root: pathlib.Path
     task_list, seed_list = tuple(expected_tasks), tuple(expected_seeds)
     registered = frozenset(str(arm) for arm in registered_arms)
     ledger = reconcile_ledger(ledger_path, historical_expected_usd=historical_expected_usd,
+                              historical_id=historical_id,
                               registered_arms=registered)
     rows = reconcile_artifacts(artifact_root, expected_tasks=task_list, expected_seeds=seed_list,
                                require_evidence=require_evidence, registered_arms=registered)

@@ -21,3 +21,17 @@ def test_reasoningbank_calls_are_owned_by_dynamic_arm_not_historical(tmp_path):
     assert [call.kind for call in dynamic] == ["embedding", "lifecycle", "lifecycle"]
     assert float(result.historical_settled_exposure) == 1.0
     assert float(result.settled_evaluation_cost) == .6
+
+
+def test_named_infrastructure_carry_is_reconciled_separately(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    rows = [
+        {"event": "reserve", "id": "historical-infrastructure-carry", "usd": .2, "role": "historical_carry_forward"},
+        {"event": "settle", "id": "historical-infrastructure-carry", "usd": .2, "role": "historical_carry_forward"},
+    ]
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    result = reconcile_ledger(path, historical_expected_usd=.2,
+                              historical_id="historical-infrastructure-carry",
+                              registered_arms=["no_memory", "reasoningbank_dynamic"])
+    assert float(result.historical_settled_exposure) == .2
+    assert float(result.settled_evaluation_cost) == 0.0
