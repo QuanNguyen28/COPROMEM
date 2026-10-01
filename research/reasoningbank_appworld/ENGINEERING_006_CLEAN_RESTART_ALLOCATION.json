@@ -1,0 +1,18 @@
+{
+  "version": "reasoningbank-appworld-engineering-006-clean-restart-v1",
+  "run_name": "reasoningbank_appworld_engineering_006_clean_restart",
+  "engineering_validation_only": true,
+  "executable_source_commit": "a315f6ed371c15c25fc975fb3a970e563398a929",
+  "predecessor_disposition": "Engineering 005 is NOT-FINALIZABLE and excluded from comparative analysis",
+  "task_ids": ["50e1ac9_1", "50e1ac9_2", "d4e9306_1"],
+  "roles": {"A": "50e1ac9_1", "B": "50e1ac9_2", "N": "d4e9306_1"},
+  "arms": ["no_memory", "reasoningbank_dynamic"],
+  "seeds": [9701, 9702],
+  "expected_trajectories": 12,
+  "historical_infrastructure_exposure_usd": 0.03524964,
+  "allocation_sha256": "a9d94f4a5e5976b6d3dcb9efa9628c2a76271af4f654e40ed772086e07a5f1c9",
+  "candidate_list_sha256": "cefd3160a25ba32731d793b936e39abcd334b95cb7959354d47ab0b08426061c",
+  "payloads_opened_during_allocation": false,
+  "provider_calls_during_allocation": 0,
+  "scientific_protocol_changed": false
+}

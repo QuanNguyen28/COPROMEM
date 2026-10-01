@@ -1,0 +1,24 @@
+{
+  "version": "reasoningbank-engineering-005-forensic-v1",
+  "run": "reasoningbank_appworld_engineering_005_recovery",
+  "manifest_sha256": "ace9fc23cee596a655d2a20133428769704786d63bbedea08cb86d2365b5028a",
+  "classification": "NOT-FINALIZABLE",
+  "failure": {"type": "RuntimeError", "source": "src/copromem/experiments/reme_copromem/runner.py:375", "message": "zero-action evidence requires durable runtime identity"},
+  "trajectory_disposition": [
+    {"key": "no_memory/fac291d_1/trial=1/seed=9701", "status": "imported_scored"},
+    {"key": "no_memory/fac291d_1/trial=2/seed=9702", "status": "native_scored"},
+    {"key": "reasoningbank_dynamic/fac291d_1/trial=1/seed=9701", "status": "native_scored"},
+    {"key": "reasoningbank_dynamic/fac291d_1/trial=2/seed=9702", "status": "settled_unscored"},
+    {"key": "no_memory/fac291d_2/trial=1/seed=9701", "status": "not_started"},
+    {"key": "no_memory/fac291d_2/trial=2/seed=9702", "status": "not_started"},
+    {"key": "reasoningbank_dynamic/fac291d_2/trial=1/seed=9701", "status": "not_started"},
+    {"key": "reasoningbank_dynamic/fac291d_2/trial=2/seed=9702", "status": "not_started"},
+    {"key": "no_memory/6c2c621_3/trial=1/seed=9701", "status": "not_started"},
+    {"key": "no_memory/6c2c621_3/trial=2/seed=9702", "status": "not_started"},
+    {"key": "reasoningbank_dynamic/6c2c621_3/trial=1/seed=9701", "status": "not_started"},
+    {"key": "reasoningbank_dynamic/6c2c621_3/trial=2/seed=9702", "status": "not_started"}
+  ],
+  "settled_unscored_evidence": {"exact_response_bytes": false, "response_content_hash": true, "finish_reason": "length", "completion_tokens": 2048, "tool_call_absence": true, "executor_settlement": true, "execution_journal_nonempty": false, "canonical_history": false, "prompt_input_identity": false, "canonical_scored_artifact": false, "artifact_scorer_binding": false, "dynamic_update_started": false},
+  "ledger": {"reservations": 24, "settlements": 24, "unresolved": 0, "settled_usd": 0.03524964},
+  "recovery_policy": "clean_restart_excluding_engineering_001_through_005_exposed_task_ids"
+}
