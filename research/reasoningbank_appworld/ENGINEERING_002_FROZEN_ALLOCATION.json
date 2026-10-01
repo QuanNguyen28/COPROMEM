@@ -1,0 +1,42 @@
+{
+  "version": "reasoningbank-appworld-engineering-002-publication-v1",
+  "purpose": "engineering_validation_only",
+  "run": "reasoningbank_appworld_engineering_002",
+  "manifest_sha256": "dfe5418729d5f867955415ae14fb5d6e7834263729f41ad038e370d790bb9753",
+  "executable_source_commit": "8732d8a3f6a163be82841a21951bc264ebf490b1",
+  "allocation_audit_sha256": "db961fe5bb12eab56f4eab773e029a4316fac1d2de1edd0283011cd2138cf5e4",
+  "task_ids": [
+    "fac291d_1",
+    "fac291d_2",
+    "6c2c621_3"
+  ],
+  "task_roles": {
+    "A": "fac291d_1",
+    "B": "fac291d_2",
+    "N": "6c2c621_3"
+  },
+  "descriptor_sha256s": {
+    "A": "47eed27d414aa3118aa15d64266d77ffcc484b7e7275c06ad79455f61a62baa8",
+    "B": "47eed27d414aa3118aa15d64266d77ffcc484b7e7275c06ad79455f61a62baa8",
+    "N": "04f1b0276859c434c2b1b512562c3003f5ba22329291c3e0623ea49143dc7bdd"
+  },
+  "design": {
+    "split": "dev",
+    "test_normal_used": false,
+    "arms": ["no_memory", "reasoningbank_dynamic"],
+    "seeds": [9701, 9702],
+    "expected_trajectories": 12,
+    "task_order": "A_then_B_then_N_task_major",
+    "no_retries_or_substitutions": true
+  },
+  "initial_bank_sha256": "8a53d8679d58641212be2cf841d128112c14d3d24116de600868e4f62dd76dd2",
+  "registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423",
+  "historical_infrastructure_exposure_usd": 0.020932692,
+  "conservative_all_in_usd": 5.280000083999999,
+  "hard_cap_usd": 50.0,
+  "engineering_001": {
+    "classification": "INFRASTRUCTURE-FAILED — checkpoint settlement interval bug",
+    "scores_imported": false,
+    "task_ids_protocol_excluded": ["d4e9306_2", "d4e9306_3", "df61dc5_3"]
+  }
+}
