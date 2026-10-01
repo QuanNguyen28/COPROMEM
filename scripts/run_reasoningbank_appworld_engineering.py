@@ -17,6 +17,7 @@ import subprocess
 import sys
 import time
 import math
+from types import MappingProxyType
 from typing import Any, Iterable, Mapping
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +32,7 @@ from copromem.integrations.reasoning_bank.checkpoints import ReasoningBankDynami
 from copromem.integrations.reasoning_bank.dynamic_runtime import ReasoningBankDynamicRuntime
 from copromem.integrations.reasoning_bank.lifecycle import ReasoningBankLifecycle
 from copromem.integrations.reasoning_bank.providers import ReasoningBankProviders
+from copromem.integrations.reasoning_bank.retrieval_provenance import ContentAddressedStore, canonical_identity, verify as verify_retrieval
 from copromem.integrations.reasoning_bank.recovery import (
     build_envelope as build_recovery_envelope,
     load_marker as load_recovery_marker,
@@ -411,13 +413,30 @@ def _imported_key(manifest: Mapping[str, Any], run: Path) -> tuple[str, str, int
     return str(key["arm"]), str(key["task_id"]), int(key["trial_id"]), int(key["seed"])
 
 
+def _retrieval_identity(manifest: Mapping[str, Any], run: Path, arm: str, task: str,
+                        trial: int, seed: int) -> Mapping[str, Any]:
+    """Freeze the exact public identity used by every trajectory boundary."""
+    return MappingProxyType(canonical_identity({
+        "task_id": task, "arm": arm, "trial_id": trial, "seed": seed,
+        "trajectory_id": f"evaluation:{arm}:{task}:trial={trial}:seed={seed}",
+        "benchmark": "appworld", "manifest_sha256": file_sha(run / "manifest.json"),
+        "runtime_identity_sha256": manifest["runtime_identity_sha256"],
+        "registry_sha256": manifest["registry_sha256"],
+    }))
+
+
 def _reconcile_execution_prefix(manifest: Mapping[str, Any], run: Path) -> tuple[int, tuple[str, str, int, int] | None]:
     schedule = _schedule(manifest); completed: set[tuple[str, str, int, int]] = set()
     imported = _imported_key(manifest, run)
     if imported is not None: completed.add(imported)
     for arm, task, trial, seed in schedule:
         path = run / "artifacts" / task / arm / f"trial-{trial}.json"
-        if not path.is_file(): continue
+        retrieval_path = run / "retrievals" / task / f"{arm}-trial-{trial}.json"
+        if not path.is_file():
+            if arm == "reasoningbank_dynamic" and (retrieval_path.exists() or
+                    retrieval_path.with_name(retrieval_path.name + ".prompt-binding.json").exists()):
+                raise RuntimeError("partial ReasoningBank retrieval exists without a scored artifact")
+            continue
         row = json.loads(path.read_text(encoding="utf-8"))
         validate_evidence(row, run_root=run, expected_registry_sha256=manifest["registry_sha256"])
         if (str(row.get("arm")), str(row.get("task_id")), int(row.get("trial_id")), int(row.get("seed"))) != (arm, task, trial, seed):
@@ -429,6 +448,24 @@ def _reconcile_execution_prefix(manifest: Mapping[str, Any], run: Path) -> tuple
         prefix += 1
     if completed != set(schedule[:prefix]):
         raise RuntimeError("successor completed work is not an ordered schedule prefix")
+    for arm, task, trial, seed in schedule[:prefix]:
+        if arm != "reasoningbank_dynamic" or (arm, task, trial, seed) == imported:
+            continue
+        retrieval_path = run / "retrievals" / task / f"{arm}-trial-{trial}.json"
+        retrieval = verify_retrieval(path=retrieval_path,
+                                     store=ContentAddressedStore(run / "reasoningbank-retrieval-objects"),
+                                     require_prompt_binding=True)
+        identity = _retrieval_identity(manifest, run, arm, task, trial, seed)
+        if retrieval["identity"] != dict(identity):
+            raise RuntimeError("restarted ReasoningBank retrieval identity differs from frozen schedule")
+        artifact_path = run / "artifacts" / task / arm / f"trial-{trial}.json"
+        row = json.loads(artifact_path.read_text(encoding="utf-8"))
+        binding_path = retrieval_path.with_name(retrieval_path.name + ".prompt-binding.json")
+        binding = json.loads(binding_path.read_text(encoding="utf-8"))
+        if (row.get("runtime_identity_sha256") != identity["runtime_identity_sha256"] or
+                row.get("execution_evidence_registry_sha256") != identity["registry_sha256"] or
+                row.get("initial_prompt_messages_sha256") != binding["initial_prompt_messages_sha256"]):
+            raise RuntimeError("restarted ReasoningBank artifact differs from sealed identity or prompt")
     return prefix, None if prefix == len(schedule) else schedule[prefix]
 
 
@@ -582,11 +619,7 @@ def run(run: Path, *, preflight: bool = False) -> None:
                         # from frozen run files and passed unchanged to the
                         # retrieval writer and post-prompt pre-dispatch seal.
                         # Neither boundary may augment a narrower identity.
-                        identity = {"task_id": task, "arm": arm, "trial_id": trial, "seed": seed,
-                                    "trajectory_id": f"evaluation:{arm}:{task}:trial={trial}:seed={seed}",
-                                    "benchmark": "appworld", "manifest_sha256": file_sha(run / "manifest.json"),
-                                    "runtime_identity_sha256": runtime_identity_sha256,
-                                    "registry_sha256": str(manifest["registry_sha256"])}
+                        identity = _retrieval_identity(manifest, run, arm, task, trial, seed)
                         kwargs["memory_for_instruction"] = runtime.retrieval_callback(retrieval_path, identity=identity)
                         kwargs["pre_dispatch_binding"] = runtime.prompt_binding_callback(retrieval_path, identity=identity)
                         kwargs["post_score_update"] = runtime.strict_post_score_callback(retrieval_path)

@@ -58,13 +58,26 @@ def test_production_runner_passes_frozen_runtime_identity_to_all_reasoningbank_a
 def test_production_runner_constructs_one_complete_identity_for_retrieval_and_prompt_seal():
     path = Path(__file__).parents[2] / "scripts" / "run_reasoningbank_appworld_engineering.py"
     source = path.read_text(encoding="utf-8")
-    start = source.index('if arm == "reasoningbank_dynamic":')
-    boundary = source[start:source.index("execute_trajectory(", start)]
+    start = source.index("def _retrieval_identity(")
+    boundary = source[start:source.index("def _reconcile_execution_prefix(", start)]
     for field in ("trajectory_id", "task_id", "arm", "trial_id", "seed", "benchmark",
                   "manifest_sha256", "runtime_identity_sha256", "registry_sha256"):
         assert f'"{field}"' in boundary
-    assert "runtime.retrieval_callback(retrieval_path, identity=identity)" in boundary
-    assert "runtime.prompt_binding_callback(retrieval_path, identity=identity)" in boundary
+    assert "MappingProxyType(canonical_identity(" in boundary
+    assert "runtime.retrieval_callback(retrieval_path, identity=identity)" in source
+    assert "runtime.prompt_binding_callback(retrieval_path, identity=identity)" in source
+    assert "_retrieval_identity(manifest, run, arm, task, trial, seed)" in source
+
+
+def test_frozen_production_identity_has_nonempty_hashes_and_cannot_mutate(tmp_path):
+    runner = _runner(); manifest = _manifest(runner); run = tmp_path / "run"; run.mkdir()
+    (run / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    identity = runner._retrieval_identity(manifest, run, "reasoningbank_dynamic", "task_1", 1, 9701)
+    assert identity["manifest_sha256"] == runner.file_sha(run / "manifest.json")
+    assert identity["runtime_identity_sha256"] == manifest["runtime_identity_sha256"]
+    assert identity["registry_sha256"] == manifest["registry_sha256"]
+    with pytest.raises(TypeError):
+        identity["manifest_sha256"] = "0" * 64
 
 
 def test_execution_boundary_rejects_a_missing_or_mismatched_runtime_identity_before_agent_load():

@@ -226,6 +226,14 @@ def _copromem_prompt_memory_text(guidance: str) -> str:
     return render_executor_memory_slot(guidance)
 
 
+def build_initial_prompt(agent: Any, world: Any, injected: str) -> list[dict[str, Any]]:
+    """Use the production prompt builder for both empty and populated retrievals."""
+    previous = ([{"when_to_use": "Retrieved procedural guidance", "content": injected}]
+                if injected else [])
+    agent.prompt_messages(0, 0, previous, world)
+    return agent.history[0][0]
+
+
 def model_visible_memory_binding(messages: list[dict[str, Any]], injected: str) -> dict[str, Any]:
     """Prove a callback's exact memory bytes entered the initial model prompt.
 
@@ -311,13 +319,10 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
         with AppWorldProxy(task_id=task_id, experiment_name=key) as world:
             before = agent.get_reward(world)
             injected = ""
-            previous: list[dict[str, str]] = []
             upstream_retrieval: dict[str, Any] | None = None
             if memory_for_instruction is not None:
                 tool_meta = {"app_descriptions": world.task.app_descriptions, "supervisor": world.task.supervisor}
                 injected = memory_for_instruction(world.task.instruction, "appworld", tool_meta)
-                if injected:
-                    previous = [{"when_to_use": "Retrieved procedural guidance", "content": injected}]
             elif arm.startswith("official_upstream_reme"):
                 # Passive only: the wrapper delegates the unchanged response
                 # object to the upstream agent.  It never adds, removes or
@@ -329,16 +334,16 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                     upstream_retrieval = _observe_upstream_retrieval(response)
                     return response
                 agent.get_memory = observed_get_memory
-            agent.prompt_messages(0, 0, previous, world)
-            initial_prompt_messages_sha256 = digest(agent.history[0][0])
-            memory_visibility = model_visible_memory_binding(agent.history[0][0], injected)
+            initial_messages = build_initial_prompt(agent, world, injected)
+            initial_prompt_messages_sha256 = digest(initial_messages)
+            memory_visibility = model_visible_memory_binding(initial_messages, injected)
             # A method-specific retrieval boundary may seal the exact initial
             # prompt before this generic executor can issue any model request.
             # It is deliberately optional so historical callers retain their
             # existing behavior while strict ReasoningBank Dynamic can fail
             # closed pre-dispatch.
             if pre_dispatch_binding is not None:
-                pre_dispatch_binding(agent.history[0][0], injected)
+                pre_dispatch_binding(initial_messages, injected)
             termination = "completed"
             last_tokens: int | None = None
             terminal_executor: dict[str, Any] | None = None

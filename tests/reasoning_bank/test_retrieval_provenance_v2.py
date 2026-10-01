@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import pytest
 
-from copromem.integrations.reasoning_bank.appworld import MEMORY_PROMPT, ReasoningBank, build_experience, render_retrieval_guidance
+from copromem.integrations.reasoning_bank.appworld import MEMORY_PROMPT, ReasoningBank, build_experience, render_retrieval_guidance, sha256
+from copromem.experiments.reme_copromem.runner import build_initial_prompt
 from copromem.integrations.reasoning_bank.retrieval_provenance import (
     ContentAddressedStore,
     RetrievalProvenanceError,
@@ -157,15 +159,49 @@ def test_every_canonical_identity_field_is_fail_closed(tmp_path, field):
                     rendered_guidance="", lifecycle_provenance={})
 
 
+@pytest.mark.parametrize("field", ["trajectory_id", "task_id", "arm", "trial_id", "seed", "benchmark",
+                                    "manifest_sha256", "runtime_identity_sha256", "registry_sha256"])
+def test_prompt_seal_rejects_every_valid_but_conflicting_identity_field(tmp_path, field):
+    guidance, record = _record(tmp_path, ReasoningBank(), [1.0, 0.0])
+    changed = dict(record["identity"])
+    changed[field] = (changed[field] + "-other" if field not in {"trial_id", "seed"}
+                      and not field.endswith("sha256") else
+                      changed[field])
+    if field in {"trial_id", "seed"}:
+        changed[field] += 1
+    elif field.endswith("sha256"):
+        changed[field] = "d" * 64
+    assert changed[field] != record["identity"][field]
+    with pytest.raises(RetrievalProvenanceError, match=f"prompt binding identity mismatch: {field}"):
+        bind_initial_prompt(path=tmp_path / "r.json", store=ContentAddressedStore(tmp_path / "objects"),
+                            messages=[{"role": "user", "content": "Public instruction"}],
+                            callback_guidance=guidance, identity=changed)
+
+
 def test_empty_reasoningbank_prompt_is_byte_identical_to_no_memory(tmp_path):
     guidance, record = _record(tmp_path, ReasoningBank(), [1.0, 0.0])
     assert guidance == ""
-    no_memory_messages = [{"role": "user", "content": "Public instruction\nTools: []"}]
-    reasoningbank_messages = json.loads(json.dumps(no_memory_messages))
+    class ZeroProviderAgent:
+        def __init__(self):
+            self.history = [[[]]]
+
+        def prompt_messages(self, trial, interaction, previous_memories, world):
+            assert trial == interaction == 0
+            memory = "".join(render_executor_memory_slot(item["content"]) for item in previous_memories)
+            self.history[0][0] = [{"role": "user", "content": world.task.instruction +
+                                   "\nTools: " + world.task.app_descriptions + memory}]
+
+        def call_llm(self, _messages):
+            raise AssertionError("zero-provider fixture must never dispatch")
+
+    world = SimpleNamespace(task=SimpleNamespace(instruction="Public instruction", app_descriptions="[]"))
+    no_memory_messages = build_initial_prompt(ZeroProviderAgent(), world, "")
+    reasoningbank_messages = build_initial_prompt(ZeroProviderAgent(), world, guidance)
     bind_initial_prompt(path=tmp_path / "r.json", store=ContentAddressedStore(tmp_path / "objects"),
                         messages=reasoningbank_messages, callback_guidance=guidance,
                         identity=record["identity"])
     binding = json.loads((tmp_path / "r.json.prompt-binding.json").read_text(encoding="utf-8"))
     assert binding["memory_slot_occurrences"] == 0
-    assert binding["initial_prompt_messages_sha256"] == __import__("copromem.integrations.reasoning_bank.appworld", fromlist=["sha256"]).sha256(no_memory_messages)
-    assert reasoningbank_messages == no_memory_messages
+    assert binding["initial_prompt_messages_sha256"] == sha256(no_memory_messages)
+    assert json.dumps(reasoningbank_messages, ensure_ascii=False, sort_keys=True).encode("utf-8") == json.dumps(
+        no_memory_messages, ensure_ascii=False, sort_keys=True).encode("utf-8")
