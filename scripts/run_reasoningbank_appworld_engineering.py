@@ -412,10 +412,11 @@ def _summary(run: Path, manifest: Mapping[str, Any], state: str, final: bool = F
     summary = dict(summary); imported = _imported_key(manifest, run)
     if imported:
         envelope = manifest["recovery_import"]; arm, _task, _trial, _seed = imported
-        stats = dict(summary["arms"][arm]); stats.update({"Completed": stats["Completed"] + 1,
+        stats = dict(summary["arms"][arm]); prior = int(stats["Completed"]); completed = prior + 1
+        stats.update({"Completed": completed,
             "Successes": stats["Successes"] + int(float(envelope["source_official_score"]) == 1.0),
-            "AvgScore": (stats["AvgScore"] * (stats["Completed"] - 1) + float(envelope["source_official_score"])) / stats["Completed"],
-            "AvgActions": (stats["AvgActions"] * (stats["Completed"] - 1) + int(envelope["source_actions"])) / stats["Completed"]})
+            "AvgScore": (stats["AvgScore"] * prior + float(envelope["source_official_score"])) / completed,
+            "AvgActions": (stats["AvgActions"] * prior + int(envelope["source_actions"])) / completed})
         summary["arms"] = {**summary["arms"], arm: stats}; summary["completed"] += 1
     if final and summary["completed"] != 12:
         raise RuntimeError("terminal reconciliation requires the imported prefix plus eleven new trajectories")
