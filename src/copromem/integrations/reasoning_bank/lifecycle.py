@@ -43,12 +43,14 @@ class ReasoningBankLifecycle:
         self.judge = judge
         self.extractor = extractor
         self.last_retrieval: Retrieval | None = None
+        self.last_query_embedding: tuple[float, ...] | None = None
 
     def retrieve_for_instruction(self, instruction: str, _benchmark: str,
                                  _metadata: Mapping[str, Any]) -> str:
         vector = self.embedder(instruction, "RETRIEVAL_QUERY")
         result = self.bank.retrieve(instruction, vector)
         self.last_retrieval = result
+        self.last_query_embedding = tuple(float(item) for item in vector)
         if not result.guidance:
             return ""
         # The shared AppWorld executor owns the outer memory slot.  Keep the
@@ -74,4 +76,3 @@ class ReasoningBankLifecycle:
         post = self.bank.commit(item)
         return UpdateResult(pre, post, item.experience_id, status,
                             sha256(dict(judge_record)), sha256(dict(extractor_record)))
-

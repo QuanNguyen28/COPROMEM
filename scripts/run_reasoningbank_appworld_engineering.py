@@ -553,7 +553,10 @@ def run(run: Path, *, preflight: bool = False) -> None:
         lifecycle = ReasoningBankLifecycle(bank=bank, embedder=SharedAzureOpenRouterEmbedder(api_key=key, ledger=ledger, progress=run / "progress.jsonl"),
                                            judge=providers.judge, extractor=providers.extract)
         runtime = ReasoningBankDynamicRuntime(lifecycle=lifecycle, initial_bank=initial, checkpoints=checkpoint,
-                                              run_root=run, registry_sha256=manifest["registry_sha256"])
+                                              run_root=run, registry_sha256=manifest["registry_sha256"],
+                                              manifest_sha256=file_sha(run / "manifest.json"),
+                                              runtime_identity_sha256=runtime_identity_sha256,
+                                              embedding_identity=manifest["embedding"])
         evidence = {"registry_path": str(REGISTRY.resolve()), "registry_sha256": manifest["registry_sha256"],
                     "runtime_identity_sha256": runtime_identity_sha256}
         _status(run, "running", manifest_sha256=file_sha(run / "manifest.json"), completed_update_prefix=len(prefix.completed))
@@ -572,7 +575,9 @@ def run(run: Path, *, preflight: bool = False) -> None:
                     retrieval_path = run / "retrievals" / task / f"{arm}-trial-{trial}.json"
                     kwargs: dict[str, Any] = {}
                     if arm == "reasoningbank_dynamic":
-                        kwargs["memory_for_instruction"] = runtime.retrieval_callback(retrieval_path)
+                        identity = {"task_id": task, "arm": arm, "trial_id": trial, "seed": seed,
+                                    "trajectory_id": f"evaluation:{arm}:{task}:trial={trial}:seed={seed}"}
+                        kwargs["memory_for_instruction"] = runtime.retrieval_callback(retrieval_path, identity=identity)
                         kwargs["post_score_update"] = runtime.strict_post_score_callback(retrieval_path)
                         kwargs["post_score_update_strict"] = True
                     execute_trajectory(run=run, progress=run / "progress.jsonl", ledger=ledger, api_key=key,
