@@ -286,6 +286,87 @@ def prepare(run: Path) -> None:
     _fsync_json(run / "template.json", template)
 
 
+def _recovery_envelope(source_run: Path) -> dict[str, Any]:
+    """Validate the one permitted immutable predecessor artifact read-only."""
+    source = source_run.resolve()
+    source_manifest = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
+    if file_sha(source / "manifest.json") != (source / "manifest.sha256").read_text(encoding="utf-8").strip():
+        raise RuntimeError("recovery source manifest is hash-inconsistent")
+    task, arm, trial, seed = "fac291d_1", "no_memory", 1, 9701
+    artifact_path = source / "artifacts" / task / arm / "trial-1.json"
+    row = json.loads(artifact_path.read_text(encoding="utf-8"))
+    validate_evidence(row, run_root=source, expected_registry_sha256=source_manifest["registry_sha256"])
+    if (row.get("task_id"), row.get("arm"), row.get("trial_id"), row.get("seed")) != (task, arm, trial, seed):
+        raise RuntimeError("recovery artifact identity is not the frozen completed key")
+    if not isinstance(row.get("official_scorer_evidence"), Mapping):
+        raise RuntimeError("recovery artifact lacks official scorer evidence")
+    calls: dict[str, set[str]] = {"reserve": set(), "settle": set()}
+    for line in (source / "ledger.jsonl").read_text(encoding="utf-8").splitlines():
+        item = json.loads(line)
+        if str(item.get("role", "")).startswith("executor:no_memory:fac291d_1:trial=1:seed=9701"):
+            calls[str(item.get("event"))].add(str(item.get("id")))
+    if not calls["reserve"] or calls["reserve"] != calls["settle"]:
+        raise RuntimeError("recovery artifact executor settlements are incomplete")
+    journal = Path(str(row["execution_evidence_path"]))
+    return {"version": "reasoningbank-recovery-import-v1", "source_run_path_sha256": sha256(str(source)),
+            "source_manifest_sha256": file_sha(source / "manifest.json"),
+            "source_artifact_path_sha256": sha256(str(artifact_path)), "source_artifact_sha256": file_sha(artifact_path),
+            "source_journal_sha256": str(row["execution_evidence_sha256"]),
+            "source_journal_rows": int(row["execution_evidence_rows"]),
+            "source_official_score": float(row["after_score"]), "source_actions": int(row["actions"]),
+            "source_history_sha256": str(row["history_sha256"]),
+            "source_executor_settlement_ids": sorted(calls["settle"]),
+            "key": {"task_id": task, "arm": arm, "trial_id": trial, "seed": seed,
+                    "trajectory_id": str(row["trajectory_id"])}}
+
+
+def prepare_recovery(run: Path, source_run: Path) -> None:
+    if run.exists() and any(run.iterdir()):
+        raise RuntimeError("recovery run directory is nonempty")
+    envelope = _recovery_envelope(source_run)
+    source_manifest = json.loads((source_run / "manifest.json").read_text(encoding="utf-8"))
+    historical = _historical_exposure(); budget = _budget(historical)
+    if budget["all_in_usd"] > HARD_CAP:
+        raise RuntimeError("registered conservative bound exceeds the hard cap")
+    template = {**source_manifest, "version": "reasoningbank-appworld-engineering-recovery-v1",
+                "git_commit": source_commit(), "budget": budget,
+                "historical_infrastructure_exposure_usd": historical,
+                "historical_carry_forward_id": HISTORICAL_CARRY_ID,
+                "recovery_import": envelope}
+    run.mkdir(parents=True, exist_ok=True); _fsync_json(run / "template.json", template)
+
+
+def import_recovery(run: Path) -> None:
+    manifest = load(run)
+    expected = dict(manifest.get("recovery_import") or {})
+    if not expected:
+        raise RuntimeError("recovery manifest lacks its import envelope")
+    source = (Path("/mnt/e/Project/AAMAS/reasoningbank-appworld-artifacts/reasoningbank_appworld_engineering_002")
+              if os.name == "posix" else Path("E:/Project/AAMAS/reasoningbank-appworld-artifacts/reasoningbank_appworld_engineering_002"))
+    actual = _recovery_envelope(source)
+    if actual != expected:
+        raise RuntimeError("recovery import evidence no longer matches the frozen envelope")
+    payload = {**actual, "transition": "recovery_import_completed"}
+    payload["record_sha256"] = sha256(payload)
+    _fsync_json(run / "recovery-import-completed.json", payload)
+    # Read back verifies the marker before it is allowed to count.
+    loaded = json.loads((run / "recovery-import-completed.json").read_text(encoding="utf-8"))
+    copy = dict(loaded); marker_hash = copy.pop("record_sha256")
+    if marker_hash != sha256(copy):
+        raise RuntimeError("recovery import completion marker reload failed")
+
+
+def _imported_key(manifest: Mapping[str, Any], run: Path) -> tuple[str, str, int, int] | None:
+    path = run / "recovery-import-completed.json"
+    if not path.is_file(): return None
+    value = json.loads(path.read_text(encoding="utf-8")); copy = dict(value); digest = copy.pop("record_sha256", None)
+    if digest != sha256(copy):
+        raise RuntimeError("recovery import completion marker is malformed")
+    key = value.get("key")
+    if not isinstance(key, Mapping): raise RuntimeError("recovery import key is absent")
+    return str(key["arm"]), str(key["task_id"]), int(key["trial_id"]), int(key["seed"])
+
+
 def freeze(run: Path) -> None:
     template = json.loads((run / "template.json").read_text(encoding="utf-8"))
     if template["git_commit"] != source_commit():
@@ -326,8 +407,18 @@ def _summary(run: Path, manifest: Mapping[str, Any], state: str, final: bool = F
                         (HISTORICAL_CARRY_ID if historical else "historical-construction-carry"))
     summary = build_live_summary(ledger_path=run / "ledger.jsonl", artifact_root=run / "artifacts",
                                  expected_tasks=manifest["evaluation"]["task_ids"], expected_seeds=SEEDS,
-                                 historical_expected_usd=historical, historical_id=historical_id, state=state, final=final,
+                                 historical_expected_usd=historical, historical_id=historical_id, state=state, final=False,
                                  expected_trajectories=12, registered_arms=ARMS)
+    summary = dict(summary); imported = _imported_key(manifest, run)
+    if imported:
+        envelope = manifest["recovery_import"]; arm, _task, _trial, _seed = imported
+        stats = dict(summary["arms"][arm]); stats.update({"Completed": stats["Completed"] + 1,
+            "Successes": stats["Successes"] + int(float(envelope["source_official_score"]) == 1.0),
+            "AvgScore": (stats["AvgScore"] * (stats["Completed"] - 1) + float(envelope["source_official_score"])) / stats["Completed"],
+            "AvgActions": (stats["AvgActions"] * (stats["Completed"] - 1) + int(envelope["source_actions"])) / stats["Completed"]})
+        summary["arms"] = {**summary["arms"], arm: stats}; summary["completed"] += 1
+    if final and summary["completed"] != 12:
+        raise RuntimeError("terminal reconciliation requires the imported prefix plus eleven new trajectories")
     write_live_summary(run / "live-summary.json", summary)
 
 
@@ -361,6 +452,9 @@ def run(run: Path, *, preflight: bool = False) -> None:
         raise RuntimeError("duplicate ReasoningBank runner lock exists")
     _fsync_json(lock, {"pid": os.getpid()})
     try:
+        imported = _imported_key(manifest, run)
+        if manifest.get("recovery_import") and imported is None:
+            raise RuntimeError("recovery import marker is absent")
         key = _credential(); _storage_guard("launch")
         ledger = AppendOnlyLedger(run / "ledger.jsonl", HARD_CAP, manifest["budget"]["call_limits"])
         # The reconciler requires a single carried-exposure record.  This is
@@ -391,6 +485,9 @@ def run(run: Path, *, preflight: bool = False) -> None:
             for arm in ARMS:
                 for trial, seed in enumerate(SEEDS, 1):
                     target = run / "artifacts" / task / arm / f"trial-{trial}.json"
+                    key_identity = (arm, task, trial, seed)
+                    if key_identity == imported:
+                        continue
                     if target.is_file():
                         row = json.loads(target.read_text(encoding="utf-8"))
                         validate_evidence(row, run_root=run, expected_registry_sha256=manifest["registry_sha256"])
@@ -424,11 +521,16 @@ def run(run: Path, *, preflight: bool = False) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("prepare", "freeze", "preflight", "run"))
+    parser.add_argument("command", choices=("prepare", "prepare-recovery", "freeze", "import-recovery", "preflight", "run"))
     parser.add_argument("--run", type=Path, required=True)
+    parser.add_argument("--source-run", type=Path)
     args = parser.parse_args(); run_path = args.run.resolve()
     if args.command == "prepare": prepare(run_path)
+    elif args.command == "prepare-recovery":
+        if args.source_run is None: parser.error("prepare-recovery requires --source-run")
+        prepare_recovery(run_path, args.source_run.resolve())
     elif args.command == "freeze": freeze(run_path)
+    elif args.command == "import-recovery": import_recovery(run_path)
     else: run(run_path, preflight=args.command == "preflight")
 
 

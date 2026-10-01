@@ -46,7 +46,9 @@ def validate_terminal_run(*, run_root: Path, manifest: Mapping[str, Any], runtim
                            require_evidence=True, registered_arms=registered_arms)
         summary = build_live_summary(ledger_path=root / "ledger.jsonl", artifact_root=root / "artifacts",
             expected_tasks=evaluation["task_ids"], expected_seeds=evaluation["seeds"],
-            historical_expected_usd=historical_exposure, state="completed", final=True,
+            historical_expected_usd=historical_exposure,
+            historical_id=str(manifest.get("historical_carry_forward_id", "historical-construction-carry")),
+            state="completed", final=True,
             expected_trajectories=int(evaluation["expected_trajectories"]), registered_arms=registered_arms)
         if int(summary["completed"]) != int(evaluation["expected_trajectories"]):
             raise RuntimeError("terminal summary denominator mismatch")
