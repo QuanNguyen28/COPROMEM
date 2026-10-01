@@ -1,0 +1,32 @@
+{
+  "version": "reasoningbank-appworld-engineering-publication-v1",
+  "engineering_validation_only": true,
+  "manifest_sha256": "2305050f8546d61a61b2952f26d1da7785a6d3cbd134b0f2d56f2f0c58720bd7",
+  "executable_source_commit": "21b90ba1fdad777e11b897ba1afbfc3bf757749b",
+  "split": "dev",
+  "payloads_opened_at_freeze": false,
+  "provider_calls_at_freeze": 0,
+  "test_normal_used": false,
+  "task_ids_in_task_major_order": [
+    "d4e9306_2",
+    "d4e9306_3",
+    "df61dc5_3"
+  ],
+  "roles": {
+    "compatible_a": "d4e9306_2",
+    "compatible_b": "d4e9306_3",
+    "negative_control": "df61dc5_3"
+  },
+  "descriptor_sha256s": {
+    "compatible_a": "13273a36e99d7b5299cde954145b6da3a36297c34443ee23778328185ff50d89",
+    "compatible_b": "13273a36e99d7b5299cde954145b6da3a36297c34443ee23778328185ff50d89",
+    "negative_control": "006f88490b38c07a64e42e787bc1db6062f464f25c882d9b133ebb1b893076e8"
+  },
+  "allocation_audit_sha256": "ed9b527b3069ba3b00659effa449de7403482906a37be282251fb4b6f7f2591a",
+  "ordering_rule": "(A descriptor SHA-256, A ID, B ID, N descriptor SHA-256, N ID)",
+  "arms": ["no_memory", "reasoningbank_dynamic"],
+  "seeds": [9701, 9702],
+  "expected_trajectories": 12,
+  "budget": {"hard_cap_usd": 50.0, "all_in_usd": 5.259067392},
+  "claim": "ReasoningBank-AppWorld shared-backbone/shared-embedding controlled port; engineering validation only, not an efficacy or superiority study."
+}
