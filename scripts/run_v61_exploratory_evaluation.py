@@ -53,6 +53,8 @@ EXTRA_TERMINAL_CHECK=None
 def ev(run,n,**x): append(run/'progress.jsonl',{'event':n,'time_ns':time.time_ns(),**x})
 def st(run,s,**x): write_json(run/'runner-status.json',{'state':s,'pid':os.getpid(),'updated_ns':time.time_ns(),**x})
 def key():
+ value=os.environ.get('OPENROUTER_API_KEY','').strip()
+ if value:return value
  for line in (ROOT/'.env').read_text(encoding='utf-8').splitlines():
   if line.startswith('OPENROUTER_API_KEY='): return line.split('=',1)[1].strip().strip("'\"")
  raise RuntimeError('OpenRouter credential unavailable')
