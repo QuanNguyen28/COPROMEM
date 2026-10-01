@@ -43,6 +43,13 @@ COPRO_FIXED_ARM='copromem_v6_1_fixed'
 COPRO_DYNAMIC_ARM='copromem_v6_1_dynamic'
 TASK_MAJOR_ARM_FIRST=False
 PREEXISTING_RUN_FILES=set()
+# Versioned successor entry points may add a baseline arm without forking the
+# executor/scorer/ReMe/CoProMem lifecycle. Historical entry points keep these
+# hooks disabled, so their frozen behavior is byte-for-byte unchanged.
+EXTRA_RUNTIME_FACTORY=None
+EXTRA_ARM_KWARGS=None
+EXTRA_EXISTING_VALIDATOR=None
+EXTRA_TERMINAL_CHECK=None
 def ev(run,n,**x): append(run/'progress.jsonl',{'event':n,'time_ns':time.time_ns(),**x})
 def st(run,s,**x): write_json(run/'runner-status.json',{'state':s,'pid':os.getpid(),'updated_ns':time.time_ns(),**x})
 def key():
@@ -129,7 +136,9 @@ def _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint,owne
  """Read-only reconciliation, then the only path to completed status."""
  _runtime_checkpoint(run,m,'terminal')
  summary(run,m,state='reconciling',final=True);st(run,'reconciling',manifest_sha256=file_sha(run/'manifest.json'))
- report=validate_terminal_run(run_root=run,manifest=m,runtime_verify=lambda:_runtime_identity(run,m),copro_reconcile=lambda:copro_checkpoint.reconcile(ledger_reconciled=_ledger_reconciled(run/'ledger.jsonl'),fixed_current_state=copro_checkpoint.fixed_initial_state),reme_dynamic_reconcile=dynamic_checkpoint.reconcile,reme_fixed_reconcile=fixed_checkpoint.reconcile,active_processes=lambda:any(getattr(item,'proc',None) is not None and item.proc.poll() is None for item in owned_services.values()),historical_exposure=HISTORICAL_EXPOSURE,additional_checks={'task_query_and_retrieval_inventory':lambda:_validate_terminal_retrieval_inventory(run,m)})
+ checks={'task_query_and_retrieval_inventory':lambda:_validate_terminal_retrieval_inventory(run,m)}
+ if EXTRA_TERMINAL_CHECK is not None:checks['additional_baseline_integrity']=lambda:EXTRA_TERMINAL_CHECK(run,m)
+ report=validate_terminal_run(run_root=run,manifest=m,runtime_verify=lambda:_runtime_identity(run,m),copro_reconcile=lambda:copro_checkpoint.reconcile(ledger_reconciled=_ledger_reconciled(run/'ledger.jsonl'),fixed_current_state=copro_checkpoint.fixed_initial_state),reme_dynamic_reconcile=dynamic_checkpoint.reconcile,reme_fixed_reconcile=fixed_checkpoint.reconcile,active_processes=lambda:any(getattr(item,'proc',None) is not None and item.proc.poll() is None for item in owned_services.values()),historical_exposure=HISTORICAL_EXPOSURE,additional_checks=checks)
  write_json(run/'terminal-reconciliation.json',report)
  if not report['valid']:raise RuntimeError('terminal reconciliation failed: '+json.dumps(report['failures'],sort_keys=True))
  runtime_path,_=_runtime_checkpoint(run,m,'terminal')
@@ -222,6 +231,7 @@ def run(run):
  write_json(run/'copromem-state-identities.json',{'fixed_initial_sha256':digest(fixed_state),'dynamic_initial_sha256':digest(dynamic_state),'non_aliased':True})
  copro_checkpoint=CoProMemDynamicCheckpointManager(root=run/'copromem-dynamic-checkpoints',manifest_sha256=file_sha(run/'manifest.json'),source_identity_sha256=digest({'git_commit':m.get('git_commit','offline-shadow')}),registry_sha256=registry['registry_sha256'],ordered_tasks=m['evaluation']['task_ids'],fixed_initial_state=fixed_state,dynamic_initial_state=dynamic_state)
  prefix=copro_checkpoint.reconcile(ledger_reconciled=_ledger_reconciled(run/'ledger.jsonl'),fixed_current_state=fixed_state);dynamic_state=prefix['dynamic_state']
+ extra_context=(EXTRA_RUNTIME_FACTORY(run,m,ledger,k,registry) if EXTRA_RUNTIME_FACTORY is not None else None)
  owned_services={}
  try:
   with services(run,run/'ledger.jsonl',run/'progress.jsonl',HARD_CAP_USD,['reme-fixed','reme-dynamic','reme-dynamic-verifier'],lifecycle_input_ceiling=LIFECYCLE_INPUT_CEILING) as svc:
@@ -247,6 +257,7 @@ def run(run):
        retrieval_path=run/'retrievals'/task/f'{arm}-{trial}.json'
        if path.exists():
         result=json.loads(path.read_text(encoding='utf-8'))
+        if EXTRA_EXISTING_VALIDATOR is not None:EXTRA_EXISTING_VALIDATOR(extra_context,run,m,arm,task,trial,seed,path,result)
         if arm=='official_upstream_reme_dynamic':
          checkpoint_state=dynamic_checkpoint.reconcile(); identity=DynamicUpdateIdentity.from_result(result)
          if _dynamic_order(m).index(identity)>=checkpoint_state['completed_count']:raise RuntimeError('scored ReMe Dynamic artifact lacks a completed durable update marker')
@@ -270,7 +281,9 @@ def run(run):
           holder.update({'guidance':guidance,'provenance':prov,'query':query,'state_sha256':digest(state)})
           return guidance
          kwargs['memory_for_instruction']=conditioned_memory
-        result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256'],'runtime_identity_sha256':file_sha(run/'runtime-identity.json'),'runtime_identity_record_sha256':file_sha(run/'runtime-identity.json'),'runtime_identity_semantic_sha256':str(json.loads((run/'runtime-identity.json').read_text(encoding='utf-8'))['runtime_identity_sha256'])},**kwargs)
+        if EXTRA_ARM_KWARGS is not None:kwargs.update(EXTRA_ARM_KWARGS(extra_context,run,m,arm,task,trial,seed,path))
+        runtime_record=json.loads((run/'runtime-identity.json').read_text(encoding='utf-8'))
+        result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256'],'runtime_identity_sha256':str(runtime_record['runtime_identity_sha256']),'runtime_identity_record_sha256':file_sha(run/'runtime-identity.json')},**kwargs)
         # The artifact is the only admissible boundary between execution and a
         # task-batch state transition.  Reload it so a zero-action evidence
         # attestation and every scorer binding are interpreted identically on

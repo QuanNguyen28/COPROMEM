@@ -15,6 +15,16 @@ def _runner():
     return module
 
 
+def _python_runtime() -> dict:
+    return {"version": "reasoningbank-appworld-python-runtime-v1", "python_executable": "/venv/bin/python",
+            "python_version": "3.12.3", "python_prefix": "/venv", "python_base_prefix": "/usr",
+            "ray_version": "2.58.0", "appworld_version": "0.1.3.post1", "dependency_set_sha256": "a" * 64,
+            "appworld_react_agent_sha256": "b" * 64, "appworld_module_sha256": "c" * 64,
+            "entrypoint_sha256": "d" * 64,
+            "imports": ["ray", "appworld", "appworld_react_agent", "copromem.experiments.reme_copromem.runner", "reasoningbank_entrypoint"],
+            "runtime_identity_sha256": "e" * 64}
+
+
 def test_prepare_freezes_the_actual_shared_backbone_and_embedding_path(monkeypatch, tmp_path):
     runner = _runner()
     inventory = tmp_path / "public-dev.json"
@@ -25,6 +35,7 @@ def test_prepare_freezes_the_actual_shared_backbone_and_embedding_path(monkeypat
     ]}), encoding="utf-8")
     monkeypatch.setenv("REASONINGBANK_PUBLIC_DEV_DESCRIPTORS", str(inventory))
     monkeypatch.setattr(runner, "_hard_exposed_task_ids", lambda: (set(), {}))
+    monkeypatch.setattr(runner, "_capture_python_runtime_identity", _python_runtime)
     run = tmp_path / "run"; runner.prepare(run)
     manifest = json.loads((run / "template.json").read_text(encoding="utf-8"))
     assert manifest["evaluation"]["expected_trajectories"] == 12
@@ -52,6 +63,7 @@ def test_prepare_freezes_separate_historical_infrastructure_exposure(monkeypatch
     monkeypatch.setenv("REASONINGBANK_PUBLIC_DEV_DESCRIPTORS", str(inventory))
     monkeypatch.setenv("REASONINGBANK_HISTORICAL_EXPOSURE_USD", "0.020932692")
     monkeypatch.setattr(runner, "_hard_exposed_task_ids", lambda: (set(), {}))
+    monkeypatch.setattr(runner, "_capture_python_runtime_identity", _python_runtime)
     run = tmp_path / "run"; runner.prepare(run)
     manifest = json.loads((run / "template.json").read_text(encoding="utf-8"))
     assert manifest["historical_infrastructure_exposure_usd"] == 0.020932692
@@ -74,6 +86,7 @@ def test_prepare_keeps_previous_engineering_allocation_out_of_successor(monkeypa
     monkeypatch.setenv("REASONINGBANK_PUBLIC_DEV_DESCRIPTORS", str(inventory))
     monkeypatch.setenv("REASONINGBANK_PROTOCOL_EXCLUDED_TASK_IDS_JSON", '["aaaaaaa_1", "aaaaaaa_2", "bbbbbbb_1"]')
     monkeypatch.setattr(runner, "_hard_exposed_task_ids", lambda: (set(), {}))
+    monkeypatch.setattr(runner, "_capture_python_runtime_identity", _python_runtime)
     run = tmp_path / "run"; runner.prepare(run)
     allocation = json.loads((run / "template.json").read_text(encoding="utf-8"))["allocation"]
     assert allocation["protocol_exclusion_count"] == 3

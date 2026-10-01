@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from copromem.experiments.reme_copromem.runtime_identity_binding import RuntimeIdentityBindingError, verify
 
 
 def _runner():
@@ -16,9 +17,16 @@ def _runner():
 
 
 def _manifest(runner):
+    python_runtime = {"version": "reasoningbank-appworld-python-runtime-v1", "python_executable": "/venv/bin/python",
+                      "python_version": "3.12.3", "python_prefix": "/venv", "python_base_prefix": "/usr",
+                      "ray_version": "2.58.0", "appworld_version": "0.1.3.post1", "dependency_set_sha256": "e" * 64,
+                      "appworld_react_agent_sha256": "f" * 64, "appworld_module_sha256": "0" * 64,
+                      "entrypoint_sha256": "1" * 64,
+                      "imports": ["ray", "appworld", "appworld_react_agent", "copromem.experiments.reme_copromem.runner", "reasoningbank_entrypoint"],
+                      "runtime_identity_sha256": "2" * 64}
     value = {"git_commit": "a" * 40, "protocol_sha256": "b" * 64, "registry_sha256": "c" * 64,
              "initial_bank_sha256": "d" * 64, "execution": {"model": "fixture"},
-             "embedding": {"model": "fixture"}, "allocation": {"frozen": True}}
+             "embedding": {"model": "fixture"}, "allocation": {"frozen": True}, "python_runtime": python_runtime}
     value["runtime_identity_version"] = runner.RUNTIME_IDENTITY_VERSION
     value["runtime_identity_sha256"] = runner._runtime_identity_digest(value)
     return value
@@ -55,10 +63,60 @@ def test_production_runner_passes_frozen_runtime_identity_to_all_reasoningbank_a
     assert "for arm in ARMS" in source and "execute_trajectory(" in source
 
 
+def test_production_runner_constructs_one_complete_identity_for_retrieval_and_prompt_seal():
+    path = Path(__file__).parents[2] / "scripts" / "run_reasoningbank_appworld_engineering.py"
+    source = path.read_text(encoding="utf-8")
+    start = source.index("def _retrieval_identity(")
+    boundary = source[start:source.index("def _reconcile_execution_prefix(", start)]
+    for field in ("trajectory_id", "task_id", "arm", "trial_id", "seed", "benchmark",
+                  "manifest_sha256", "runtime_identity_sha256", "registry_sha256"):
+        assert f'"{field}"' in boundary
+    assert "MappingProxyType(canonical_identity(" in boundary
+    assert "runtime.retrieval_callback(retrieval_path, identity=identity)" in source
+    assert "runtime.prompt_binding_callback(retrieval_path, identity=identity)" in source
+    assert "_retrieval_identity(manifest, run, arm, task, trial, seed)" in source
+
+
+def test_frozen_production_identity_has_nonempty_hashes_and_cannot_mutate(tmp_path):
+    runner = _runner(); manifest = _manifest(runner); run = tmp_path / "run"; run.mkdir()
+    (run / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    identity = runner._retrieval_identity(manifest, run, "reasoningbank_dynamic", "task_1", 1, 9701)
+    assert identity["manifest_sha256"] == runner.file_sha(run / "manifest.json")
+    assert identity["runtime_identity_sha256"] == manifest["runtime_identity_sha256"]
+    assert identity["registry_sha256"] == manifest["registry_sha256"]
+    with pytest.raises(TypeError):
+        identity["manifest_sha256"] = "0" * 64
+
+
+def test_runtime_identity_changes_when_python_dependency_identity_changes():
+    runner = _runner(); first = _manifest(runner); second = _manifest(runner)
+    second["python_runtime"] = {**second["python_runtime"], "dependency_set_sha256": "3" * 64,
+                                "runtime_identity_sha256": "4" * 64}
+    second["runtime_identity_sha256"] = runner._runtime_identity_digest(second)
+    assert first["runtime_identity_sha256"] != second["runtime_identity_sha256"]
+
+
+def test_engineering_013_semantic_and_container_identity_substitution_fails_closed(tmp_path):
+    # These are the recorded Engineering 013 values.  Its artifact carried
+    # the container hash in the semantic field, which must never be accepted.
+    semantic = "37ea47f69b296e8a3dd9a311b046c7318e0c4bdf3a2529051e19fc861354314a"
+    historical_container = "21a88d3f40e656912e9b49339080662d17aad1e6c32031c61c0376f3edfa71c1"
+    runtime = tmp_path / "runtime-identity.json"
+    runtime.write_text(json.dumps({"runtime_identity_sha256": semantic}), encoding="utf-8")
+    actual_container = __import__("hashlib").sha256(runtime.read_bytes()).hexdigest()
+    (tmp_path / "runtime-identity.binding.json").write_text(json.dumps({"runtime_identity_sha256": semantic,
+        "runtime_identity_record_sha256": actual_container}), encoding="utf-8")
+    with pytest.raises(RuntimeIdentityBindingError, match="different domains"):
+        verify(tmp_path, {"runtime_identity_sha256": historical_container,
+                          "runtime_identity_record_sha256": historical_container})
+    assert verify(tmp_path, {"runtime_identity_sha256": semantic,
+                             "runtime_identity_record_sha256": actual_container})["runtime_identity_sha256"] == semantic
+
+
 def test_execution_boundary_rejects_a_missing_or_mismatched_runtime_identity_before_agent_load():
     path = Path(__file__).parents[2] / "src" / "copromem" / "experiments" / "reme_copromem" / "runner.py"
     source = path.read_text(encoding="utf-8")
     boundary = source[source.index("def execute_trajectory"):]
-    assert "execution evidence runtime identity is absent or differs from its frozen record" in source
+    assert "execution evidence runtime identity is absent or uses the wrong domain" in source
     assert boundary.index("execution evidence runtime identity") < boundary.index("load_official_agent")
     assert "result[\"runtime_identity_sha256\"] = runtime_identity_sha256" in source

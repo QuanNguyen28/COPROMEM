@@ -275,6 +275,10 @@ def load_registry(path: str | Path, expected_sha256: str) -> dict[str, Any]:
 def normalize_evidence_path(value: str | Path, *, require_e_backed: bool = True) -> Path:
     """Convert an explicit Windows E: path or WSL path to a stable absolute path."""
     text = str(value).strip()
+    # A Windows path must remain Windows-native in a Windows worker.  Mapping
+    # it to ``/mnt/<drive>`` unconditionally turns it into a root-relative
+    # path under ``pathlib.WindowsPath`` and breaks ordinary isolated fixtures.
+    # POSIX workers use the WSL mapping so all durable run paths stay E-backed.
     if os.name == "posix" and len(text) >= 3 and text[1:3] in {":\\", ":/"}:
         drive = text[0].lower()
         text = f"/mnt/{drive}/" + text[3:].replace("\\", "/")

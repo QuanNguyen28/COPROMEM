@@ -10,6 +10,11 @@ ROOT = Path(__file__).resolve().parents[2]
 LAUNCHER = ROOT / "scripts" / "launch_reasoningbank_appworld_engineering_wsl.sh"
 
 
+def test_wsl_launchers_are_frozen_with_lf_checkout_semantics():
+    attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+    assert "*.sh text eol=lf" in attributes
+
+
 def _wsl(path: Path) -> str:
     windows = path.resolve().as_posix()
     assert windows[1:3] == ":/"

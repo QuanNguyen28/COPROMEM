@@ -4,6 +4,31 @@
 set -euo pipefail
 set +x
 
+# A detached parent can request durable, value-free launch records.  The
+# protected environment path and every credential value stay out of records.
+stage_dir="${REASONINGBANK_LAUNCH_STAGE_DIR:-}"
+stage_record() {
+  local stage="$1" code="${2:-0}" tmp
+  [[ -n "$stage_dir" ]] || return 0
+  mkdir -p "$stage_dir"
+  tmp="$(mktemp "$stage_dir/.launch-stage.XXXXXX")"
+  printf '{"version":"reasoningbank-detached-launch-v1","stage":"%s","pid":%s,"exit_code":%s}\n' \
+    "$stage" "$$" "$code" > "$tmp"
+  mv -f "$tmp" "$stage_dir/$stage.json"
+}
+terminal_failure() {
+  local code="$1" tmp
+  [[ -n "$stage_dir" && "$code" -ne 0 && ! -e "$stage_dir/launch-terminal.json" ]] || return 0
+  mkdir -p "$stage_dir"
+  tmp="$(mktemp "$stage_dir/.launch-terminal.XXXXXX")"
+  printf '{"version":"reasoningbank-detached-launch-v1","stage":"credential-wrapper-failed","pid":%s,"exit_code":%s}\n' \
+    "$$" "$code" > "$tmp"
+  mv -f "$tmp" "$stage_dir/launch-terminal.json"
+}
+on_exit() { local code=$?; terminal_failure "$code"; exit "$code"; }
+trap on_exit EXIT
+stage_record credential-wrapper-received
+
 if [[ "$#" -eq 0 ]]; then
   echo "usage: REASONINGBANK_PROTECTED_ENV_FILE=/absolute/path $0 <runner-command...>" >&2
   exit 64
@@ -27,4 +52,6 @@ if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
   exit 41
 fi
 export OPENROUTER_API_KEY
+stage_record credential-wrapper-exec
+trap - EXIT
 exec "$@"

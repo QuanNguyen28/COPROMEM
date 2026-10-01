@@ -30,6 +30,7 @@ from ...online import ScoredCandidate, apply_task_batch
 from .evidence_contract import bind as bind_execution_evidence
 from .evidence_contract import bind_zero_action
 from .evidence_contract import validate as validate_execution_evidence
+from .runtime_identity_binding import RuntimeIdentityBindingError, verify as verify_runtime_identity_binding
 
 
 ROOT = pathlib.Path(os.environ.get("COPROMEM_ROOT", pathlib.Path(__file__).resolve().parents[4]))
@@ -214,11 +215,24 @@ def _observe_upstream_retrieval(response: Any) -> dict[str, Any]:
             "retrieval_response_sha256": digest(response) if response is not None else digest(None)}
 
 
+from .prompt_memory import render_executor_memory_slot
+
+
 def _copromem_prompt_memory_text(guidance: str) -> str:
-    """Render exactly one source-agent ``previous_memories`` item."""
-    if not guidance:
-        return ""
-    return "Experience 1:\n When to use: Retrieved procedural guidance\n Content: " + guidance + "\n"
+    """Compatibility shim for historical audit/test imports.
+
+    The authoritative executor-slot renderer lives in ``prompt_memory``; this
+    name intentionally contains no independently maintained template.
+    """
+    return render_executor_memory_slot(guidance)
+
+
+def build_initial_prompt(agent: Any, world: Any, injected: str) -> list[dict[str, Any]]:
+    """Use the production prompt builder for both empty and populated retrievals."""
+    previous = ([{"when_to_use": "Retrieved procedural guidance", "content": injected}]
+                if injected else [])
+    agent.prompt_messages(0, 0, previous, world)
+    return agent.history[0][0]
 
 
 def model_visible_memory_binding(messages: list[dict[str, Any]], injected: str) -> dict[str, Any]:
@@ -251,7 +265,8 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                        api_key: str, all_task_ids: list[str], arm: str, task_id: str,
                        trial_id: int, seed: int, max_actions: int, temperature: float,
                        memory_base_url: str | None = None,
-                       memory_for_instruction: Callable[[str, str, dict[str, Any]], str] | None = None,
+                        memory_for_instruction: Callable[[str, str, dict[str, Any]], str] | None = None,
+                        pre_dispatch_binding: Callable[[list[dict[str, Any]], str], None] | None = None,
                        phase: str = "evaluation", artifact_path: pathlib.Path | None = None,
                        post_score_update: Callable[[Any, dict[str, Any]], None] | None = None,
                        post_score_update_strict: bool = False,
@@ -266,31 +281,19 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
     if phase not in {"acquisition", "evaluation"}:
         raise ValueError("unregistered trajectory phase")
     runtime_identity_sha256: str | None = None
-    runtime_identity_semantic_sha256: str | None = None
     runtime_identity_record_sha256: str | None = None
     if execution_evidence is not None and "runtime_identity_sha256" in execution_evidence:
         candidate = execution_evidence.get("runtime_identity_sha256")
         if not isinstance(candidate, str) or not re.fullmatch(r"[0-9a-f]{64}", candidate):
             raise RuntimeError("execution evidence runtime identity is malformed")
-        identity_path = run / "runtime-identity.json"
-        if not identity_path.is_file() or hashlib.sha256(identity_path.read_bytes()).hexdigest() != candidate:
-            raise RuntimeError("execution evidence runtime identity is absent or differs from its frozen record")
+        try:
+            binding = verify_runtime_identity_binding(run, execution_evidence)
+        except RuntimeIdentityBindingError as exc:
+            raise RuntimeError("execution evidence runtime identity is absent or uses the wrong domain") from exc
+        if candidate != binding["runtime_identity_sha256"]:
+            raise RuntimeError("execution evidence semantic runtime identity differs from its frozen record")
         runtime_identity_sha256 = candidate
-    if execution_evidence is not None and "runtime_identity_record_sha256" in execution_evidence:
-        record_candidate = execution_evidence.get("runtime_identity_record_sha256")
-        semantic_candidate = execution_evidence.get("runtime_identity_semantic_sha256")
-        identity_path = run / "runtime-identity.json"
-        if (not isinstance(record_candidate, str) or not re.fullmatch(r"[0-9a-f]{64}", record_candidate)
-                or not isinstance(semantic_candidate, str) or not re.fullmatch(r"[0-9a-f]{64}", semantic_candidate)
-                or not identity_path.is_file()
-                or hashlib.sha256(identity_path.read_bytes()).hexdigest() != record_candidate):
-            raise RuntimeError("explicit runtime identity binding is malformed or drifted")
-        identity_record = json.loads(identity_path.read_text(encoding="utf-8"))
-        if identity_record.get("runtime_identity_sha256") != semantic_candidate:
-            raise RuntimeError("runtime semantic identity differs from its frozen record")
-        runtime_identity_record_sha256 = record_candidate
-        runtime_identity_semantic_sha256 = semantic_candidate
-        runtime_identity_sha256 = record_candidate
+        runtime_identity_record_sha256 = binding["runtime_identity_record_sha256"]
     key = f"{phase}:{arm}:{task_id}:trial={trial_id}:seed={seed}"
     journal = safe_journal_path(run / "journals", key)
     token = CALL_ROLE.set(f"executor:{arm}:{task_id}:trial={trial_id}:seed={seed}")
@@ -322,13 +325,10 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
         with AppWorldProxy(task_id=task_id, experiment_name=key) as world:
             before = agent.get_reward(world)
             injected = ""
-            previous: list[dict[str, str]] = []
             upstream_retrieval: dict[str, Any] | None = None
             if memory_for_instruction is not None:
                 tool_meta = {"app_descriptions": world.task.app_descriptions, "supervisor": world.task.supervisor}
                 injected = memory_for_instruction(world.task.instruction, "appworld", tool_meta)
-                if injected:
-                    previous = [{"when_to_use": "Retrieved procedural guidance", "content": injected}]
             elif arm.startswith("official_upstream_reme"):
                 # Passive only: the wrapper delegates the unchanged response
                 # object to the upstream agent.  It never adds, removes or
@@ -340,9 +340,16 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                     upstream_retrieval = _observe_upstream_retrieval(response)
                     return response
                 agent.get_memory = observed_get_memory
-            agent.prompt_messages(0, 0, previous, world)
-            initial_prompt_messages_sha256 = digest(agent.history[0][0])
-            memory_visibility = model_visible_memory_binding(agent.history[0][0], injected)
+            initial_messages = build_initial_prompt(agent, world, injected)
+            initial_prompt_messages_sha256 = digest(initial_messages)
+            memory_visibility = model_visible_memory_binding(initial_messages, injected)
+            # A method-specific retrieval boundary may seal the exact initial
+            # prompt before this generic executor can issue any model request.
+            # It is deliberately optional so historical callers retain their
+            # existing behavior while strict ReasoningBank Dynamic can fail
+            # closed pre-dispatch.
+            if pre_dispatch_binding is not None:
+                pre_dispatch_binding(initial_messages, injected)
             termination = "completed"
             last_tokens: int | None = None
             terminal_executor: dict[str, Any] | None = None
@@ -384,11 +391,10 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                 result["runtime_identity_sha256"] = runtime_identity_sha256
             if runtime_identity_record_sha256 is not None:
                 result["runtime_identity_record_sha256"] = runtime_identity_record_sha256
-                result["runtime_identity_semantic_sha256"] = runtime_identity_semantic_sha256
             if memory_for_instruction is not None:
                 result.update({"copromem_callback_guidance_sha256": digest(injected),
                                "copromem_callback_guidance_nonempty": bool(injected),
-                               "prompt_memory_injection_sha256": digest(_copromem_prompt_memory_text(injected))})
+                                "prompt_memory_injection_sha256": digest(render_executor_memory_slot(injected))})
             if arm.startswith("official_upstream_reme"):
                 result["reme_retrieval_provenance"] = upstream_retrieval or {
                     "retrieved_memory_count": 0, "retrieved_memory_sha256s": [],
@@ -413,8 +419,7 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                         source_commit=source_commit, task_id=task_id, arm=arm, trial_id=trial_id,
                         seed=seed, history_sha256=result["history_sha256"],
                         runtime_identity_sha256=runtime_identity_sha256,
-                        runtime_identity_record_sha256=runtime_identity_record_sha256,
-                        runtime_identity_semantic_sha256=runtime_identity_semantic_sha256,
+                        runtime_identity_record_sha256=str(runtime_identity_record_sha256 or ""),
                     ))
                 else:
                     result.update(bind_execution_evidence(journal=evidence_path, run_root=run,

@@ -159,6 +159,10 @@ def prepare(run: pathlib.Path) -> None:
     template["runtime_identity_version"] = RUNTIME_IDENTITY_V3
     runtime, inputs = build_evaluation_identity_v3(root=ROOT, manifest=template)
     write_json(run / "runtime-identity.json", runtime)
+    write_json(run / "runtime-identity.binding.json", {
+        "runtime_identity_sha256": runtime["runtime_identity_sha256"],
+        "runtime_identity_record_sha256": base.file_sha(run / "runtime-identity.json"),
+    })
     template["runtime_identity_inputs"] = inputs
     template["runtime_identity_sha256"] = runtime["runtime_identity_sha256"]
     template["runtime_identity_file_sha256"] = base.file_sha(run / "runtime-identity.json")
