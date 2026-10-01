@@ -46,7 +46,15 @@ V622_BANK_ROOT: pathlib.Path | None = None
 def _bank_identities() -> tuple[dict[str, Any], dict[str, Any]]:
     if V622_BANK_ROOT is None:
         raise RuntimeError("v6.2.2 bank root is not configured")
-    report, _legacy_gate = base.identities_original()
+    # Read the immutable ReMe construction report directly. Calling the legacy
+    # helper after rebinding ``base.COPRO`` makes that helper observe the new
+    # v6.2.2 bank through its module global and compare it with the v6.1 hash.
+    report_path = base.CONSTRUCTION / "FINAL_CONSTRUCTION_REPORT.json"
+    if not report_path.is_file():
+        raise RuntimeError("shared ReMe construction report is absent")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    if report.get("shared_bank_sha256") != "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0":
+        raise RuntimeError("shared ReMe bank identity is invalid")
     gate_path = V622_BANK_ROOT / "semantic-admission-gate.json"
     bank_path = V622_BANK_ROOT / "fixed-bank.json"
     if not gate_path.is_file() or not bank_path.is_file():

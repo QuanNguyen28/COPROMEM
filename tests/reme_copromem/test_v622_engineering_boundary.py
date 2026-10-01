@@ -66,6 +66,28 @@ def test_versioned_runner_rejects_old_allocation_and_binds_new_policy(tmp_path):
             setattr(runner.base, name, value)
 
 
+def test_bank_identity_does_not_reenter_legacy_global_copro_locator(tmp_path, monkeypatch):
+    construction = tmp_path / "construction"; construction.mkdir()
+    (construction / "FINAL_CONSTRUCTION_REPORT.json").write_text(json.dumps({
+        "shared_bank_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0"
+    }), encoding="utf-8")
+    bank = tmp_path / "v622"; bank.mkdir()
+    fixed = {"contrastive_v6_schemas": {}}
+    (bank / "fixed-bank.json").write_text(json.dumps(fixed), encoding="utf-8")
+    (bank / "semantic-admission-gate.json").write_text(json.dumps({
+        "version": "copromem-v6.2.2-bank-admission-v1", "passed": True,
+        "provider_calls": 0, "state_sha256": runner.base.digest(fixed),
+    }), encoding="utf-8")
+    monkeypatch.setattr(runner.base, "CONSTRUCTION", construction)
+    monkeypatch.setattr(runner, "V622_BANK_ROOT", bank)
+    # A poisoned legacy callback proves the versioned identity boundary never
+    # re-enters a function whose module-global COPRO locator has been rebound.
+    monkeypatch.setattr(runner.base, "identities_original", lambda: (_ for _ in ()).throw(AssertionError("legacy")), raising=False)
+    report, gate = runner._bank_identities()
+    assert report["shared_bank_sha256"].startswith("6c3bc799")
+    assert gate["state_sha256"] == runner.base.digest(fixed)
+
+
 def _learned_bank() -> tuple[dict, dict]:
     nodes = tuple(
         {"operation": operation, "effect_class": effect, "public_required": required,
