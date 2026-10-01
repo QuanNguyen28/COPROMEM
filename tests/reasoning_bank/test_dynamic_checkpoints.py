@@ -7,6 +7,7 @@ import pytest
 
 from copromem.integrations.reasoning_bank.appworld import ReasoningBank, build_experience
 from copromem.integrations.reasoning_bank.checkpoints import (
+    CheckpointPrefix,
     DynamicCheckpointError,
     ReasoningBankDynamicCheckpoints,
 )
@@ -60,6 +61,27 @@ def test_first_second_update_and_restart_restore_longest_verified_prefix(tmp_pat
     assert restored.restored_bank.state() == bank.state()
     assert [entry.trajectory_id for entry in restored.completed] == [
         _trajectory(1)["trajectory_id"], _trajectory(2)["trajectory_id"]]
+
+
+def test_read_only_prefix_uses_native_suffix_index_and_historical_ledger(tmp_path: Path):
+    source = _manager(tmp_path / "source", 6); initial = ReasoningBank(); historical = ReasoningBank()
+    for index in range(1, 6):
+        source.update(bank=historical, initial_bank=initial, trajectory=_trajectory(index), retrieval_record={"i": index},
+                      evidence_journal_sha256=f"journal-{index}", update=lambda index=index: (
+                          _append_update_settlements(source.ledger_path, f"historical-{index}"), historical.commit(_experience(index)))[1])
+    prefix = CheckpointPrefix.from_source(root=source.root, expected_trajectory_ids=source.expected,
+                                          ledger_path=source.ledger_path, count=5, initial_bank=initial)
+    successor = ReasoningBankDynamicCheckpoints(root=tmp_path / "successor" / "dynamic", expected_trajectory_ids=source.expected,
+                                                 ledger_path=tmp_path / "successor" / "ledger.jsonl", prefix=prefix)
+    state = successor.reconcile(initial)
+    assert state.next_index == 6 and state.restored_bank.state() == historical.state()
+    native = ReasoningBank.restore(historical.state())
+    complete = successor.update(bank=native, initial_bank=initial, trajectory=_trajectory(6), retrieval_record={"i": 6},
+                                evidence_journal_sha256="journal-6", update=lambda: (
+                                    _append_update_settlements(successor.ledger_path, "native-6"), native.commit(_experience(6)))[1])
+    assert complete.update_index == 6
+    assert json.loads(successor._intent_path(6).read_text())["predecessor_completion_marker_sha256"] == prefix.completed[-1].marker_sha256
+    assert not successor._intent_path(1).exists()
 
 
 def test_intent_without_marker_fails_closed_and_does_not_repeat_update(tmp_path: Path):

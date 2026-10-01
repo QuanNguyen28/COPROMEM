@@ -100,15 +100,42 @@ class Reconciliation:
     restored_bank: ReasoningBank
 
 
+@dataclass(frozen=True)
+class CheckpointPrefix:
+    """A validated, immutable historical prefix viewed by a successor."""
+    completed: tuple[UpdateCompletion, ...]
+    restored_bank: ReasoningBank
+    identity_sha256: str
+
+    @classmethod
+    def from_source(cls, *, root: Path, expected_trajectory_ids: Sequence[str], ledger_path: Path,
+                    count: int, initial_bank: ReasoningBank | None = None) -> "CheckpointPrefix":
+        source = ReasoningBankDynamicCheckpoints(root=root, expected_trajectory_ids=expected_trajectory_ids,
+                                                  ledger_path=ledger_path)
+        state = source.reconcile(initial_bank or ReasoningBank())
+        if count <= 0 or len(state.completed) != count:
+            raise DynamicCheckpointError("historical checkpoint prefix is not the expected complete prefix")
+        body = {"completed": [{"index": item.update_index, "trajectory_id": item.trajectory_id,
+                                "marker_sha256": item.marker_sha256, "post_state_sha256": item.post_state_sha256}
+                               for item in state.completed],
+                "restored_bank_sha256": state.restored_bank.state()["semantic_state_sha256"]}
+        return cls(state.completed, state.restored_bank, sha256(body))
+
+
 class ReasoningBankDynamicCheckpoints:
     """Own ordered intent/snapshot/marker files for one Dynamic bank stream."""
 
-    def __init__(self, *, root: Path, expected_trajectory_ids: Sequence[str], ledger_path: Path) -> None:
+    def __init__(self, *, root: Path, expected_trajectory_ids: Sequence[str], ledger_path: Path,
+                 prefix: CheckpointPrefix | None = None) -> None:
         self.root = root.resolve()
         self.expected = tuple(str(item) for item in expected_trajectory_ids)
         if len(self.expected) != len(set(self.expected)):
             raise ValueError("Dynamic update order has duplicate trajectory IDs")
         self.ledger_path = ledger_path.resolve()
+        self.prefix = prefix
+        self.prefix_count = len(prefix.completed) if prefix else 0
+        if prefix and tuple(item.trajectory_id for item in prefix.completed) != self.expected[:self.prefix_count]:
+            raise DynamicCheckpointError("historical checkpoint prefix trajectory order differs from successor schedule")
         self.intents = self.root / "intents"
         self.snapshots = self.root / "snapshots"
         self.markers = self.root / "completion-markers"
@@ -241,10 +268,10 @@ class ReasoningBankDynamicCheckpoints:
 
     def reconcile(self, initial_bank: ReasoningBank) -> Reconciliation:
         """Read only durable records and restore the longest verified prefix."""
-        bank = ReasoningBank.restore(initial_bank.state())
-        predecessor: str | None = None
-        completed: list[UpdateCompletion] = []
-        for index, trajectory_id in enumerate(self.expected, 1):
+        bank = ReasoningBank.restore(self.prefix.restored_bank.state() if self.prefix else initial_bank.state())
+        predecessor: str | None = self.prefix.completed[-1].marker_sha256 if self.prefix else None
+        completed: list[UpdateCompletion] = list(self.prefix.completed) if self.prefix else []
+        for index, trajectory_id in enumerate(self.expected[self.prefix_count:], self.prefix_count + 1):
             intent_path, snapshot_path, marker_path = (self._intent_path(index), self._snapshot_path(index), self._marker_path(index))
             present = tuple(path.exists() for path in (intent_path, snapshot_path, marker_path))
             if not any(present):

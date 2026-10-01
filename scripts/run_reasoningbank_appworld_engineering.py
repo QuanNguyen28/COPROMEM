@@ -29,7 +29,7 @@ from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, append, 
 from copromem.experiments.reme_copromem.runtime_identity_binding import read as read_runtime_identity_binding
 from copromem.integrations.reasoning_bank.appworld import ReasoningBank, sha256
 from copromem.integrations.reasoning_bank.appworld_protocol import protocol_record, validate_protocol
-from copromem.integrations.reasoning_bank.checkpoints import ReasoningBankDynamicCheckpoints
+from copromem.integrations.reasoning_bank.checkpoints import CheckpointPrefix, ReasoningBankDynamicCheckpoints
 from copromem.integrations.reasoning_bank.dynamic_runtime import ReasoningBankDynamicRuntime
 from copromem.integrations.reasoning_bank.lifecycle import ReasoningBankLifecycle
 from copromem.integrations.reasoning_bank.providers import ReasoningBankProviders
@@ -40,6 +40,7 @@ from copromem.integrations.reasoning_bank.recovery import (
     publish_marker as publish_recovery_marker,
     validate_envelope as validate_recovery_envelope,
 )
+from copromem.integrations.reasoning_bank.recovery_admission import validate_spec as validate_recovery_admission
 from copromem.integrations.reasoning_bank.shared_embedding import SharedAzureOpenRouterEmbedder
 from copromem.integrations.reme.transport import INPUT_PRICE, MAX_OUTPUT_TOKENS, OUTPUT_PRICE
 
@@ -550,6 +551,74 @@ def _credential() -> str:
     return value
 
 
+def _checkpoint_prefix_from_manifest(manifest: Mapping[str, Any], admission: Mapping[str, Any] | None = None) -> CheckpointPrefix | None:
+    """Open a frozen read-only checkpoint prefix without copying its records.
+
+    The manifest supplies all locators and identities.  This deliberately has
+    no run-name or experiment-name policy: every source is revalidated by the
+    checkpoint manager before it can affect successor scheduling.
+    """
+    recovery = manifest.get("recovery_prefix")
+    if recovery is None and admission is not None:
+        ledger = admission["source_ledger"]; prefix = admission["checkpoint_prefix"]
+        recovery = {"source_run": admission["source_run"], "source_ledger_relative": ledger["relative_locator"],
+                    "source_ledger_sha256": ledger["sha256"], "checkpoint_root_relative": "reasoningbank-dynamic-checkpoints",
+                    "checkpoint_count": prefix["count"], "checkpoint_prefix_identity_sha256": prefix["identity_sha256"],
+                    "restored_bank_sha256": prefix["restored_bank_sha256"]}
+    if recovery is None:
+        return None
+    if not isinstance(recovery, Mapping):
+        raise RuntimeError("recovery prefix specification is malformed")
+    source_root = Path(str(recovery.get("source_run") or "")).resolve()
+    ledger = source_root / str(recovery.get("source_ledger_relative") or "ledger.jsonl")
+    expected_ledger = str(recovery.get("source_ledger_sha256") or "")
+    if not source_root.is_dir() or not ledger.is_file() or file_sha(ledger) != expected_ledger:
+        raise RuntimeError("recovery prefix source ledger identity differs from frozen specification")
+    dynamic_ids = [f"evaluation:reasoningbank_dynamic:{task}:trial={trial}:seed={seed}"
+                   for task in manifest["evaluation"]["task_ids"] for trial, seed in enumerate(SEEDS, 1)]
+    prefix = CheckpointPrefix.from_source(root=source_root / str(recovery.get("checkpoint_root_relative") or "reasoningbank-dynamic-checkpoints"),
+                                           expected_trajectory_ids=dynamic_ids, ledger_path=ledger,
+                                           count=int(recovery.get("checkpoint_count") or 0),
+                                           initial_bank=ReasoningBank.restore(manifest["initial_bank"]))
+    if prefix.identity_sha256 != recovery.get("checkpoint_prefix_identity_sha256"):
+        raise RuntimeError("recovery prefix checkpoint identity differs from frozen specification")
+    if prefix.restored_bank.state()["semantic_state_sha256"] != recovery.get("restored_bank_sha256"):
+        raise RuntimeError("recovery prefix restored bank differs from frozen specification")
+    return prefix
+
+
+def _imported_recovery_keys(manifest: Mapping[str, Any]) -> tuple[tuple[str, str, int, int], ...]:
+    recovery = manifest.get("recovery_prefix")
+    if recovery is None: return ()
+    raw = recovery.get("imported_keys") if isinstance(recovery, Mapping) else None
+    if not isinstance(raw, list): raise RuntimeError("recovery prefix has no ordered imported trajectory keys")
+    keys = tuple((str(item.get("arm")), str(item.get("task_id")), int(item.get("trial_id")), int(item.get("seed")))
+                 for item in raw if isinstance(item, Mapping))
+    schedule = _schedule(manifest)
+    if len(keys) != len(raw) or not keys or keys != tuple(schedule[:len(keys)]) or len(set(keys)) != len(keys):
+        raise RuntimeError("recovery imported trajectories are not an exact ordered schedule prefix")
+    expected = recovery.get("next_key")
+    next_key = schedule[len(keys)] if len(keys) < len(schedule) else None
+    if not isinstance(expected, Mapping) or next_key is None or dict(expected) != {"arm": next_key[0], "task_id": next_key[1], "trial_id": next_key[2], "seed": next_key[3]}:
+        raise RuntimeError("recovery imported prefix does not admit its exact next trajectory")
+    return keys
+
+
+def _validated_recovery_admission(run: Path, manifest: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """Reload the sole immutable admission marker before scheduling recovery work."""
+    if "recovery_admission_spec" not in manifest:
+        return None
+    path = run / "recovery-admission-completed.json"
+    if not path.is_file(): raise RuntimeError("frozen recovery admission marker is absent")
+    value = json.loads(path.read_text(encoding="utf-8")); body = dict(value); bound = body.pop("marker_sha256", None)
+    if bound != sha256(body) or value.get("transition") != "recovery_admitted":
+        raise RuntimeError("recovery admission marker hash or transition is invalid")
+    frozen = manifest["recovery_admission_spec"]
+    if value.get("recovery_spec") != frozen or value.get("recovery_spec_sha256") != frozen.get("recovery_spec_sha256"):
+        raise RuntimeError("recovery admission marker differs from frozen specification")
+    return validate_recovery_admission(frozen)
+
+
 def _status(run: Path, state: str, **extra: Any) -> None:
     _fsync_json(run / "runner-status.json", {"state": state, "pid": os.getpid(), "updated_ns": time.time_ns(), **extra})
 
@@ -572,8 +641,27 @@ def _summary(run: Path, manifest: Mapping[str, Any], state: str, final: bool = F
             "AvgScore": (stats["AvgScore"] * prior + float(result["official_score"])) / completed,
             "AvgActions": (stats["AvgActions"] * prior + int(result["actions"])) / completed})
         summary["arms"] = {**summary["arms"], arm: stats}; summary["completed"] += 1
+    admission = _validated_recovery_admission(run, manifest)
+    if admission is not None:
+        arms = dict(summary["arms"])
+        for envelope in admission["imported_envelopes"]:
+            key = envelope["key"]; result = envelope["result"]; arm = str(key["arm"])
+            stats = dict(arms[arm]); prior = int(stats["Completed"]); completed = prior + 1
+            score = float(result["official_score"]); actions = int(result["actions"])
+            successes = int(stats["Successes"]) + int(score == 1.0)
+            stats.update({"Completed": completed, "Successes": successes,
+                          "SuccessRate": successes / completed,
+                          "AvgScore": (float(stats["AvgScore"]) * prior + score) / completed,
+                          "AvgActions": (float(stats["AvgActions"]) * prior + actions) / completed})
+            arms[arm] = stats
+        summary["arms"] = arms
+        summary["completed"] += len(admission["imported_envelopes"])
+        summary.update({"imported_completed": len(admission["imported_envelopes"]),
+                        "successor_completed": summary["completed"] - len(admission["imported_envelopes"]),
+                        "referenced_checkpoints": int(admission["checkpoint_prefix"]["count"]),
+                        "native_checkpoints": len(list((run / "reasoningbank-dynamic-checkpoints" / "completion-markers").glob("*.json")))})
     if final and summary["completed"] != 12:
-        raise RuntimeError("terminal reconciliation requires the imported prefix plus eleven new trajectories")
+        raise RuntimeError("terminal reconciliation requires exactly twelve registered trajectories")
     write_live_summary(run / "live-summary.json", summary)
 
 
@@ -587,6 +675,13 @@ def _reconciled_marker(run: Path, manifest: Mapping[str, Any]) -> dict[str, Any]
     if manifest.get("recovery_import"):
         payload.update({"recovery_envelope_sha256": manifest["recovery_import"]["envelope_sha256"],
                         "recovery_import_marker_sha256": file_sha(run / "recovery-import-completed.json")})
+    if manifest.get("recovery_admission_spec"):
+        admission = _validated_recovery_admission(run, manifest)
+        payload.update({"recovery_admission_marker_sha256": file_sha(run / "recovery-admission-completed.json"),
+                        "recovery_spec_sha256": admission["recovery_spec_sha256"],
+                        "checkpoint_prefix_identity_sha256": admission["checkpoint_prefix"]["identity_sha256"],
+                        "source_ledger_sha256": admission["source_ledger"]["sha256"],
+                        "imported_artifact_count": len(admission["imported_envelopes"])})
     payload["record_sha256"] = sha256(payload)
     _fsync_json(run / "run-reconciled.json", payload)
     return payload
@@ -615,7 +710,15 @@ def run(run: Path, *, preflight: bool = False) -> None:
         raise RuntimeError("duplicate ReasoningBank runner lock exists")
     _fsync_json(lock, {"pid": os.getpid()})
     try:
+        admission = _validated_recovery_admission(run, manifest)
         imported = _imported_key(manifest, run)
+        imported_prefix = (_imported_recovery_keys(manifest) if admission is None else tuple(
+            (str(item["key"]["arm"]), str(item["key"]["task_id"]), int(item["key"]["trial_id"]), int(item["key"]["seed"]))
+            for item in admission["imported_envelopes"]))
+        if admission is not None:
+            expected = dict(admission["next_key"]); schedule = _schedule(manifest)
+            if tuple(imported_prefix) != tuple(schedule[:len(imported_prefix)]) or expected != {"arm": schedule[len(imported_prefix)][0], "task_id": schedule[len(imported_prefix)][1], "trial_id": schedule[len(imported_prefix)][2], "seed": schedule[len(imported_prefix)][3]}:
+                raise RuntimeError("validated recovery admission does not identify the exact next schedule key")
         if manifest.get("recovery_import") and imported is None:
             raise RuntimeError("recovery import marker is absent")
         prefix_count, next_key = _reconcile_execution_prefix(manifest, run)
@@ -637,11 +740,12 @@ def run(run: Path, *, preflight: bool = False) -> None:
             ledger.reserve(historical_id, historical, {"role": "historical_carry_forward"})
             ledger.settle(historical_id, historical, {"role": "historical_carry_forward"})
         initial = ReasoningBank.restore(manifest["initial_bank"])
+        checkpoint_prefix = _checkpoint_prefix_from_manifest(manifest, admission)
         checkpoint = ReasoningBankDynamicCheckpoints(root=run / "reasoningbank-dynamic-checkpoints",
                                                      expected_trajectory_ids=[f"evaluation:reasoningbank_dynamic:{task}:trial={trial}:seed={seed}"
                                                                               for task in manifest["evaluation"]["task_ids"]
                                                                               for trial, seed in enumerate(SEEDS, 1)],
-                                                     ledger_path=run / "ledger.jsonl")
+                                                     ledger_path=run / "ledger.jsonl", prefix=checkpoint_prefix)
         prefix = checkpoint.reconcile(initial)
         bank = prefix.restored_bank
         providers = ReasoningBankProviders(api_key=key, ledger=ledger, progress=run / "progress.jsonl")
@@ -662,7 +766,7 @@ def run(run: Path, *, preflight: bool = False) -> None:
                 for trial, seed in enumerate(SEEDS, 1):
                     target = run / "artifacts" / task / arm / f"trial-{trial}.json"
                     key_identity = (arm, task, trial, seed)
-                    if key_identity == imported:
+                    if key_identity == imported or key_identity in imported_prefix:
                         continue
                     if target.is_file():
                         row = json.loads(target.read_text(encoding="utf-8"))
@@ -677,9 +781,15 @@ def run(run: Path, *, preflight: bool = False) -> None:
                         # retrieval writer and post-prompt pre-dispatch seal.
                         # Neither boundary may augment a narrower identity.
                         identity = _retrieval_identity(manifest, run, arm, task, trial, seed)
-                        kwargs["memory_for_instruction"] = runtime.retrieval_callback(retrieval_path, identity=identity)
-                        kwargs["pre_dispatch_binding"] = runtime.prompt_binding_callback(retrieval_path, identity=identity)
-                        kwargs["post_score_update"] = runtime.strict_post_score_callback(retrieval_path)
+                        admitted_pending = admission is not None and key_identity == (str(admission["next_key"]["arm"]), str(admission["next_key"]["task_id"]), int(admission["next_key"]["trial_id"]), int(admission["next_key"]["seed"]))
+                        if admitted_pending:
+                            kwargs["memory_for_instruction"] = runtime.admission_precomputed_retrieval_callback(retrieval_path, admission=admission, identity=identity)
+                            kwargs["pre_dispatch_binding"] = runtime.admission_prompt_binding_callback(retrieval_path, admission=admission, identity=identity)
+                        else:
+                            kwargs["memory_for_instruction"] = runtime.retrieval_callback(retrieval_path, identity=identity)
+                            kwargs["pre_dispatch_binding"] = runtime.prompt_binding_callback(retrieval_path, identity=identity)
+                        kwargs["post_score_update"] = runtime.strict_post_score_callback(
+                            retrieval_path, admission=admission if admitted_pending else None)
                         kwargs["post_score_update_strict"] = True
                     execute_trajectory(run=run, progress=run / "progress.jsonl", ledger=ledger, api_key=key,
                                        all_task_ids=list(manifest["evaluation"]["task_ids"]), arm=arm, task_id=task,
