@@ -1,6 +1,13 @@
 {
   "version": "copromem-v6.2.2-comprehensive-repair-audit-v1",
   "classification": "ENGINEERING-PREFLIGHT-READY",
+  "executable_source_commit": "eecadef358938522f96523e5aced5fc5edcd10fd",
+  "clean_detached_runtime_validation": {
+    "focused_tests_passed": 69,
+    "compile_passed": true,
+    "diff_check_passed": true,
+    "bank_rebuild_reproduced_report_sha256": true
+  },
   "paid_pilot_launched": false,
   "historical_methods_rewritten": false,
   "resolved_invariants": [
@@ -27,8 +34,6 @@
     "provider_calls": 0
   },
   "remaining_gates": [
-    "publish_executable_commit",
-    "clean_detached_runtime_validation",
     "freeze_bank_and_new_manifest",
     "zero_provider_production_shadow",
     "small_engineering_integration",

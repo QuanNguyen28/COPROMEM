@@ -2,6 +2,10 @@
 
 Status: **ENGINEERING-PREFLIGHT-READY; paid confirmatory pilot not yet authorized by this record.**
 
+Executable source commit: `eecadef358938522f96523e5aced5fc5edcd10fd`.
+It was validated from a clean detached worktree. The 69-test focused gate,
+compilation, imports, diff check, and a second WSL bank rebuild passed there.
+
 This repair is additive to v6.2.1. Historical runs and their method labels are
 unchanged.
 
@@ -43,6 +47,7 @@ The immutable v6 acquisition was rebuilt offline with the new contract:
 - Committed schemas: 5 across 3 families
 - Provider/model/scorer/AppWorld calls during rebuild: 0
 - Recovery report: `40aa13c3c60f8078a792332f8a817185ff06b815d30a6e586537b234ee32c842`
+- The clean-runtime rebuild reproduced that report hash exactly.
 
 ## Remaining gates before a real pilot
 
