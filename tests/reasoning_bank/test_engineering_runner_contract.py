@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+from pathlib import Path
+
+
+def _runner():
+    path = Path(__file__).parents[2] / "scripts" / "run_reasoningbank_appworld_engineering.py"
+    spec = importlib.util.spec_from_file_location("reasoningbank_engineering_runner", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    return module
+
+
+def test_prepare_freezes_the_actual_shared_backbone_and_embedding_path(monkeypatch, tmp_path):
+    runner = _runner()
+    inventory = tmp_path / "public-dev.json"
+    inventory.write_text(json.dumps({"split": "dev", "public_only": True, "tasks": [
+        {"task_id": "aaaaaaa_1", "instruction": "List top 3 indie songs", "app_descriptions": {}},
+        {"task_id": "aaaaaaa_2", "instruction": "List top 4 rock songs", "app_descriptions": {}},
+        {"task_id": "bbbbbbb_1", "instruction": "Create a note for tomorrow", "app_descriptions": {}},
+    ]}), encoding="utf-8")
+    monkeypatch.setenv("REASONINGBANK_PUBLIC_DEV_DESCRIPTORS", str(inventory))
+    monkeypatch.setattr(runner, "_hard_exposed_task_ids", lambda: (set(), {}))
+    run = tmp_path / "run"; runner.prepare(run)
+    manifest = json.loads((run / "template.json").read_text(encoding="utf-8"))
+    assert manifest["evaluation"]["expected_trajectories"] == 12
+    assert manifest["execution"]["executor_temperature"] == .7
+    assert manifest["execution"]["judge_temperature"] == 0.0
+    assert manifest["execution"]["extractor_temperature"] == 1.0
+    assert manifest["embedding"] == {"model": "openai/text-embedding-3-small", "provider": "azure",
+                                     "transport": "OpenRouter", "dimensions": 1024, "encoding_format": "float",
+                                     "provider_fallback": False, "normalization": "unit_l2_before_cosine",
+                                     "transport_identity": "copromem.integrations.reme.transport.LockedEmbeddings"}
+    assert manifest["budget"]["call_limits"] == {"executor": 360, "reasoningbank_judge": 6,
+                                                    "reasoningbank_extraction": 6, "reasoningbank_embedding": 12}
+    assert manifest["allocation"]["payloads_opened"] is False
+    assert manifest["allocation"]["test_normal_used"] is False
+
+
+def test_runner_source_wires_strict_dynamic_callback_and_no_reme_boundary():
+    path = Path(__file__).parents[2] / "scripts" / "run_reasoningbank_appworld_engineering.py"
+    source = path.read_text(encoding="utf-8")
+    assert "ReasoningBankDynamicRuntime" in source
+    assert "post_score_update_strict" in source
+    assert "SharedAzureOpenRouterEmbedder" in source
+    assert "services(" not in source
+    assert "memory_base_url" not in source

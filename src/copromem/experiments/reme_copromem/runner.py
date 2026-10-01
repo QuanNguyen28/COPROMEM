@@ -220,6 +220,32 @@ def _copromem_prompt_memory_text(guidance: str) -> str:
     return "Experience 1:\n When to use: Retrieved procedural guidance\n Content: " + guidance + "\n"
 
 
+def model_visible_memory_binding(messages: list[dict[str, Any]], injected: str) -> dict[str, Any]:
+    """Prove a callback's exact memory bytes entered the initial model prompt.
+
+    A retrieval record alone is not evidence of prompt injection.  This helper
+    is shared by the ReasoningBank port and existing memory arms: it examines
+    the exact post-``prompt_messages`` payload that the locked executor sends,
+    retains only a hash, and fails closed when non-empty callback text is not
+    present byte-for-byte.
+    """
+    def contains(value: Any) -> bool:
+        if isinstance(value, str):
+            return injected in value
+        if isinstance(value, dict):
+            return any(contains(item) for item in value.values())
+        if isinstance(value, list):
+            return any(contains(item) for item in value)
+        return False
+    visible = not injected or contains(messages)
+    if injected and not visible:
+        raise RuntimeError("retrieved callback memory is absent from the model-visible prompt")
+    return {"model_visible_prompt_sha256": digest(messages),
+            "injected_memory_visible_in_initial_prompt": visible,
+            "model_visible_memory_binding_sha256": digest({"prompt": digest(messages), "memory": digest(injected),
+                                                             "visible": visible})}
+
+
 def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: AppendOnlyLedger,
                        api_key: str, all_task_ids: list[str], arm: str, task_id: str,
                        trial_id: int, seed: int, max_actions: int, temperature: float,
@@ -289,6 +315,7 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                 agent.get_memory = observed_get_memory
             agent.prompt_messages(0, 0, previous, world)
             initial_prompt_messages_sha256 = digest(agent.history[0][0])
+            memory_visibility = model_visible_memory_binding(agent.history[0][0], injected)
             termination = "completed"
             last_tokens: int | None = None
             terminal_executor: dict[str, Any] | None = None
@@ -324,6 +351,7 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                       "history_sha256": digest(agent.history[0][0]), "injected_memory_sha256": digest(injected),
                       "injected_memory_nonempty": bool(injected),
                       "initial_prompt_messages_sha256": initial_prompt_messages_sha256,
+                      **memory_visibility,
                       "execution_evidence_path": str(journal.with_suffix(".execution-evidence.jsonl")) if execution_evidence else None}
             if memory_for_instruction is not None:
                 result.update({"copromem_callback_guidance_sha256": digest(injected),
