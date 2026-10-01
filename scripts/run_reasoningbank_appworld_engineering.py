@@ -282,7 +282,7 @@ def _python_runtime_manifest(manifest: Mapping[str, Any]) -> Mapping[str, Any]:
 def _runtime_identity_material(manifest: Mapping[str, Any]) -> dict[str, Any]:
     """Use only frozen manifest content; never infer identity from HEAD at dispatch."""
     python_runtime = _python_runtime_manifest(manifest)
-    return {"version": RUNTIME_IDENTITY_VERSION, "executable_commit": str(manifest.get("git_commit") or ""),
+    material = {"version": RUNTIME_IDENTITY_VERSION, "executable_commit": str(manifest.get("git_commit") or ""),
             "protocol_sha256": str(manifest.get("protocol_sha256") or ""),
             "registry_sha256": str(manifest.get("registry_sha256") or ""),
             "initial_bank_sha256": str(manifest.get("initial_bank_sha256") or ""),
@@ -290,6 +290,9 @@ def _runtime_identity_material(manifest: Mapping[str, Any]) -> dict[str, Any]:
             "allocation_sha256": sha256(manifest.get("allocation")),
             "python_runtime_identity_sha256": str(python_runtime["runtime_identity_sha256"]),
             "recovery_envelope_sha256": str((manifest.get("recovery_import") or {}).get("envelope_sha256") or "")}
+    if manifest.get("recovery_admission_spec"):
+        material["recovery_admission_spec_sha256"] = str(manifest["recovery_admission_spec"].get("recovery_spec_sha256") or "")
+    return material
 
 
 def _runtime_identity_digest(manifest: Mapping[str, Any]) -> str:
@@ -477,7 +480,8 @@ def _retrieval_identity(manifest: Mapping[str, Any], run: Path, arm: str, task: 
     }))
 
 
-def _reconcile_execution_prefix(manifest: Mapping[str, Any], run: Path) -> tuple[int, tuple[str, str, int, int] | None]:
+def _reconcile_execution_prefix(manifest: Mapping[str, Any], run: Path,
+                                admission: Mapping[str, Any] | None = None) -> tuple[int, tuple[str, str, int, int] | None]:
     schedule = _schedule(manifest); completed: set[tuple[str, str, int, int]] = set()
     imported = _imported_key(manifest, run)
     if imported is not None: completed.add(imported)
@@ -504,6 +508,17 @@ def _reconcile_execution_prefix(manifest: Mapping[str, Any], run: Path) -> tuple
         if arm != "reasoningbank_dynamic" or (arm, task, trial, seed) == imported:
             continue
         retrieval_path = run / "retrievals" / task / f"{arm}-trial-{trial}.json"
+        pending = admission.get("next_key") if admission is not None else None
+        if isinstance(pending, Mapping) and (arm, task, trial, seed) == (
+                str(pending["arm"]), str(pending["task_id"]), int(pending["trial_id"]), int(pending["seed"])):
+            # The typed admission verifier needs the restored bank and is run
+            # after runtime construction below.  At this early schedule pass,
+            # only reject missing/partial files; never send the versioned
+            # recovery record through the ordinary provenance verifier.
+            binding = retrieval_path.with_suffix(retrieval_path.suffix + ".prompt-binding.json")
+            if not retrieval_path.is_file() or not binding.is_file():
+                raise RuntimeError("completed recovery trajectory lacks retrieval or prompt binding")
+            continue
         retrieval = verify_retrieval(path=retrieval_path,
                                      store=ContentAddressedStore(run / "reasoningbank-retrieval-objects"),
                                      require_prompt_binding=True)
@@ -721,7 +736,7 @@ def run(run: Path, *, preflight: bool = False) -> None:
                 raise RuntimeError("validated recovery admission does not identify the exact next schedule key")
         if manifest.get("recovery_import") and imported is None:
             raise RuntimeError("recovery import marker is absent")
-        prefix_count, next_key = _reconcile_execution_prefix(manifest, run)
+        prefix_count, next_key = _reconcile_execution_prefix(manifest, run, admission)
         if prefix_count == 1:
             expected_next = manifest.get("recovery_next_key")
             observed_next = None if next_key is None else {"arm": next_key[0], "task_id": next_key[1],
@@ -771,6 +786,10 @@ def run(run: Path, *, preflight: bool = False) -> None:
                     if target.is_file():
                         row = json.loads(target.read_text(encoding="utf-8"))
                         validate_evidence(row, run_root=run, expected_registry_sha256=manifest["registry_sha256"])
+                        if arm == "reasoningbank_dynamic" and admission is not None:
+                            expected = admission["next_key"]
+                            if key_identity == (str(expected["arm"]), str(expected["task_id"]), int(expected["trial_id"]), int(expected["seed"])):
+                                runtime._admission_receipt(retrieval_path, admission, require_prompt_binding=True)
                         continue
                     _storage_guard("task dispatch")
                     retrieval_path = run / "retrievals" / task / f"{arm}-trial-{trial}.json"

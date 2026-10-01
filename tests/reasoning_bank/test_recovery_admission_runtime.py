@@ -137,6 +137,8 @@ def test_runner_summary_accounts_for_real_e014_prefix_without_arm_cost(tmp_path:
     assert summary["referenced_checkpoints"] == 5 and summary["native_checkpoints"] == 0
     assert sum(int(value["Completed"]) for value in summary["arms"].values()) == 11
     assert all(float(value["TotalCost"]) == 0 for value in summary["arms"].values())
+    material = runner._runtime_identity_material(manifest)
+    assert material["recovery_admission_spec_sha256"] == admission["recovery_spec_sha256"]
 
 
 def test_precomputed_receipt_crosses_strict_post_score_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
