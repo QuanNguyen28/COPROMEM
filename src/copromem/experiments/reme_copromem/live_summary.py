@@ -67,6 +67,19 @@ def _role_owner(role: str, *, allow_copromem_decomposition: bool,
         return lifecycle[role], "lifecycle"
     if role in embedding:
         return embedding[role], "embedding"
+    # The controlled ReasoningBank-AppWorld port has one online Dynamic bank
+    # in its engineering profile.  Judge/extractor calls are lifecycle calls;
+    # query/document embeddings use the shared Azure embedding transport.  A
+    # future profile that registers a Fixed ReasoningBank arm must introduce a
+    # separately owned role rather than silently attributing it here.
+    reasoningbank = {"reasoningbank_judge": ("reasoningbank_dynamic", "lifecycle"),
+                     "reasoningbank_extraction": ("reasoningbank_dynamic", "lifecycle"),
+                     "reasoningbank_embedding": ("reasoningbank_dynamic", "embedding")}
+    if role in reasoningbank:
+        arm, kind = reasoningbank[role]
+        if arm not in registered_arms:
+            raise LedgerReconciliationError("ReasoningBank call exists without its registered Dynamic arm")
+        return arm, kind
     if role in {"reme_lifecycle:reme-dynamic-verifier", "reme_embedding:reme-dynamic-verifier"}:
         raise LedgerReconciliationError("ReMe Dynamic verifier provider activity is prohibited")
     if role.startswith("copromem_decomposition"):
