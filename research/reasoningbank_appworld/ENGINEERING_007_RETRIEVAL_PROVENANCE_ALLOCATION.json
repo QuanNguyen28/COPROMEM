@@ -1,0 +1,23 @@
+{
+  "run_name": "reasoningbank_appworld_engineering_007",
+  "purpose": "engineering_validation_only",
+  "executable_commit": "8308e39aebc3c8385fbffd9bff8a8d073f86df26",
+  "retrieval_provenance_contract": "reasoningbank-retrieval-provenance-v2",
+  "policy": "official_reasoningbank_top1_no_abstention_v1",
+  "source_allocation_audit": {
+    "inventory_sha256": "d58635302ca54cd9a5206bc1ac99181376c6db1e04d1310e5957c224fdf871df",
+    "hard_exposure_evidence_sha256": "0bb1fa9d95764784960d828308554ffc29ba2e0f4b368a61566852727b172684",
+    "candidate_list_sha256": "1d8657e04dee145fdae24f1cb06fc251ad5591784b05e983a906942d937f1a67",
+    "payloads_opened": false,
+    "provider_calls": 0,
+    "test_normal_used": false
+  },
+  "selected": {
+    "A": {"task_id": "d4e9306_2", "descriptor_sha256": "13273a36e99d7b5299cde954145b6da3a36297c34443ee23778328185ff50d89"},
+    "B": {"task_id": "d4e9306_3", "descriptor_sha256": "13273a36e99d7b5299cde954145b6da3a36297c34443ee23778328185ff50d89"},
+    "N": {"task_id": "df61dc5_3", "descriptor_sha256": "006f88490b38c07a64e42e787bc1db6062f464f25c882d9b133ebb1b893076e8"}
+  },
+  "design": {"arms": ["no_memory", "reasoningbank_dynamic"], "trials": 2, "expected_trajectories": 12, "split": "dev"},
+  "prohibitions": ["retries", "task_substitution", "fallback", "abstention_threshold", "task_family_filter", "reranker"],
+  "engineering_006": "immutable_invalid_method_integration; not imported or used for efficacy"
+}
