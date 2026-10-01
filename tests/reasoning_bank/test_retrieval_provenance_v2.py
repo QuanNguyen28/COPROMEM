@@ -65,6 +65,12 @@ def test_top1_tie_break_and_restart_are_deterministic(tmp_path):
     assert verify(path=tmp_path / "r.json", store=ContentAddressedStore(tmp_path / "objects")) == record
 
 
+def test_self_score_uses_reloaded_persisted_float64_bytes(tmp_path):
+    item = _item("self", [1.0, 0.1])
+    _guidance, record = _record(tmp_path, ReasoningBank([item]), [1.0, 0.1])
+    assert record["candidates"][0]["score"]["float64_hex"] == "0x1.0000000000001p+0"
+
+
 @pytest.mark.parametrize("mutation", ["query", "candidate", "order", "score", "selected", "guidance", "lifecycle"])
 def test_tampering_fails_closed(tmp_path, mutation):
     first, second = _item("first", [1.0, 0.0]), _item("second", [0.0, 1.0])

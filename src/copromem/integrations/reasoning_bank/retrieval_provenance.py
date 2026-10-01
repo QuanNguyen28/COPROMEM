@@ -251,14 +251,19 @@ def materialize(*, bank: ReasoningBank, query: str, query_vector: Sequence[float
     """Persist and reload-verify retrieval inputs before executor dispatch."""
     if path.exists(): raise RetrievalProvenanceError("duplicate retrieval provenance path")
     identity = canonical_identity(identity)
-    query_norm = _normal(query_vector); query_object = store.put_text("queries", query); query_locator = store.put_vector(query_norm)
+    # Scores are defined over immutable f64le payloads.  Never score a vector
+    # before the store has applied its one normalization and we have reloaded
+    # the exact bytes that restart verification will consume.
+    query_object = store.put_text("queries", query); query_locator = store.put_vector(query_vector)
+    query_norm = store.load_vector(query_locator)
     candidates = []
     for append_order, item in enumerate(bank.experiences):
-        vector = store.put_vector(item.query_embedding); text = "\n\n".join(item.memory_items); text_locator = store.put_text("memories", text)
+        vector = store.put_vector(item.query_embedding); persisted_vector = store.load_vector(vector)
+        text = "\n\n".join(item.memory_items); text_locator = store.put_text("memories", text)
         candidates.append({"append_order": append_order, "experience_id": item.experience_id,
                            "experience_sha256": sha256(item.as_dict()), "source_task_id": item.task_id,
                            "source_trajectory_sha256": item.source_trajectory_sha256,
-                           "memory": text_locator, "vector": vector, "score": _score_record(_score(query_norm, store.load_vector(vector)))})
+                           "memory": text_locator, "vector": vector, "score": _score_record(_score(query_norm, persisted_vector))})
     ranked = sorted(candidates, key=lambda item: (-float.fromhex(item["score"]["float64_hex"]), int(item["append_order"])))
     selected = ranked[0] if ranked else None
     raw_memory = store.load_text(selected["memory"]) if selected else ""
