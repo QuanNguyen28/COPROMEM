@@ -51,7 +51,7 @@ def source_commit() -> str:
     # an unrelated current directory or a mutable checkout.
     environment = dict(os.environ)
     pointer = ROOT / ".git"
-    if pointer.is_file():
+    if os.name == "posix" and pointer.is_file():
         match = re.fullmatch(r"gitdir:\s*([A-Za-z]):/(.+)", pointer.read_text(encoding="utf-8").strip())
         if match:
             environment["GIT_DIR"] = f"/mnt/{match.group(1).lower()}/{match.group(2)}"
