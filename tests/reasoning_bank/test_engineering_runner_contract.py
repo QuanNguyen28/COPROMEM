@@ -81,6 +81,18 @@ def test_prepare_keeps_previous_engineering_allocation_out_of_successor(monkeypa
         {"aaaaaaa_1", "aaaaaaa_2", "bbbbbbb_1"})
 
 
+def test_configured_external_scored_artifact_establishes_hard_task_exposure(monkeypatch, tmp_path):
+    runner = _runner()
+    artifact = tmp_path / "prior-run" / "artifacts" / "zzzzzzz_1" / "no_memory" / "trial-1.json"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_text(json.dumps({"task_id": "zzzzzzz_1", "arm": "no_memory", "trial_id": 1,
+                                    "official_score": 1.0, "history": []}), encoding="utf-8")
+    monkeypatch.setenv("REASONINGBANK_CUSTODY_ROOTS_JSON", json.dumps([str(tmp_path)]))
+    exposed, trace = runner._hard_exposed_task_ids()
+    assert exposed == {"zzzzzzz_1"}
+    assert trace["zzzzzzz_1"] == [str(artifact)]
+
+
 def test_runner_source_wires_strict_dynamic_callback_and_no_reme_boundary():
     path = Path(__file__).parents[2] / "scripts" / "run_reasoningbank_appworld_engineering.py"
     source = path.read_text(encoding="utf-8")

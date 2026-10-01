@@ -131,8 +131,11 @@ def _hard_exposed_task_ids() -> tuple[set[str], dict[str, list[str]]]:
         # A Windows-side offline audit has a useful conservative default.
         # Linux detached runners must pass explicit /mnt/e roots; never infer
         # an E drive from the worker current directory.
+        external_artifacts = (Path("/mnt/e/Project/AAMAS/reasoningbank-appworld-artifacts")
+                              if os.name == "posix"
+                              else Path("E:/Project/AAMAS/reasoningbank-appworld-artifacts"))
         roots = [ROOT / "artifacts", Path("E:/Project/AAMAS/COPROMEM/artifacts"),
-                 Path("E:/Project/AAMAS/COPROMEM-review/artifacts")]
+                 Path("E:/Project/AAMAS/COPROMEM-review/artifacts"), external_artifacts]
     exposed: set[str] = set(); trace: dict[str, list[str]] = {}
     for root in roots:
         if not root.is_dir():
