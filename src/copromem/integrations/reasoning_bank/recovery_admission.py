@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -20,6 +21,24 @@ MARKER_VERSION = "reasoningbank-recovery-admission-marker-v1"
 def _canonical(value: Any) -> bytes: return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
 def _digest(value: Any) -> str: return hashlib.sha256(_canonical(value)).hexdigest()
 def _file(path: Path) -> str: return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def portable_source_run(value: str | Path) -> str:
+    """Return one path-independent custody locator for Windows and WSL."""
+    text = str(value).replace("\\", "/")
+    match = re.fullmatch(r"/mnt/([a-zA-Z])/(.+)", text)
+    if match: return f"{match.group(1).upper()}:/{match.group(2)}"
+    match = re.fullmatch(r"([a-zA-Z]):/(.+)", text)
+    if match: return f"{match.group(1).upper()}:/{match.group(2)}"
+    path = Path(text).resolve()
+    return path.as_posix()
+
+def resolve_source_run(value: str | Path) -> Path:
+    """Resolve a portable custody locator on native Windows or inside WSL."""
+    portable = portable_source_run(value)
+    match = re.fullmatch(r"([A-Z]):/(.+)", portable)
+    if match and os.name == "posix":
+        return Path(f"/mnt/{match.group(1).lower()}/{match.group(2)}").resolve()
+    return Path(portable).resolve()
 
 def _read(path: Path) -> dict[str, Any]:
     try: value = json.loads(path.read_text(encoding="utf-8"))
@@ -81,21 +100,21 @@ def _pending(source: Path, key: tuple[str,str,int,int], bank_sha: str) -> dict[s
     return {**body,"reconstruction_sha256":_digest(body)}
 
 def build_spec(source_run: Path, *, imported_keys: Sequence[tuple[str,str,int,int]], pending_key: tuple[str,str,int,int], checkpoint_count: int) -> dict[str,Any]:
-    source=source_run.resolve(); manifest=_read(source/"manifest.json")
+    source=resolve_source_run(source_run); manifest=_read(source/"manifest.json")
     if (source/"manifest.sha256").read_text().strip()!=_file(source/"manifest.json"): raise RecoveryIntegrityError("source manifest is hash-inconsistent")
     keys=list(imported_keys); schedule=_schedule(manifest)
     if not keys or keys!=schedule[:len(keys)] or len(keys)!=len(set(keys)) or len(keys)>=len(schedule) or pending_key!=schedule[len(keys)]: raise RecoveryIntegrityError("recovery keys are not an exact ordered prefix plus next key")
     envelopes=[build_envelope(source,task_id=t,arm=a,trial_id=i,seed=s) for a,t,i,s in keys]
     ids=[f"evaluation:reasoningbank_dynamic:{t}:trial={i}:seed={s}" for t in manifest["evaluation"]["task_ids"] for i,s in enumerate(manifest["evaluation"]["seeds"],1)]
     prefix=CheckpointPrefix.from_source(root=source/"reasoningbank-dynamic-checkpoints",expected_trajectory_ids=ids,ledger_path=source/"ledger.jsonl",count=checkpoint_count,initial_bank=ReasoningBank.restore(manifest["initial_bank"]))
-    body={"version":VERSION,"source_run":str(source),"source_manifest_sha256":_file(source/"manifest.json"),"source_runtime_identity":runtime_binding(source),"source_ledger":_ledger(source),
+    body={"version":VERSION,"source_run":portable_source_run(source),"source_manifest_sha256":_file(source/"manifest.json"),"source_runtime_identity":runtime_binding(source),"source_ledger":_ledger(source),
           "imported_envelopes":envelopes,"progress":{"imported":len(keys),"pending":1,"expected":len(schedule)},
           "checkpoint_prefix":{"identity_sha256":prefix.identity_sha256,"count":len(prefix.completed),"restored_bank_sha256":prefix.restored_bank.state()["semantic_state_sha256"],"last_marker_sha256":prefix.completed[-1].marker_sha256},
           "pending":_pending(source,pending_key,prefix.restored_bank.state()["semantic_state_sha256"]),"next_key":{"arm":pending_key[0],"task_id":pending_key[1],"trial_id":pending_key[2],"seed":pending_key[3]}}
     return {**body,"recovery_spec_sha256":_digest(body)}
 
 def validate_spec(spec: Mapping[str,Any]) -> dict[str,Any]:
-    source=Path(str(spec.get("source_run") or "")); keys=[(str(x["key"]["arm"]),str(x["key"]["task_id"]),int(x["key"]["trial_id"]),int(x["key"]["seed"])) for x in spec.get("imported_envelopes",[])]
+    source=resolve_source_run(str(spec.get("source_run") or "")); keys=[(str(x["key"]["arm"]),str(x["key"]["task_id"]),int(x["key"]["trial_id"]),int(x["key"]["seed"])) for x in spec.get("imported_envelopes",[])]
     n=spec.get("next_key") or {}; actual=build_spec(source,imported_keys=keys,pending_key=(str(n.get("arm")),str(n.get("task_id")),int(n.get("trial_id")),int(n.get("seed"))),checkpoint_count=int((spec.get("checkpoint_prefix") or {}).get("count") or 0))
     if dict(spec)!=actual: raise RecoveryIntegrityError("reconstructed source evidence differs from frozen admission specification")
     return actual

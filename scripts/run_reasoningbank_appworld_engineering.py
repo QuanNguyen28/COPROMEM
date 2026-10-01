@@ -40,7 +40,10 @@ from copromem.integrations.reasoning_bank.recovery import (
     publish_marker as publish_recovery_marker,
     validate_envelope as validate_recovery_envelope,
 )
-from copromem.integrations.reasoning_bank.recovery_admission import validate_spec as validate_recovery_admission
+from copromem.integrations.reasoning_bank.recovery_admission import (
+    resolve_source_run as resolve_recovery_source_run,
+    validate_spec as validate_recovery_admission,
+)
 from copromem.integrations.reasoning_bank.shared_embedding import SharedAzureOpenRouterEmbedder
 from copromem.integrations.reme.transport import INPUT_PRICE, MAX_OUTPUT_TOKENS, OUTPUT_PRICE
 
@@ -584,7 +587,7 @@ def _checkpoint_prefix_from_manifest(manifest: Mapping[str, Any], admission: Map
         return None
     if not isinstance(recovery, Mapping):
         raise RuntimeError("recovery prefix specification is malformed")
-    source_root = Path(str(recovery.get("source_run") or "")).resolve()
+    source_root = resolve_recovery_source_run(str(recovery.get("source_run") or ""))
     ledger = source_root / str(recovery.get("source_ledger_relative") or "ledger.jsonl")
     expected_ledger = str(recovery.get("source_ledger_sha256") or "")
     if not source_root.is_dir() or not ledger.is_file() or file_sha(ledger) != expected_ledger:

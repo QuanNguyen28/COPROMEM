@@ -20,6 +20,7 @@ from .retrieval_provenance import (
     verify,
 )
 from .appworld import render_retrieval_guidance
+from .recovery_admission import resolve_source_run
 from ...experiments.reme_copromem.prompt_memory import (
     count_exact_memory_slot,
     render_executor_memory_slot,
@@ -132,7 +133,7 @@ class ReasoningBankDynamicRuntime:
         frozen = canonical_identity(identity); key = pending.get("key") or {}
         if (frozen["arm"], frozen["task_id"], frozen["trial_id"], frozen["seed"]) != (key.get("arm"), key.get("task_id"), key.get("trial_id"), key.get("seed")):
             raise RuntimeError("precomputed retrieval key differs from admission pending key")
-        source = Path(str(admission.get("source_run") or "")).resolve()
+        source = resolve_source_run(str(admission.get("source_run") or ""))
         source_path = source / str(pending.get("source_relative") or "")
         source_store = ContentAddressedStore(source / "reasoningbank-retrieval-objects")
         if not source_path.is_file(): raise RuntimeError("admission source retrieval is unavailable")
@@ -191,7 +192,7 @@ class ReasoningBankDynamicRuntime:
         if (identity["arm"], identity["task_id"], identity["trial_id"], identity["seed"]) != (
                 key.get("arm"), key.get("task_id"), key.get("trial_id"), key.get("seed")):
             raise RuntimeError("precomputed retrieval receipt key differs from admission")
-        source = Path(str(admission.get("source_run") or "")).resolve()
+        source = resolve_source_run(str(admission.get("source_run") or ""))
         source_path = source / str(pending.get("source_relative") or "")
         if not source_path.is_file() or self._file_sha256(source_path) != pending.get("source_sha256"):
             raise RuntimeError("precomputed retrieval source identity differs from admission")
@@ -301,7 +302,7 @@ class ReasoningBankDynamicRuntime:
 
     @staticmethod
     def _admission_rendered_guidance(admission: Mapping[str, Any]) -> str:
-        pending = admission["pending"]; source = Path(str(admission["source_run"])); path = source / str(pending["source_relative"])
+        pending = admission["pending"]; source = resolve_source_run(str(admission["source_run"])); path = source / str(pending["source_relative"])
         record = json.loads(path.read_text(encoding="utf-8")); store = ContentAddressedStore(source / "reasoningbank-retrieval-objects")
         rendered = store.load_text(record["guidance"]["rendered_bytes"])
         if sha256(rendered) != pending["rendered_guidance_sha256"]: raise RuntimeError("admission rendered guidance hash differs")

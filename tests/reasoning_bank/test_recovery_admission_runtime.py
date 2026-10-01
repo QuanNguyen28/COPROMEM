@@ -13,11 +13,21 @@ from copromem.integrations.reasoning_bank.checkpoints import CheckpointPrefix, R
 from copromem.integrations.reasoning_bank.dynamic_runtime import ReasoningBankDynamicRuntime
 import copromem.integrations.reasoning_bank.dynamic_runtime as dynamic_runtime_module
 from copromem.integrations.reasoning_bank.lifecycle import ReasoningBankLifecycle
-from copromem.integrations.reasoning_bank.recovery_admission import admit, build_spec
+from copromem.integrations.reasoning_bank.recovery_admission import (
+    admit, build_spec, portable_source_run, resolve_source_run,
+)
 from copromem.integrations.reasoning_bank.retrieval_provenance import ContentAddressedStore
 
 
 SOURCE = Path("E:/Project/AAMAS/reasoningbank-appworld-artifacts/reasoningbank_appworld_engineering_014_clean_exposed_restart")
+
+
+def test_recovery_source_locator_is_portable_between_windows_and_wsl(monkeypatch: pytest.MonkeyPatch):
+    assert portable_source_run(r"E:\Project\AAMAS\run") == "E:/Project/AAMAS/run"
+    assert portable_source_run("/mnt/e/Project/AAMAS/run") == "E:/Project/AAMAS/run"
+    # Native test host resolves the canonical drive locator without embedding
+    # a worktree-relative Windows string in the frozen identity.
+    assert portable_source_run(resolve_source_run("E:/Project/AAMAS/run")) == "E:/Project/AAMAS/run"
 
 
 def _real_spec():
