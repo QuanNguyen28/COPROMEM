@@ -578,9 +578,17 @@ def run(run: Path, *, preflight: bool = False) -> None:
                     retrieval_path = run / "retrievals" / task / f"{arm}-trial-{trial}.json"
                     kwargs: dict[str, Any] = {}
                     if arm == "reasoningbank_dynamic":
+                        # This immutable identity is deliberately built once
+                        # from frozen run files and passed unchanged to the
+                        # retrieval writer and post-prompt pre-dispatch seal.
+                        # Neither boundary may augment a narrower identity.
                         identity = {"task_id": task, "arm": arm, "trial_id": trial, "seed": seed,
-                                    "trajectory_id": f"evaluation:{arm}:{task}:trial={trial}:seed={seed}"}
+                                    "trajectory_id": f"evaluation:{arm}:{task}:trial={trial}:seed={seed}",
+                                    "benchmark": "appworld", "manifest_sha256": file_sha(run / "manifest.json"),
+                                    "runtime_identity_sha256": runtime_identity_sha256,
+                                    "registry_sha256": str(manifest["registry_sha256"])}
                         kwargs["memory_for_instruction"] = runtime.retrieval_callback(retrieval_path, identity=identity)
+                        kwargs["pre_dispatch_binding"] = runtime.prompt_binding_callback(retrieval_path, identity=identity)
                         kwargs["post_score_update"] = runtime.strict_post_score_callback(retrieval_path)
                         kwargs["post_score_update_strict"] = True
                     execute_trajectory(run=run, progress=run / "progress.jsonl", ledger=ledger, api_key=key,

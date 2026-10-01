@@ -55,6 +55,18 @@ def test_production_runner_passes_frozen_runtime_identity_to_all_reasoningbank_a
     assert "for arm in ARMS" in source and "execute_trajectory(" in source
 
 
+def test_production_runner_constructs_one_complete_identity_for_retrieval_and_prompt_seal():
+    path = Path(__file__).parents[2] / "scripts" / "run_reasoningbank_appworld_engineering.py"
+    source = path.read_text(encoding="utf-8")
+    start = source.index('if arm == "reasoningbank_dynamic":')
+    boundary = source[start:source.index("execute_trajectory(", start)]
+    for field in ("trajectory_id", "task_id", "arm", "trial_id", "seed", "benchmark",
+                  "manifest_sha256", "runtime_identity_sha256", "registry_sha256"):
+        assert f'"{field}"' in boundary
+    assert "runtime.retrieval_callback(retrieval_path, identity=identity)" in boundary
+    assert "runtime.prompt_binding_callback(retrieval_path, identity=identity)" in boundary
+
+
 def test_execution_boundary_rejects_a_missing_or_mismatched_runtime_identity_before_agent_load():
     path = Path(__file__).parents[2] / "src" / "copromem" / "experiments" / "reme_copromem" / "runner.py"
     source = path.read_text(encoding="utf-8")

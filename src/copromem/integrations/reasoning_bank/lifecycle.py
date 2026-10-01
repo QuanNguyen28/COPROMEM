@@ -11,11 +11,11 @@ from typing import Any, Callable, Mapping, Sequence
 
 from .appworld import (
     FAILED_EXTRACTION_PROMPT,
-    MEMORY_PROMPT,
     SUCCESSFUL_EXTRACTION_PROMPT,
     ReasoningBank,
     Retrieval,
     build_experience,
+    render_retrieval_guidance,
     sha256,
 )
 
@@ -51,12 +51,9 @@ class ReasoningBankLifecycle:
         result = self.bank.retrieve(instruction, vector)
         self.last_retrieval = result
         self.last_query_embedding = tuple(float(item) for item in vector)
-        if not result.guidance:
-            return ""
-        # The shared AppWorld executor owns the outer memory slot.  Keep the
-        # official ReasoningBank instruction and retrieved item bytes together
-        # as the slot content.
-        return MEMORY_PROMPT + "\n\n" + result.guidance
+        # The shared AppWorld executor owns the outer memory slot. Keep the
+        # official instruction and selected memory in one authoritative render.
+        return render_retrieval_guidance(result.guidance)
 
     def update(self, *, task_id: str, query: str, trajectory: Any) -> UpdateResult:
         """Self-judge and append one new experience after a trajectory.

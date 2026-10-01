@@ -214,11 +214,16 @@ def _observe_upstream_retrieval(response: Any) -> dict[str, Any]:
             "retrieval_response_sha256": digest(response) if response is not None else digest(None)}
 
 
+from .prompt_memory import render_executor_memory_slot
+
+
 def _copromem_prompt_memory_text(guidance: str) -> str:
-    """Render exactly one source-agent ``previous_memories`` item."""
-    if not guidance:
-        return ""
-    return "Experience 1:\n When to use: Retrieved procedural guidance\n Content: " + guidance + "\n"
+    """Compatibility shim for historical audit/test imports.
+
+    The authoritative executor-slot renderer lives in ``prompt_memory``; this
+    name intentionally contains no independently maintained template.
+    """
+    return render_executor_memory_slot(guidance)
 
 
 def model_visible_memory_binding(messages: list[dict[str, Any]], injected: str) -> dict[str, Any]:
@@ -251,7 +256,8 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                        api_key: str, all_task_ids: list[str], arm: str, task_id: str,
                        trial_id: int, seed: int, max_actions: int, temperature: float,
                        memory_base_url: str | None = None,
-                       memory_for_instruction: Callable[[str, str, dict[str, Any]], str] | None = None,
+                        memory_for_instruction: Callable[[str, str, dict[str, Any]], str] | None = None,
+                        pre_dispatch_binding: Callable[[list[dict[str, Any]], str], None] | None = None,
                        phase: str = "evaluation", artifact_path: pathlib.Path | None = None,
                        post_score_update: Callable[[Any, dict[str, Any]], None] | None = None,
                        post_score_update_strict: bool = False,
@@ -326,6 +332,13 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
             agent.prompt_messages(0, 0, previous, world)
             initial_prompt_messages_sha256 = digest(agent.history[0][0])
             memory_visibility = model_visible_memory_binding(agent.history[0][0], injected)
+            # A method-specific retrieval boundary may seal the exact initial
+            # prompt before this generic executor can issue any model request.
+            # It is deliberately optional so historical callers retain their
+            # existing behavior while strict ReasoningBank Dynamic can fail
+            # closed pre-dispatch.
+            if pre_dispatch_binding is not None:
+                pre_dispatch_binding(agent.history[0][0], injected)
             termination = "completed"
             last_tokens: int | None = None
             terminal_executor: dict[str, Any] | None = None
@@ -368,7 +381,7 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
             if memory_for_instruction is not None:
                 result.update({"copromem_callback_guidance_sha256": digest(injected),
                                "copromem_callback_guidance_nonempty": bool(injected),
-                               "prompt_memory_injection_sha256": digest(_copromem_prompt_memory_text(injected))})
+                                "prompt_memory_injection_sha256": digest(render_executor_memory_slot(injected))})
             if arm.startswith("official_upstream_reme"):
                 result["reme_retrieval_provenance"] = upstream_retrieval or {
                     "retrieved_memory_count": 0, "retrieved_memory_sha256s": [],

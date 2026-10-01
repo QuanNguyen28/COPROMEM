@@ -1,6 +1,7 @@
 """Strict scored-artifact-to-ReasoningBank-Dynamic update boundary."""
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Mapping
@@ -9,7 +10,14 @@ from ...experiments.reme_copromem.evidence_contract import validate as validate_
 from .appworld import ReasoningBank, sha256
 from .checkpoints import ReasoningBankDynamicCheckpoints, UpdateCompletion
 from .lifecycle import ReasoningBankLifecycle
-from .retrieval_provenance import ContentAddressedStore, materialize, verify
+from .retrieval_provenance import (
+    ContentAddressedStore,
+    RetrievalProvenanceError,
+    bind_initial_prompt,
+    canonical_identity,
+    materialize,
+    verify,
+)
 
 
 class ReasoningBankDynamicRuntime:
@@ -42,27 +50,36 @@ class ReasoningBankDynamicRuntime:
     def retrieval_callback(self, path: Path, *, identity: Mapping[str, Any] | None = None):
         """Return the executor callback and durable retrieval-record writer."""
         path = path.resolve()
+        # Validate the full frozen identity while the runner is still deciding
+        # whether this trajectory may dispatch.  Do not wait until the prompt
+        # is built (or an embedding/provider boundary has been reached).
+        try:
+            frozen_identity = canonical_identity(identity or {})
+        except RetrievalProvenanceError as exc:
+            raise RuntimeError("ReasoningBank retrieval identity is invalid before dispatch") from exc
+
         def retrieve(instruction: str, benchmark: str, metadata: Mapping[str, Any]) -> str:
             # Preserve the official lifecycle retrieval exactly, then persist
             # the normalized embedding and deterministic top-1 calculation it
             # consumed before the executor can observe any guidance.
-            self.lifecycle.retrieve_for_instruction(instruction, benchmark, metadata)
+            lifecycle_guidance = self.lifecycle.retrieve_for_instruction(instruction, benchmark, metadata)
             retrieval = self.lifecycle.last_retrieval
             vector = self.lifecycle.last_query_embedding
             if retrieval is None or vector is None:
                 raise RuntimeError("ReasoningBank retrieval callback returned no provenance")
-            base = {"task_id": str((identity or {}).get("task_id") or ""), "arm": str((identity or {}).get("arm") or ""),
-                    "trial_id": (identity or {}).get("trial_id"), "seed": (identity or {}).get("seed"),
-                    "trajectory_id": str((identity or {}).get("trajectory_id") or ""), "benchmark": benchmark,
-                    "manifest_sha256": self.manifest_sha256, "runtime_identity_sha256": self.runtime_identity_sha256,
-                    "registry_sha256": self.registry_sha256}
+            if benchmark != frozen_identity["benchmark"]:
+                raise RuntimeError("ReasoningBank retrieval benchmark differs from frozen identity")
             guidance, record = materialize(bank=self.lifecycle.bank, query=instruction, query_vector=vector,
-                                            store=self.store, path=path, identity=base,
-                                            embedding=self.embedding_identity)
+                                            store=self.store, path=path, identity=frozen_identity,
+                                            embedding=self.embedding_identity,
+                                            rendered_guidance=lifecycle_guidance,
+                                            lifecycle_provenance=retrieval.provenance)
             # Ensure an accidental pre-dispatch mutation is caught before the
             # executor receives model-visible memory text.
             if self.lifecycle.bank.state()["semantic_state_sha256"] != record["pre_state_sha256"]:
                 raise RuntimeError("ReasoningBank retrieval mutated Dynamic state")
+            if guidance != lifecycle_guidance:
+                raise RuntimeError("ReasoningBank provenance altered lifecycle-rendered guidance")
             return guidance
         return retrieve
 
@@ -84,9 +101,39 @@ class ReasoningBankDynamicRuntime:
                 raise RuntimeError("ReasoningBank Dynamic update lacks durable retrieval provenance")
             retrieval = json.loads(retrieval_path.read_text(encoding="utf-8"))
             verify(path=retrieval_path, store=self.store,
-                   expected_bank_sha256=self.lifecycle.bank.state()["semantic_state_sha256"])
-            if retrieval.get("identity", {}).get("trajectory_id") != durable.get("trajectory_id"):
-                raise RuntimeError("ReasoningBank Dynamic retrieval trajectory identity mismatch")
+                   expected_bank_sha256=self.lifecycle.bank.state()["semantic_state_sha256"],
+                   require_prompt_binding=True)
+            try:
+                identity = canonical_identity(retrieval.get("identity") or {})
+            except RetrievalProvenanceError as exc:
+                raise RuntimeError("ReasoningBank Dynamic retrieval identity is malformed") from exc
+            for field, artifact_field in (("trajectory_id", "trajectory_id"), ("task_id", "task_id"),
+                                          ("arm", "arm"), ("trial_id", "trial_id"), ("seed", "seed")):
+                if identity[field] != durable.get(artifact_field):
+                    raise RuntimeError(f"ReasoningBank Dynamic artifact identity mismatch: {field}")
+            if durable.get("runtime_identity_sha256") != identity["runtime_identity_sha256"]:
+                raise RuntimeError("ReasoningBank Dynamic artifact runtime identity mismatch")
+            if durable.get("execution_evidence_registry_sha256") != identity["registry_sha256"]:
+                raise RuntimeError("ReasoningBank Dynamic artifact registry identity mismatch")
+            manifest_path = self.run_root / "manifest.json"
+            if (not manifest_path.is_file() or
+                    hashlib.sha256(manifest_path.read_bytes()).hexdigest() != identity["manifest_sha256"]):
+                raise RuntimeError("ReasoningBank Dynamic artifact manifest identity mismatch")
+            rendered_sha256 = str((retrieval.get("guidance") or {}).get("rendered_sha256") or "")
+            if durable.get("injected_memory_sha256") != rendered_sha256:
+                raise RuntimeError("ReasoningBank artifact did not receive provenance-bound rendered guidance")
+            if bool(durable.get("injected_memory_nonempty")) != bool(retrieval.get("guidance_nonempty")):
+                raise RuntimeError("ReasoningBank artifact guidance-presence binding mismatch")
+            binding = retrieval.get("prompt_binding") or {}
+            binding_path = retrieval_path.parent / str(binding.get("relative_locator") or "")
+            try:
+                binding_value = json.loads(binding_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise RuntimeError("ReasoningBank Dynamic prompt binding is unavailable") from exc
+            if binding_value.get("initial_prompt_messages_sha256") != durable.get("initial_prompt_messages_sha256"):
+                raise RuntimeError("ReasoningBank artifact initial prompt differs from sealed binding")
+            if binding_value.get("callback_guidance_sha256") != durable.get("injected_memory_sha256"):
+                raise RuntimeError("ReasoningBank artifact callback differs from sealed binding")
             # Seal the pre-dispatch retrieval with the artifact and exact
             # model-visible prompt binding before any provider-backed update.
             retrieval["execution_binding"] = {"scored_artifact_sha256": sha256(dict(durable)),
@@ -111,3 +158,17 @@ class ReasoningBankDynamicRuntime:
                                                      trajectory=durable["history"]),
             )
         return callback
+
+    def prompt_binding_callback(self, retrieval_path: Path, *, identity: Mapping[str, Any]):
+        """Return the pre-LLM seal callback for one exact trajectory."""
+        retrieval_path = retrieval_path.resolve()
+        try:
+            frozen_identity = canonical_identity(identity)
+        except RetrievalProvenanceError as exc:
+            raise RuntimeError("ReasoningBank prompt-binding identity is invalid before dispatch") from exc
+
+        def bind(messages: list[dict[str, Any]], callback_guidance: str) -> None:
+            bind_initial_prompt(path=retrieval_path, store=self.store, messages=messages,
+                                callback_guidance=callback_guidance, identity=frozen_identity)
+
+        return bind

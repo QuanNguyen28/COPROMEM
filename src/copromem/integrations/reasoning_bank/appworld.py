@@ -75,6 +75,16 @@ Your output must strictly follow the Markdown format shown below:
 """
 
 
+def render_retrieval_guidance(raw_memory: str) -> str:
+    """Render the exact official ReasoningBank callback text once.
+
+    Production lifecycle delivery, durable provenance, and offline replay all
+    call this function so raw stored memory can never silently replace the
+    executor-visible guidance wrapper.
+    """
+    return "" if not raw_memory else MEMORY_PROMPT + "\n\n" + raw_memory
+
+
 def _canonical(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
 
@@ -202,7 +212,7 @@ class ReasoningBank:
         selected = [ranked[0][2]] if ranked else []
         blocks = [block for item in selected for block in item.memory_items if block.strip()]
         guidance = "\n\n".join(blocks)
-        rendered = (MEMORY_PROMPT + "\n\n" + guidance).strip() if guidance else ""
+        rendered = render_retrieval_guidance(guidance)
         provenance = {
             "method_version": METHOD_VERSION,
             "upstream_commit": UPSTREAM_COMMIT,
