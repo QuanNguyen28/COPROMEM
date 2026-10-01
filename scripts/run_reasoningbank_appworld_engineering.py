@@ -244,6 +244,45 @@ def _publication_commit() -> str:
     return value
 
 
+RUNTIME_IDENTITY_VERSION = "reasoningbank-appworld-runtime-content-v1"
+
+
+def _runtime_identity_material(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """Use only frozen manifest content; never infer identity from HEAD at dispatch."""
+    return {"version": RUNTIME_IDENTITY_VERSION, "executable_commit": str(manifest.get("git_commit") or ""),
+            "protocol_sha256": str(manifest.get("protocol_sha256") or ""),
+            "registry_sha256": str(manifest.get("registry_sha256") or ""),
+            "initial_bank_sha256": str(manifest.get("initial_bank_sha256") or ""),
+            "execution_sha256": sha256(manifest.get("execution")), "embedding_sha256": sha256(manifest.get("embedding")),
+            "allocation_sha256": sha256(manifest.get("allocation")),
+            "recovery_envelope_sha256": str((manifest.get("recovery_import") or {}).get("envelope_sha256") or "")}
+
+
+def _runtime_identity_digest(manifest: Mapping[str, Any]) -> str:
+    material = _runtime_identity_material(manifest)
+    if not all(material[key] for key in ("executable_commit", "protocol_sha256", "registry_sha256", "initial_bank_sha256")):
+        raise RuntimeError("frozen manifest lacks a runtime-content identity component")
+    return sha256(material)
+
+
+def _runtime_identity(run: Path, manifest: Mapping[str, Any]) -> str:
+    """Durably materialize and verify the manifest-declared runtime identity."""
+    expected = _runtime_identity_digest(manifest)
+    if manifest.get("runtime_identity_version") != RUNTIME_IDENTITY_VERSION or manifest.get("runtime_identity_sha256") != expected:
+        raise RuntimeError("frozen manifest runtime-content identity is inconsistent")
+    path = run / "runtime-identity.json"
+    record = {"version": RUNTIME_IDENTITY_VERSION, "manifest_sha256": file_sha(run / "manifest.json"),
+              "runtime_identity_sha256": expected, "material": _runtime_identity_material(manifest)}
+    if path.exists():
+        try: observed = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc: raise RuntimeError("runtime-content identity is malformed") from exc
+        if observed != record:
+            raise RuntimeError("runtime-content identity differs from the frozen manifest")
+    else:
+        _fsync_json(path, record)
+    return file_sha(path)
+
+
 def _budget(historical_exposure_usd: float) -> dict[str, Any]:
     limits = {"executor": 12 * 30, "reasoningbank_judge": 6,
               "reasoningbank_extraction": 6, "reasoningbank_embedding": 12}
@@ -296,6 +335,8 @@ def prepare(run: Path) -> None:
                 "allocation": allocation, "budget": budget,
                 "historical_infrastructure_exposure_usd": historical_exposure,
                 "historical_carry_forward_id": HISTORICAL_CARRY_ID}
+    template.update({"runtime_identity_version": RUNTIME_IDENTITY_VERSION})
+    template["runtime_identity_sha256"] = _runtime_identity_digest(template)
     _fsync_json(run / "template.json", template)
 
 
@@ -339,6 +380,8 @@ def prepare_recovery(run: Path, source_run: Path) -> None:
                 "historical_carry_forward_id": HISTORICAL_CARRY_ID,
                 "recovery_import": envelope,
                 "recovery_next_key": _frozen_next_key(source_manifest, envelope)}
+    template.update({"runtime_identity_version": RUNTIME_IDENTITY_VERSION})
+    template["runtime_identity_sha256"] = _runtime_identity_digest(template)
     run.mkdir(parents=True, exist_ok=True); _fsync_json(run / "template.json", template)
 
 
@@ -468,6 +511,7 @@ def _write_final(run: Path, manifest: Mapping[str, Any], marker: Mapping[str, An
 
 def run(run: Path, *, preflight: bool = False) -> None:
     manifest = load(run)
+    runtime_identity_sha256 = _runtime_identity(run, manifest)
     _status(run, "preflight_passed", manifest_sha256=file_sha(run / "manifest.json"))
     if preflight:
         return
@@ -510,7 +554,8 @@ def run(run: Path, *, preflight: bool = False) -> None:
                                            judge=providers.judge, extractor=providers.extract)
         runtime = ReasoningBankDynamicRuntime(lifecycle=lifecycle, initial_bank=initial, checkpoints=checkpoint,
                                               run_root=run, registry_sha256=manifest["registry_sha256"])
-        evidence = {"registry_path": str(REGISTRY.resolve()), "registry_sha256": manifest["registry_sha256"]}
+        evidence = {"registry_path": str(REGISTRY.resolve()), "registry_sha256": manifest["registry_sha256"],
+                    "runtime_identity_sha256": runtime_identity_sha256}
         _status(run, "running", manifest_sha256=file_sha(run / "manifest.json"), completed_update_prefix=len(prefix.completed))
         for task in manifest["evaluation"]["task_ids"]:
             for arm in ARMS:
