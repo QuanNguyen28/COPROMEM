@@ -1,0 +1,13 @@
+{
+  "version": "reasoningbank-appworld-engineering-011-exposed-guidance-replay-allocation-v1",
+  "run_name": "reasoningbank_appworld_engineering_011_exposed_guidance_replay",
+  "purpose": "engineering_validation_only_exposed_replay",
+  "publication_scope": "allocation_and_custody_only",
+  "executable_commit": "2de917161197501b936559d8a06b9e2e76958e5e",
+  "frozen_predecessor_allocation": "c511afe80193d8acf95b978f43e02aeb6b832a931603ecdb766e0f8f06e38c8e",
+  "source_selection": {"selection_mode": "exact_frozen_engineering_010_allocation", "payloads_opened_during_allocation": false, "provider_calls_during_allocation": 0},
+  "custody": {"classification": "all_tasks_previously_exposed_engineering_replay", "prior_artifacts_imported": false, "prior_scores_imported": false, "prior_memory_state_imported": false, "prior_retrieval_or_checkpoint_imported": false, "claims_prohibited": ["efficacy", "superiority", "transfer", "generalization", "held_out_evaluation"]},
+  "roles": {"A": {"task_id": "d4e9306_2", "descriptor_sha256": "13273a36e99d7b5299cde954145b6da3a36297c34443ee23778328185ff50d89"}, "B": {"task_id": "d4e9306_3", "descriptor_sha256": "13273a36e99d7b5299cde954145b6da3a36297c34443ee23778328185ff50d89"}, "N": {"task_id": "df61dc5_3", "descriptor_sha256": "006f88490b38c07a64e42e787bc1db6062f464f25c882d9b133ebb1b893076e8"}},
+  "design": {"split": "dev", "arms": ["no_memory", "reasoningbank_dynamic"], "seeds": [9701, 9702], "task_order": "A_then_B_then_N_task_major", "expected_trajectories": 12, "initial_reasoningbank": "empty", "retrieval_policy": "official_top_1_no_abstention"},
+  "execution": {"executor_judge_extractor_model": "deepseek/deepseek-v4.1-flash", "embedding": {"provider": "azure", "model": "openai/text-embedding-3-small", "dimensions": 1024, "fallbacks": false}, "hard_cap_usd": 50.0, "historical_exposure_usd": 0.116670876, "historical_exposure_is_separate_from_arm_costs": true}
+}
