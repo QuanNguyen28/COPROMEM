@@ -1,0 +1,27 @@
+{
+  "version": "reasoningbank-appworld-engineering-008-public-allocation-no-go-v1",
+  "run_name": "reasoningbank_appworld_engineering_008",
+  "classification": "NO_GO_INSUFFICIENT_FRESH_DEVELOPMENT_TRIPLES",
+  "payloads_opened": false,
+  "provider_calls": 0,
+  "test_normal_used": false,
+  "inventory": {
+    "split": "dev",
+    "count": 57,
+    "sha256": "d58635302ca54cd9a5206bc1ac99181376c6db1e04d1310e5957c224fdf871df"
+  },
+  "custody": {
+    "hard_exclusion_count": 63,
+    "hard_exclusion_sha256": "992f2c88fb464a1e0b564f7434df76a002c8c3b06cc65642652fdd46a40321d1",
+    "hard_exposure_evidence_sha256": "03ab15bd9468c55980ef2aa3d0ff0a9ebfcc2dcb7e0e97c0a96b2358d395f771",
+    "protocol_exclusion_count": 8,
+    "protocol_exclusion_sha256": "6f7be85aee36bd76ac1b7f06cd4216dac8a36d20f338eeef33224fa59a628192"
+  },
+  "selection": {
+    "ordering_rule": "(A descriptor SHA-256, A ID, B ID, N descriptor SHA-256, N ID)",
+    "candidate_count": 0,
+    "candidate_list_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "selected": null
+  },
+  "disposition": "Do not freeze a manifest, open a payload, dispatch a provider request, or reuse the Engineering 007 triple."
+}
