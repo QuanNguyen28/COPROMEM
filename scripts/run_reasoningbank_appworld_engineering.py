@@ -122,9 +122,8 @@ def _hard_exposed_task_ids() -> tuple[set[str], dict[str, list[str]]]:
         # Limit custody evidence to durable execution/scoring namespaces.  A
         # broad all-JSON traversal would both mistake public reports for runs
         # and needlessly parse large unrelated local test fixtures.
-        candidates = list(root.glob("research/**/artifacts/**/*.json"))
-        candidates += list(root.glob("research/**/scorer/**/*.json"))
-        candidates += list(root.glob("research/**/evaluation/**/*.json"))
+        candidates = list(root.glob("research/**/artifacts/**/trial-*.json"))
+        candidates += list(root.glob("research/**/evaluation/**/trial-*.json"))
         for path in candidates:
             # Runtime payloads/DBs are never parsed by this custody scanner.
             if any(part in {"data", "databases", "payloads"} for part in path.parts):
@@ -203,12 +202,18 @@ def _budget() -> dict[str, Any]:
 
 
 def prepare(run: Path) -> None:
-    if run.exists() and any(run.iterdir()):
+    if run.exists() and any(path.name != "allocation-audit.json" for path in run.iterdir()):
         raise RuntimeError("engineering run directory is nonempty")
     validate_protocol(protocol_record())
     allocation = _allocation()
     run.mkdir(parents=True, exist_ok=True)
-    _fsync_json(run / "allocation-audit.json", {key: value for key, value in allocation.items() if key != "selected"})
+    audit = {key: value for key, value in allocation.items() if key != "selected"}
+    audit_path = run / "allocation-audit.json"
+    if audit_path.exists():
+        if json.loads(audit_path.read_text(encoding="utf-8")) != audit:
+            raise RuntimeError("interrupted public allocation audit does not reproduce exactly")
+    else:
+        _fsync_json(audit_path, audit)
     if allocation["selected"] is None:
         raise RuntimeError("no unexecuted public development A/B/N allocation exists")
     budget = _budget()
