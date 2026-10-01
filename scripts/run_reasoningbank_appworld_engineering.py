@@ -119,7 +119,13 @@ def _hard_exposed_task_ids() -> tuple[set[str], dict[str, list[str]]]:
     for root in roots:
         if not root.is_dir():
             continue
-        for path in root.rglob("*.json"):
+        # Limit custody evidence to durable execution/scoring namespaces.  A
+        # broad all-JSON traversal would both mistake public reports for runs
+        # and needlessly parse large unrelated local test fixtures.
+        candidates = list(root.glob("research/**/artifacts/**/*.json"))
+        candidates += list(root.glob("research/**/scorer/**/*.json"))
+        candidates += list(root.glob("research/**/evaluation/**/*.json"))
+        for path in candidates:
             # Runtime payloads/DBs are never parsed by this custody scanner.
             if any(part in {"data", "databases", "payloads"} for part in path.parts):
                 continue
