@@ -1,0 +1,26 @@
+{
+  "version": "reasoningbank-appworld-engineering-005-launcher-amendment-v1",
+  "run_name": "reasoningbank_appworld_engineering_005_recovery",
+  "engineering_validation_only": true,
+  "executable_source_commit": "4211c01243651c2338b29ce1c3b6ea10af13ec95",
+  "predecessor_zero_dispatch_run": "reasoningbank_appworld_engineering_004_recovery",
+  "predecessor_change_class": "launcher_environment_only",
+  "recovery_source_run": "reasoningbank_appworld_engineering_002",
+  "recovery_envelope_sha256": "79e33abe17a2356bb4ec2642cb194679e3cb1b9d3b833da7b4dbf1a04837b8d8",
+  "imported_prefix": {
+    "completed": 1,
+    "expected": 12,
+    "key": "no_memory/fac291d_1/trial=1/seed=9701",
+    "next_key": "no_memory/fac291d_1/trial=2/seed=9702"
+  },
+  "historical_exposure_usd": 0.022584288,
+  "credential_handling": {
+    "secret_persisted": false,
+    "secret_in_process_title": false,
+    "preflight_record": "boolean_presence_only",
+    "launcher_method": "protected_process_environment_source"
+  },
+  "scientific_protocol_changed": false,
+  "provider_calls_during_publication": 0,
+  "payloads_opened_during_publication": false
+}
