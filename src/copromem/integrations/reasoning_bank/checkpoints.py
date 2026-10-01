@@ -20,6 +20,11 @@ from .appworld import ReasoningBank, load_state, sha256, write_state
 
 
 VERSION = "reasoningbank-appworld-dynamic-checkpoint-v1"
+UPDATE_PROVIDER_ROLES = (
+    "reasoningbank_judge",
+    "reasoningbank_extraction",
+    "reasoningbank_embedding",
+)
 
 
 class DynamicCheckpointError(RuntimeError):
@@ -122,26 +127,99 @@ class ReasoningBankDynamicCheckpoints:
     def _ledger_offset(self) -> int:
         return self.ledger_path.stat().st_size if self.ledger_path.exists() else 0
 
-    def _settlements_between(self, offset: int, end_offset: int | None = None) -> list[str]:
+    def _ledger_records(self) -> tuple[bytes, list[tuple[int, int, dict[str, Any]]]]:
+        """Return append-only JSONL records with exact byte boundaries.
+
+        Checkpoint markers bind a closed byte interval.  Parsing only a slice
+        would accidentally accept a boundary in the middle of a JSON record,
+        so all validation starts from this full-ledger index.
+        """
         if not self.ledger_path.exists():
-            return []
+            return b"", []
         payload = self.ledger_path.read_bytes()
-        end = len(payload) if end_offset is None else end_offset
-        if offset < 0 or end < offset or end > len(payload):
-            raise DynamicCheckpointError("ledger offset is outside the durable ledger")
-        settled: list[str] = []
-        reserved: set[str] = set()
-        for raw in payload[offset:end].splitlines():
-            row = json.loads(raw)
-            if row.get("event") == "reserve":
-                reserved.add(str(row.get("id")))
-            elif row.get("event") == "settle":
-                call_id = str(row.get("id"))
-                if call_id in reserved:
-                    settled.append(call_id)
-        if reserved - set(settled):
-            raise DynamicCheckpointError("Dynamic update has an unresolved reservation")
-        return settled
+        records: list[tuple[int, int, dict[str, Any]]] = []
+        cursor = 0
+        for raw in payload.splitlines(keepends=True):
+            start, cursor = cursor, cursor + len(raw)
+            try:
+                row = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                raise DynamicCheckpointError("ledger contains malformed durable JSONL") from exc
+            if not isinstance(row, dict):
+                raise DynamicCheckpointError("ledger contains a non-object record")
+            records.append((start, cursor, row))
+        if cursor != len(payload):
+            raise DynamicCheckpointError("ledger has an incomplete final record")
+        return payload, records
+
+    def _interval_records(self, start: int, end: int) -> tuple[bytes, list[tuple[int, int, dict[str, Any]]]]:
+        payload, records = self._ledger_records()
+        boundaries = {0, len(payload)} | {point for record in records for point in record[:2]}
+        if start not in boundaries or end not in boundaries or start < 0 or end < start:
+            raise DynamicCheckpointError("ledger settlement boundary is not a durable record boundary")
+        return payload[start:end], [record for record in records if record[0] >= start and record[1] <= end]
+
+    @staticmethod
+    def _validate_update_roles(rows: list[tuple[int, int, dict[str, Any]]], ids: list[str]) -> None:
+        """Validate one strict judge -> extractor -> document-embedding interval."""
+        reserve: dict[str, list[tuple[int, dict[str, Any]]]] = {}
+        settle: dict[str, list[tuple[int, dict[str, Any]]]] = {}
+        settlement_order: list[str] = []
+        for start, _end, row in rows:
+            event, call_id = row.get("event"), str(row.get("id") or "")
+            if event == "reserve":
+                reserve.setdefault(call_id, []).append((start, row))
+            elif event == "settle":
+                settle.setdefault(call_id, []).append((start, row))
+                settlement_order.append(call_id)
+        if ids != settlement_order or len(ids) != len(set(ids)):
+            raise DynamicCheckpointError("Dynamic marker settlement binding mismatch")
+        observed_roles: list[str] = []
+        for call_id in ids:
+            reserves, settlements = reserve.get(call_id, []), settle.get(call_id, [])
+            if len(reserves) != 1 or len(settlements) != 1:
+                raise DynamicCheckpointError("Dynamic marker settlement has missing or duplicate reservation/settlement")
+            reserve_start, reservation = reserves[0]
+            settle_start, settlement = settlements[0]
+            if reserve_start >= settle_start:
+                raise DynamicCheckpointError("Dynamic marker settlement ordering is invalid")
+            role = str(reservation.get("role") or "")
+            if role != str(settlement.get("role") or "") or role not in UPDATE_PROVIDER_ROLES:
+                raise DynamicCheckpointError("Dynamic marker settlement role is invalid")
+            observed_roles.append(role)
+        # The frozen lifecycle performs exactly one self-judge, one extraction,
+        # and one document embedding, in that order.  This also rejects an
+        # unbound lifecycle settlement inside an otherwise plausible interval.
+        if observed_roles != list(UPDATE_PROVIDER_ROLES):
+            raise DynamicCheckpointError("Dynamic marker settlement lifecycle order is invalid")
+
+    def _validate_settlement_interval(self, *, start: int, end: int, ids: list[str], expected_hash: str | None) -> None:
+        payload, rows = self._interval_records(start, end)
+        if expected_hash is not None and hashlib.sha256(payload).hexdigest() != expected_hash:
+            raise DynamicCheckpointError("Dynamic marker ledger interval hash mismatch")
+        self._validate_update_roles(rows, ids)
+
+    def _legacy_settlement_end_offset(self, start: int, ids: list[str]) -> int:
+        """Derive the only safe legacy boundary from named settlement records.
+
+        The old marker omitted an end offset.  It can be read only when every
+        named ID occurs exactly once and the final named settlement has a
+        deterministic byte end.  Later executor/retrieval rows are therefore
+        outside the recovered interval rather than silently accepted.
+        """
+        _payload, records = self._ledger_records()
+        if not ids or len(ids) != len(set(ids)):
+            raise DynamicCheckpointError("Dynamic legacy marker settlement binding is malformed")
+        ends: dict[str, list[int]] = {call_id: [] for call_id in ids}
+        for _record_start, record_end, row in records:
+            if row.get("event") == "settle" and str(row.get("id") or "") in ends:
+                ends[str(row["id"])].append(record_end)
+        if any(len(positions) != 1 for positions in ends.values()):
+            raise DynamicCheckpointError("Dynamic legacy marker cannot derive a unique settlement boundary")
+        end = max(position[0] for position in ends.values())
+        if end < start:
+            raise DynamicCheckpointError("Dynamic legacy marker settlement precedes its intent")
+        return end
 
     @staticmethod
     def _semantic_equal(left: ReasoningBank, right: ReasoningBank) -> bool:
@@ -202,12 +280,18 @@ class ReasoningBankDynamicCheckpoints:
             ids = marker.get("newly_settled_provider_ids")
             if not isinstance(ids, list) or len(ids) != len(set(ids)):
                 raise DynamicCheckpointError("Dynamic marker settlement binding is malformed")
-            next_intent = self._intent_path(index + 1)
-            next_offset = None
-            if next_intent.exists():
-                next_offset = int(_read_json(next_intent).get("ledger_byte_offset", -1))
-            if set(ids) != set(self._settlements_between(int(intent["ledger_byte_offset"]), next_offset)):
-                raise DynamicCheckpointError("Dynamic marker settlement binding mismatch")
+            start = int(intent["ledger_byte_offset"])
+            end_value = marker.get("ledger_settlement_end_byte_offset")
+            interval_hash = marker.get("ledger_settlement_interval_sha256")
+            if end_value is None and interval_hash is None:
+                # Legacy recovery is deliberately narrow: it validates the
+                # prefix ending at the last *named* settlement, not ledger EOF.
+                end = self._legacy_settlement_end_offset(start, ids)
+                self._validate_settlement_interval(start=start, end=end, ids=ids, expected_hash=None)
+            elif isinstance(end_value, int) and isinstance(interval_hash, str):
+                self._validate_settlement_interval(start=start, end=end_value, ids=ids, expected_hash=interval_hash)
+            else:
+                raise DynamicCheckpointError("Dynamic marker settlement boundary is malformed")
             bank = snapshot
             marker_hash = _bytes_hash(marker_path)
             completed.append(UpdateCompletion(index, trajectory_id, marker_hash,
@@ -260,7 +344,14 @@ class ReasoningBankDynamicCheckpoints:
         verifier_hash = _bytes_hash(verifier_path)
         if verified.state()["semantic_state_sha256"] != post:
             raise DynamicCheckpointError("clean verifier has a different Dynamic semantic state")
-        settlements = self._settlements_between(int(intent["ledger_byte_offset"]))
+        settlement_end = self._ledger_offset()
+        interval_payload, _rows = self._interval_records(int(intent["ledger_byte_offset"]), settlement_end)
+        # Validate before writing the marker so an unexpected provider call can
+        # never be hidden by a future restart boundary.
+        settlement_ids = [str(row.get("id")) for _start, _end, row in self._interval_records(
+            int(intent["ledger_byte_offset"]), settlement_end)[1] if row.get("event") == "settle"]
+        self._validate_settlement_interval(start=int(intent["ledger_byte_offset"]), end=settlement_end,
+                                           ids=settlement_ids, expected_hash=None)
         marker = {
             "version": VERSION, "ordered_update_index": index, "trajectory_id": trajectory_id,
             "update_intent_sha256": _bytes_hash(intent_path),
@@ -272,7 +363,9 @@ class ReasoningBankDynamicCheckpoints:
             "post_update_semantic_state_sha256": post,
             "source_snapshot": snapshot_path.name, "source_snapshot_sha256": snapshot_hash,
             "verifier_dump": verifier_path.name, "verifier_dump_sha256": verifier_hash,
-            "newly_settled_provider_ids": settlements,
+            "newly_settled_provider_ids": settlement_ids,
+            "ledger_settlement_end_byte_offset": settlement_end,
+            "ledger_settlement_interval_sha256": hashlib.sha256(interval_payload).hexdigest(),
             "update_result_sha256": sha256(getattr(update_result, "__dict__", str(update_result))),
         }
         marker_path = self._marker_path(index)

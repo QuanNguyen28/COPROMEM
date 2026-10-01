@@ -1,0 +1,22 @@
+{
+  "version": "reasoningbank-engineering-001-settlement-interval-forensic-v1",
+  "classification": "INFRASTRUCTURE-FAILED — checkpoint settlement interval bug",
+  "run": "reasoningbank_appworld_engineering_001",
+  "manifest_sha256": "2305050f8546d61a61b2952f26d1da7785a6d3cbd134b0f2d56f2f0c58720bd7",
+  "scored_artifact_count": 4,
+  "completed_dynamic_updates": 1,
+  "second_dynamic_update_started": false,
+  "legacy_marker": {
+    "intent_ledger_byte_offset": 29109,
+    "derived_settlement_end_byte_offset": 30504,
+    "ledger_size_at_failure": 38043,
+    "named_settlement_roles": [
+      "reasoningbank_judge",
+      "reasoningbank_extraction",
+      "reasoningbank_embedding"
+    ]
+  },
+  "root_cause": "legacy reconciliation used ledger EOF after the first completed marker and included later executor/retrieval settlements",
+  "repair": "closed hashed settlement intervals for future markers; deterministic final-named-settlement boundary only for legacy markers",
+  "analysis_use": "Engineering 001 scores are not imported into Engineering 002 scientific results"
+}
