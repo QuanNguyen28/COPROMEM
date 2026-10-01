@@ -1,0 +1,37 @@
+{
+  "version": "reasoningbank-appworld-engineering-004-recovery-allocation-v1",
+  "run_name": "reasoningbank_appworld_engineering_004_recovery",
+  "engineering_validation_only": true,
+  "executable_source_commit": "4211c01243651c2338b29ce1c3b6ea10af13ec95",
+  "source_run": "reasoningbank_appworld_engineering_002",
+  "source_artifact_sha256": "6dae6fab4531e70151701e26633c3570aac8ec5b3276ee7687dea8942d04114e",
+  "source_journal_sha256": "a054d0b9f5ff2b99df19232931ca9dc97aa2cb3140d2e91384eba713e8b8570d",
+  "recovery_envelope_sha256": "79e33abe17a2356bb4ec2642cb194679e3cb1b9d3b833da7b4dbf1a04837b8d8",
+  "task_ids": [
+    "fac291d_1",
+    "fac291d_2",
+    "6c2c621_3"
+  ],
+  "arms": [
+    "no_memory",
+    "reasoningbank_dynamic"
+  ],
+  "seeds": [
+    9701,
+    9702
+  ],
+  "expected_trajectories": 12,
+  "imported_trajectories": 1,
+  "pending_trajectories": 11,
+  "next_key": {
+    "arm": "no_memory",
+    "task_id": "fac291d_1",
+    "trial_id": 2,
+    "seed": 9702
+  },
+  "historical_exposure_usd": 0.022584288,
+  "new_evaluation_exposure_at_freeze_usd": 0.0,
+  "initial_reasoningbank_state": "empty",
+  "provider_calls_during_allocation": 0,
+  "payloads_opened_during_allocation": false
+}
