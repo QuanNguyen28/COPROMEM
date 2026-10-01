@@ -34,9 +34,17 @@ def test_versioned_runner_uses_v622_retrieval_and_reproduces_before_dispatch():
 
 
 def test_versioned_runner_rejects_old_allocation_and_binds_new_policy(tmp_path):
+    bank = tmp_path / "bank"; bank.mkdir()
+    for name, value in (("fixed-bank.json", {}), ("semantic-admission-gate.json", {"passed": True}),
+                        ("recovery-report.json", {})):
+        (bank / name).write_text(json.dumps(value), encoding="utf-8")
     audit = {"selected_task_ids": ["one", "two", "three"], "payloads_opened": False,
              "selection_source": "public_pre_execution_metadata_only", "compatible_task_count": 2,
-             "negative_control_count": 1, "historical_settled_exposure_usd": 0.0}
+             "negative_control_count": 1, "historical_settled_exposure_usd": 0.0,
+             "copromem_bank": {"path": str(bank.resolve()),
+                 "fixed_bank_file_sha256": runner.base.file_sha(bank / "fixed-bank.json"),
+                 "admission_gate_file_sha256": runner.base.file_sha(bank / "semantic-admission-gate.json"),
+                 "recovery_report_file_sha256": runner.base.file_sha(bank / "recovery-report.json")}}
     path = tmp_path / runner.ALLOCATION_NAME
     path.write_text(json.dumps(audit), encoding="utf-8")
     with pytest.raises(RuntimeError, match="semantic-spine policy"):
@@ -44,11 +52,13 @@ def test_versioned_runner_rejects_old_allocation_and_binds_new_policy(tmp_path):
     audit["retrieval_policy_version"] = v622.POLICY_VERSION
     path.write_text(json.dumps(audit), encoding="utf-8")
     names = ("PROTOCOL", "ARMS", "COPRO_FIXED_ARM", "COPRO_DYNAMIC_ARM", "HISTORICAL_EXPOSURE",
-             "derive_task_query", "validate_task_query", "retrieval_record")
+             "derive_task_query", "validate_task_query", "retrieval_record", "reproduce_retrieval",
+             "semantic_task_batch_update", "COPRO", "identities")
     before = {name: getattr(runner.base, name) for name in names}
     try:
         runner._configure(tmp_path)
         assert runner.base.retrieval_record is runner._retrieval_record
+        assert runner.base.semantic_task_batch_update is runner.semantic_spine_task_batch_update
         assert runner.base.COPRO_FIXED_ARM == "copromem_v6_2_2_fixed"
         assert runner.base.HISTORICAL_EXPOSURE == 0.0
     finally:

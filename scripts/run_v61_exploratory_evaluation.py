@@ -6,6 +6,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]; sys.path[:0]=[str(ROOT),str(RO
 from copromem.contrastive_graph_v6 import digest
 from copromem.experiments.reme_copromem.contrastive_v6_runner import retrieval_record, semantic_task_batch_update, scorer_evidence_sha256
 from copromem.experiments.reme_copromem.task_query import derive_task_query, validate_task_query
+from copromem.experiments.reme_copromem.task_conditioned_retrieval_v621 import reproduce_retrieval
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, execute_trajectory, official_post, services, v5_budget_bound, write_json, append
 from copromem.integrations.reme.dynamic_checkpoint import DynamicUpdateIdentity, ReMeDynamicCheckpointManager
 from copromem.experiments.reme_copromem.evidence_contract import validate as validate_execution_evidence
@@ -16,6 +17,7 @@ from copromem.integrations.reme.fixed_checkpoint import ReMeFixedIntegrityManage
 from copromem.experiments.reme_copromem.runtime_identity import RuntimeIdentityError, apply_runtime_locators, build_evaluation_runtime_identity, verify_runtime_identity, evaluation_runtime_inputs
 from copromem.experiments.reme_copromem.runtime_identity_v3 import IDENTITY_VERSION as RUNTIME_IDENTITY_V3, evaluation_v3_inputs, verify_manifest_identity as verify_runtime_identity_v3
 from copromem.experiments.reme_copromem.terminal_reconciliation import validate_terminal_run
+from copromem.experiments.reme_copromem.retrieval_binding_v622 import create as create_retrieval_binding, validate as validate_retrieval_binding
 from copromem.experiments.reme_copromem.v61_custody import classify
 from scripts.run_v6_shared_acquisition import c_free_gib,file_sha,git_head
 
@@ -96,6 +98,15 @@ def _validate_terminal_retrieval_inventory(run,m):
     record=json.loads(path.read_text(encoding='utf-8'))
     if not isinstance(record.get('task_query'),dict) or not record['task_query'].get('query_sha256'):
      raise RuntimeError(f'invalid terminal retrieval query: {task}/{arm}/{trial}')
+    if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.2'):
+     artifact=run/'artifacts'/task/arm/f'trial-{trial}.json'; binding=path.with_suffix('.binding.json')
+     state_matches=list((run/'copromem-dynamic-checkpoints'/'tasks').glob(f'*-{task}/pre-state.json')) if arm==COPRO_DYNAMIC_ARM else []
+     if arm==COPRO_FIXED_ARM: state=json.loads((COPRO/'fixed-bank.json').read_text(encoding='utf-8'))
+     elif len(state_matches)==1: state=json.loads(state_matches[0].read_text(encoding='utf-8'))['state']
+     else: raise RuntimeError(f'missing retrieval pre-state: {task}/{arm}/{trial}')
+     validate_retrieval_binding(artifact_path=artifact,retrieval_path=path,binding_path=binding,
+       runtime_identity_record_path=run/'runtime-identity.json',state=state,registry=json.loads(REG.read_text(encoding='utf-8')),
+       reproduce=reproduce_retrieval)
 def _write_final_reports(run,manifest,marker,marker_file_sha256):
  marker_path=run/'copromem-dynamic-checkpoints'/'run-reconciled.json'
  if not marker_path.is_file() or file_sha(marker_path)!=marker_file_sha256:raise RuntimeError('final report requires valid run_reconciled marker')
@@ -242,6 +253,10 @@ def run(run):
         if arm.startswith('copromem'):
          if not retrieval_path.is_file():raise RuntimeError('completed CoProMem artifact lacks retrieval record')
          holder.update(json.loads(retrieval_path.read_text(encoding='utf-8')))
+         if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.2'):
+          validate_retrieval_binding(artifact_path=path,retrieval_path=retrieval_path,
+           binding_path=retrieval_path.with_suffix('.binding.json'),runtime_identity_record_path=run/'runtime-identity.json',
+           state=(fixed_state if arm==COPRO_FIXED_ARM else pre_dynamic_state),registry=registry,reproduce=reproduce_retrieval)
        else:
         _runtime_checkpoint(run,m,f'dispatch-{task_position:04d}-{trial:02d}-{arm}')
         kwargs={};
@@ -255,7 +270,7 @@ def run(run):
           holder.update({'guidance':guidance,'provenance':prov,'query':query,'state_sha256':digest(state)})
           return guidance
          kwargs['memory_for_instruction']=conditioned_memory
-        result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256']},**kwargs)
+        result=execute_trajectory(run=run,progress=run/'progress.jsonl',ledger=ledger,api_key=k,all_task_ids=m['evaluation']['task_ids'],arm=arm,task_id=task,trial_id=trial,seed=seed,max_actions=30,temperature=.7,phase='evaluation',artifact_path=path,execution_evidence={'registry_path':str(REG.resolve()),'registry_sha256':registry['registry_sha256'],'runtime_identity_sha256':file_sha(run/'runtime-identity.json'),'runtime_identity_record_sha256':file_sha(run/'runtime-identity.json'),'runtime_identity_semantic_sha256':str(json.loads((run/'runtime-identity.json').read_text(encoding='utf-8'))['runtime_identity_sha256'])},**kwargs)
         # The artifact is the only admissible boundary between execution and a
         # task-batch state transition.  Reload it so a zero-action evidence
         # attestation and every scorer binding are interpreted identically on
@@ -269,14 +284,18 @@ def run(run):
                           'prompt_injection_sha256':result.get('prompt_memory_injection_sha256',digest(holder['guidance'])),
                           'initial_prompt_messages_sha256':result.get('initial_prompt_messages_sha256')}
         if not retrieval_path.exists():write_json(retrieval_path,retrieval_payload)
-        # The executor persists its scorer-bound artifact before this point.
-        # Add only deterministic retrieval identities; this does not alter its
-        # history, score, native actions, or model-visible prompt.
-        result.update({'copromem_retrieval_record_sha256':digest(retrieval_payload),
-                       'copromem_callback_guidance_sha256':digest(holder['guidance']),
-                       'copromem_callback_guidance_nonempty':bool(holder['guidance']),
-                       'prompt_memory_injection_sha256':result.get('prompt_memory_injection_sha256',digest(holder['guidance']))})
-        write_json(path,result)
+        if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.2'):
+         # The scored artifact is immutable. Retrieval/query/prompt custody is
+         # an atomic sidecar bound to its exact bytes and reproduced on restart.
+         create_retrieval_binding(artifact_path=path,retrieval_path=retrieval_path,
+           binding_path=retrieval_path.with_suffix('.binding.json'),runtime_identity_record_path=run/'runtime-identity.json')
+        else:
+         # Historical protocols retain their frozen artifact shape.
+         result.update({'copromem_retrieval_record_sha256':digest(retrieval_payload),
+                        'copromem_callback_guidance_sha256':digest(holder['guidance']),
+                        'copromem_callback_guidance_nonempty':bool(holder['guidance']),
+                        'prompt_memory_injection_sha256':result.get('prompt_memory_injection_sha256',digest(holder['guidance']))})
+         write_json(path,result)
         if arm==COPRO_FIXED_ARM and digest(fixed_state)!=m['banks']['copromem_sha256']:raise RuntimeError('CoProMem Fixed state mutated')
        if arm==COPRO_DYNAMIC_ARM:copro.append(result)
        # The durable public status is refreshed immediately after every

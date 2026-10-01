@@ -1,0 +1,38 @@
+{
+  "version": "copromem-v6.2.2-comprehensive-repair-audit-v1",
+  "classification": "ENGINEERING-PREFLIGHT-READY",
+  "paid_pilot_launched": false,
+  "historical_methods_rewritten": false,
+  "resolved_invariants": [
+    "occurrence_level_attested_dataflow_only",
+    "no_registry_or_slot_name_dataflow_inference",
+    "exact_occurrence_typed_constraints",
+    "explicit_terminal_occurrence_or_repetition_group",
+    "parameterized_consecutive_repetition",
+    "semantic_validation_gates_commit",
+    "immutable_scored_artifact_with_atomic_retrieval_binding",
+    "restart_reproduces_retrieval_before_skip",
+    "terminal_revalidates_all_retrieval_bindings",
+    "separate_semantic_and_runtime_record_identity_domains",
+    "native_windows_and_wsl_evidence_path_policy"
+  ],
+  "offline_bank_rebuild": {
+    "source_manifest_sha256": "422a45f8925b82dd83287bb10642a857fd3753b77570ccadb069f4ed310ad607",
+    "source_pool_sha256": "39878442ef832fa75c526f3c1af3be2c4cc052496ba0311bcfdba5b4623b618b",
+    "registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423",
+    "state_sha256": "5d98798f203150dea4011cc6134ac96469cbd1389141757bf2792e6d02db96ce",
+    "report_sha256": "40aa13c3c60f8078a792332f8a817185ff06b815d30a6e586537b234ee32c842",
+    "committed_schema_count": 5,
+    "committed_family_count": 3,
+    "provider_calls": 0
+  },
+  "remaining_gates": [
+    "publish_executable_commit",
+    "clean_detached_runtime_validation",
+    "freeze_bank_and_new_manifest",
+    "zero_provider_production_shadow",
+    "small_engineering_integration",
+    "fresh_confirmatory_preregistration"
+  ],
+  "claim_boundary": "engineering integrity only; no efficacy or superiority claim"
+}

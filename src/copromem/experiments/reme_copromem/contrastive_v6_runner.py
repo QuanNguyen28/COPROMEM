@@ -7,6 +7,10 @@ from ...benchmarks.appworld.execution_evidence import journal_records, partition
 from ...contrastive_graph_v6 import build_graph, commit, digest, plan_task_batch, reproduce_retrieval, retrieve, validate_plan
 from ...semantic_graph_v61 import (POLICY_VERSION as SEMANTIC_POLICY_VERSION, build_semantic_graph,
                                    semantic_plan, validate_semantic_plan)
+from ...semantic_spine_v622 import (POLICY_VERSION as SEMANTIC_SPINE_POLICY_VERSION,
+                                    commit as commit_semantic_spine,
+                                    plan as plan_semantic_spine,
+                                    validate as validate_semantic_spine)
 from .evidence_contract import SCORER, validate as validate_execution_evidence
 
 STATE_FORMAT = "copromem-v6-contrastive-state-v1"
@@ -134,6 +138,51 @@ def semantic_task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: 
            "marker":marker,"post_state_sha256":digest(post)}
     if marker["state"] == "rejected" and post != dict(pre_state):
         raise ValueError("semantic rejection mutated state")
+    return post, marker, audit
+
+
+def semantic_spine_task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: Mapping[str, Any],
+                                     pre_state: Mapping[str, Any], evidence_paths: list[str | Path],
+                                     run_root: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """v6.2.2 update whose commit is gated by occurrence-level semantics."""
+    if len(artifacts) != len(evidence_paths) or len(artifacts) < 2:
+        raise ValueError("complete same-task semantic-spine batch required")
+    compatibility = semantic_state_compatibility(pre_state)
+    if compatibility is None:
+        raise ValueError("raw v6 state cannot enter a semantic-spine bank")
+    semantic_graphs: list[tuple[Any, bool]] = []
+    audits: list[dict[str, Any]] = []
+    for artifact, evidence_path in zip(artifacts, evidence_paths):
+        scorer_evidence_sha256(artifact)
+        validate_execution_evidence(artifact, run_root=run_root,
+                                    expected_registry_sha256=str(registry["registry_sha256"]))
+        partition, ingestion = partition_v6_graph_evidence(
+            journal_records(evidence_path), str(registry["registry_sha256"]),
+            runtime_context_fields=runtime_context_fields(registry))
+        graph, projection = build_semantic_graph(partition, registry)
+        semantic_graphs.append((graph, float(artifact["after_score"]) == 1.0))
+        audits.append({"artifact_trajectory_id": artifact.get("trajectory_id"),
+                       "original_graph_sha256": projection["original_graph_sha256"],
+                       "semantic_projection_sha256": projection["semantic_projection_sha256"],
+                       "projection": projection, "ingestion": ingestion})
+    success = [graph for graph, good in semantic_graphs if good]
+    failed = [graph for graph, good in semantic_graphs if not good]
+    plan_record = plan_semantic_spine(success, failed, pre_state,
+                                     [item["projection"] for item in audits])
+    validation = validate_semantic_spine(plan_record, registry)
+    post, marker = commit_semantic_spine(pre_state, plan_record, validation)
+    if marker["state"] == "committed":
+        post = {**post, "state_format": SEMANTIC_STATE_FORMAT}
+        marker = {**marker, "post_state_sha256": digest(post)}
+    if marker["state"] == "rejected" and post != dict(pre_state):
+        raise ValueError("semantic-spine rejection mutated state")
+    audit = {"state_format": SEMANTIC_STATE_FORMAT,
+             "semantic_policy_version": SEMANTIC_SPINE_POLICY_VERSION,
+             "pre_state_format": pre_state.get("state_format"),
+             "pre_state_compatibility": compatibility,
+             "pre_state_sha256": digest(pre_state), "semantic_graph_audits": audits,
+             "plan": plan_record, "validation": validation, "marker": marker,
+             "post_state_sha256": digest(post)}
     return post, marker, audit
 
 def retrieval_record(*, state: Mapping[str, Any], query_operations: list[str], registry_sha256: str,

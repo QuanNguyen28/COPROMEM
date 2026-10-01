@@ -266,6 +266,8 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
     if phase not in {"acquisition", "evaluation"}:
         raise ValueError("unregistered trajectory phase")
     runtime_identity_sha256: str | None = None
+    runtime_identity_semantic_sha256: str | None = None
+    runtime_identity_record_sha256: str | None = None
     if execution_evidence is not None and "runtime_identity_sha256" in execution_evidence:
         candidate = execution_evidence.get("runtime_identity_sha256")
         if not isinstance(candidate, str) or not re.fullmatch(r"[0-9a-f]{64}", candidate):
@@ -274,6 +276,21 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
         if not identity_path.is_file() or hashlib.sha256(identity_path.read_bytes()).hexdigest() != candidate:
             raise RuntimeError("execution evidence runtime identity is absent or differs from its frozen record")
         runtime_identity_sha256 = candidate
+    if execution_evidence is not None and "runtime_identity_record_sha256" in execution_evidence:
+        record_candidate = execution_evidence.get("runtime_identity_record_sha256")
+        semantic_candidate = execution_evidence.get("runtime_identity_semantic_sha256")
+        identity_path = run / "runtime-identity.json"
+        if (not isinstance(record_candidate, str) or not re.fullmatch(r"[0-9a-f]{64}", record_candidate)
+                or not isinstance(semantic_candidate, str) or not re.fullmatch(r"[0-9a-f]{64}", semantic_candidate)
+                or not identity_path.is_file()
+                or hashlib.sha256(identity_path.read_bytes()).hexdigest() != record_candidate):
+            raise RuntimeError("explicit runtime identity binding is malformed or drifted")
+        identity_record = json.loads(identity_path.read_text(encoding="utf-8"))
+        if identity_record.get("runtime_identity_sha256") != semantic_candidate:
+            raise RuntimeError("runtime semantic identity differs from its frozen record")
+        runtime_identity_record_sha256 = record_candidate
+        runtime_identity_semantic_sha256 = semantic_candidate
+        runtime_identity_sha256 = record_candidate
     key = f"{phase}:{arm}:{task_id}:trial={trial_id}:seed={seed}"
     journal = safe_journal_path(run / "journals", key)
     token = CALL_ROLE.set(f"executor:{arm}:{task_id}:trial={trial_id}:seed={seed}")
@@ -365,6 +382,9 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                        "execution_evidence_path": str(journal.with_suffix(".execution-evidence.jsonl")) if execution_evidence else None}
             if runtime_identity_sha256 is not None:
                 result["runtime_identity_sha256"] = runtime_identity_sha256
+            if runtime_identity_record_sha256 is not None:
+                result["runtime_identity_record_sha256"] = runtime_identity_record_sha256
+                result["runtime_identity_semantic_sha256"] = runtime_identity_semantic_sha256
             if memory_for_instruction is not None:
                 result.update({"copromem_callback_guidance_sha256": digest(injected),
                                "copromem_callback_guidance_nonempty": bool(injected),
@@ -393,6 +413,8 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                         source_commit=source_commit, task_id=task_id, arm=arm, trial_id=trial_id,
                         seed=seed, history_sha256=result["history_sha256"],
                         runtime_identity_sha256=runtime_identity_sha256,
+                        runtime_identity_record_sha256=runtime_identity_record_sha256,
+                        runtime_identity_semantic_sha256=runtime_identity_semantic_sha256,
                     ))
                 else:
                     result.update(bind_execution_evidence(journal=evidence_path, run_root=run,

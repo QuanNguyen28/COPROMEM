@@ -23,6 +23,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "src")]
 os.environ.setdefault("COPROMEM_EVALUATION_RUNNER", str(pathlib.Path(__file__).resolve()))
 
 from copromem.experiments.reme_copromem.runner import write_json
+from copromem.experiments.reme_copromem.contrastive_v6_runner import semantic_spine_task_batch_update
 from copromem.experiments.reme_copromem.runtime_identity_v3 import IDENTITY_VERSION as RUNTIME_IDENTITY_V3, build_evaluation_identity_v3
 from copromem.experiments.reme_copromem.task_conditioned_retrieval_v622 import (
     POLICY_VERSION, derive_task_query, frozen_policy, reproduce_retrieval, retrieve,
@@ -39,6 +40,23 @@ CALL_LIMITS = {"executor": 900, "reme_lifecycle": 128, "reme_embedding": 512,
                "copromem_decomposition": 0}
 HARD_CAP_USD = 300
 ALLOCATION_NAME = "allocation-audit-v622.json"
+V622_BANK_ROOT: pathlib.Path | None = None
+
+
+def _bank_identities() -> tuple[dict[str, Any], dict[str, Any]]:
+    if V622_BANK_ROOT is None:
+        raise RuntimeError("v6.2.2 bank root is not configured")
+    report, _legacy_gate = base.identities_original()
+    gate_path = V622_BANK_ROOT / "semantic-admission-gate.json"
+    bank_path = V622_BANK_ROOT / "fixed-bank.json"
+    if not gate_path.is_file() or not bank_path.is_file():
+        raise RuntimeError("v6.2.2 admitted bank artifacts are absent")
+    gate = json.loads(gate_path.read_text(encoding="utf-8"))
+    bank = json.loads(bank_path.read_text(encoding="utf-8"))
+    if (gate.get("version") != "copromem-v6.2.2-bank-admission-v1" or gate.get("passed") is not True
+            or gate.get("provider_calls") != 0 or gate.get("state_sha256") != base.digest(bank)):
+        raise RuntimeError("v6.2.2 bank admission identity is invalid")
+    return report, gate
 
 
 def _retrieval_record(*, state: Mapping[str, Any], query_operations: list[str], registry_sha256: str,
@@ -71,6 +89,18 @@ def _configure(run: pathlib.Path) -> None:
         raise RuntimeError("v6.2.2 allocation must preregister two compatible tasks and one negative control")
     if audit.get("retrieval_policy_version") != POLICY_VERSION:
         raise RuntimeError("v6.2.2 allocation does not bind the semantic-spine policy")
+    bank_record = audit.get("copromem_bank")
+    if not isinstance(bank_record, Mapping):
+        raise RuntimeError("v6.2.2 allocation lacks an admitted bank record")
+    bank_root = pathlib.Path(str(bank_record.get("path") or ""))
+    if not bank_root.is_absolute():
+        raise RuntimeError("v6.2.2 bank path must be absolute")
+    for name, field in (("fixed-bank.json", "fixed_bank_file_sha256"),
+                        ("semantic-admission-gate.json", "admission_gate_file_sha256"),
+                        ("recovery-report.json", "recovery_report_file_sha256")):
+        path = bank_root / name
+        if not path.is_file() or base.file_sha(path) != bank_record.get(field):
+            raise RuntimeError(f"v6.2.2 bank artifact identity mismatch: {name}")
     try:
         historical_exposure = float(audit["historical_settled_exposure_usd"])
     except (KeyError, TypeError, ValueError) as exc:
@@ -88,11 +118,19 @@ def _configure(run: pathlib.Path) -> None:
     base.COPRO_DYNAMIC_ARM = "copromem_v6_2_2_dynamic"
     base.TASK_MAJOR_ARM_FIRST = True
     base.PREEXISTING_RUN_FILES = {ALLOCATION_NAME, "engineering-protocol.json"}
+    global V622_BANK_ROOT
+    V622_BANK_ROOT = bank_root
+    base.COPRO = bank_root
+    if not hasattr(base, "identities_original"):
+        base.identities_original = base.identities
+    base.identities = _bank_identities
     # These assignments are intentionally localized to this versioned entry
     # point.  Historical v6/v6.2 runners retain their frozen retrieval method.
     base.derive_task_query = derive_task_query
     base.validate_task_query = validate_task_query
     base.retrieval_record = _retrieval_record
+    base.reproduce_retrieval = reproduce_retrieval
+    base.semantic_task_batch_update = semantic_spine_task_batch_update
 
 
 def prepare(run: pathlib.Path) -> None:

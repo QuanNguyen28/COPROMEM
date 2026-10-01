@@ -155,9 +155,9 @@ def test_global_frozen_runtime_context_is_not_an_undeclared_public_argument(tmp_
 
 
 def test_explicit_path_boundary_converts_windows_path_and_preflights_parent(tmp_path, monkeypatch):
-    assert normalize_evidence_path(r"E:\Project\AAMAS\evidence\events.jsonl") == Path(
-        "/mnt/e/Project/AAMAS/evidence/events.jsonl"
-    )
+    expected = (Path("/mnt/e/Project/AAMAS/evidence/events.jsonl") if os.name == "posix"
+                else Path(r"E:\Project\AAMAS\evidence\events.jsonl").resolve())
+    assert normalize_evidence_path(r"E:\Project\AAMAS\evidence\events.jsonl") == expected
     with pytest.raises(JournalPathError, match="path_not_absolute"):
         normalize_evidence_path("relative/events.jsonl")
     journal_path = tmp_path / "absent" / "nested" / "events.jsonl"

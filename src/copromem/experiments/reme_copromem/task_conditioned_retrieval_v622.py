@@ -12,6 +12,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from . import task_conditioned_retrieval_v621 as v621
+from ...semantic_spine_v622 import POLICY_VERSION as LEARNING_POLICY_VERSION
 
 
 POLICY_VERSION = "copromem-v6.2.2-semantic-spine-retrieval"
@@ -29,11 +30,11 @@ def frozen_policy() -> dict[str, Any]:
         "base_common_core_policy": "copromem-v6.1-semantic-graph-v1",
         "selection": "unique_semantic_evidence_winner_or_empty_guidance",
         "tie_evidence": "distinct_nonterminal_operations_supported_by_public_task_query_not_success_count_or_schema_id",
-        "semantic_projection": "terminal_backward_prerequisites_and_forward_verification_on_public_dependency_closure",
+        "semantic_projection": "terminal_closure_over_committed_occurrence_level_value_equality_witnesses_only",
         "external_input_guard": "queried_operation_and_all_non_generic_slot_concepts_supported_or_prior_attested_output",
-        "cross_app_guard": "no_inferred_cross_app_dataflow_and_publicly_named_declared_dependency_only",
-        "occurrences": "positioned_required_operations_preserved_to_model_visible_guidance",
-        "deduplication": "dependency_edges_only_not_semantic_occurrences",
+        "cross_app_guard": "no_slot_name_or_registry_dependency_may_substitute_for_attested_value_equality",
+        "occurrences": "all_positioned_occurrences_preserved_in_provenance_consecutive_identical_runs_parameterized_in_guidance",
+        "deduplication": "no_semantic_occurrence_loss",
         "query_evidence": ["visible_instruction", "public_app_descriptions", "frozen_callable_registry"],
         "exclusions": ["hidden_state", "scorer", "current_or_future_actions", "task_specific_rules"],
         "fixed": "read_only",
@@ -46,9 +47,9 @@ def frozen_policy() -> dict[str, Any]:
 def _typed_occurrences(schema: Mapping[str, Any], required: tuple[str, ...]) -> list[dict[str, Any]]:
     """Attach a public constraint to every required *occurrence*.
 
-    Older semantic schemas carry one constraint per operation.  That remains
-    readable, but each reused occurrence receives a distinct occurrence ID;
-    newer records may provide ``occurrence_index`` to distinguish content.
+    Legacy schemas remain readable only where their constraints are
+    unambiguous. A constraint may cover repeated occurrences solely when it
+    explicitly declares ``reusable_for_occurrences=true``.
     """
     raw = schema.get("typed_constraints", ())
     if not isinstance(raw, Sequence):
@@ -68,6 +69,14 @@ def _typed_occurrences(schema: Mapping[str, Any], required: tuple[str, ...]) -> 
             raise ValueError("schema typed occurrence index is malformed")
     if by_position and set(by_position) != set(range(1, len(required) + 1)):
         raise ValueError("schema positional constraints do not cover every required occurrence")
+    required_counts = {operation: required.count(operation) for operation in set(required)}
+    if set(by_operation) - set(required_counts):
+        raise ValueError("schema has typed constraints for a non-required operation")
+    if not by_position:
+        for operation, count in required_counts.items():
+            choices = by_operation.get(operation, [])
+            if len(choices) != count and not (len(choices) == 1 and choices[0].get("reusable_for_occurrences") is True):
+                raise ValueError("typed constraints must cover occurrences exactly")
     seen: dict[str, int] = {}
     rows: list[dict[str, Any]] = []
     for index, operation in enumerate(required, 1):
@@ -79,9 +88,13 @@ def _typed_occurrences(schema: Mapping[str, Any], required: tuple[str, ...]) -> 
             choices = by_operation.get(operation, [])
             if not choices:
                 raise ValueError("schema required operation lacks typed public constraint")
-            # A legacy one-operation constraint applies to each occurrence;
-            # a per-operation sequence maps deterministically by occurrence.
-            constraint = choices[min(seen[operation] - 1, len(choices) - 1)]
+            occurrence = seen[operation] - 1
+            if occurrence < len(choices):
+                constraint = choices[occurrence]
+            elif len(choices) == 1 and choices[0].get("reusable_for_occurrences") is True:
+                constraint = choices[0]
+            else:
+                raise ValueError("typed constraints do not cover every required occurrence")
         required_slots = tuple(str(item) for item in constraint.get("required", ()) if isinstance(item, str))
         outputs = tuple(str(item) for item in constraint.get("outputs", ()) if isinstance(item, str))
         rows.append({"position": index, "occurrence_id": f"{operation}#{seen[operation]}",
@@ -105,58 +118,77 @@ def semantic_projection(schema: Mapping[str, Any], registry: Mapping[str, Any]) 
     if not required or terminal not in required or any(item not in index for item in required):
         raise ValueError("schema lacks a declared terminal required operation")
     occurrences = _typed_occurrences(schema, required)
-    terminal_position = max(row["position"] for row in occurrences if row["operation"] == terminal)
-    declared_edges = {(str(edge.get("from_operation")), str(edge.get("to_operation")))
-                      for edge in registry.get("dependency_edges", ()) if isinstance(edge, Mapping)}
-    retained = {terminal_position}
-    retained_edges: set[tuple[int, int, str]] = set()
+    by_id = {row["occurrence_id"]: row for row in occurrences}
+    terminal_id = schema.get("terminal_occurrence_id")
+    terminal_ids = schema.get("terminal_occurrence_ids")
+    if isinstance(terminal_ids, Sequence) and not isinstance(terminal_ids, (str, bytes)) and terminal_ids:
+        if any(item not in by_id or by_id[str(item)]["operation"] != terminal for item in terminal_ids):
+            raise ValueError("terminal occurrence group is invalid")
+        terminal_positions = {int(by_id[str(item)]["position"]) for item in terminal_ids}
+    else:
+        terminal_positions = set()
+    if terminal_id is None:
+        legacy = [row for row in occurrences if row["operation"] == terminal]
+        if len(legacy) != 1:
+            raise ValueError("terminal occurrence is ambiguous")
+        terminal_id = legacy[0]["occurrence_id"]
+    if not terminal_positions and (terminal_id not in by_id or by_id[str(terminal_id)]["operation"] != terminal):
+        raise ValueError("terminal occurrence identity is invalid")
+    if not terminal_positions:
+        terminal_positions = {int(by_id[str(terminal_id)]["position"])}
+    attested: list[tuple[int, int, str, str]] = []
+    for edge in schema.get("attested_dataflow_edges", ()):
+        if not isinstance(edge, Mapping):
+            raise ValueError("attested dataflow edge is malformed")
+        source = by_id.get(str(edge.get("from_occurrence_id")))
+        target = by_id.get(str(edge.get("to_occurrence_id")))
+        producer_slot = str(edge.get("producer_slot") or "")
+        consumer_slot = str(edge.get("consumer_slot") or "")
+        if (source is None or target is None or source["position"] >= target["position"]
+                or producer_slot not in source["outputs"] or consumer_slot not in target["required_inputs"]
+                or edge.get("attestation") != "redacted_value_equality_in_every_success"):
+            raise ValueError("attested dataflow edge fails occurrence contract")
+        attested.append((int(source["position"]), int(target["position"]), producer_slot, consumer_slot))
+    retained = set(terminal_positions)
+    retained_edges: set[tuple[int, int, str, str]] = set()
     # Iterate until a fixed point: newly kept predecessors can themselves
     # require a response-attested producer.
     changed = True
     while changed:
         changed = False
         for target in sorted(tuple(retained), reverse=True):
-            target_row = occurrences[target - 1]
-            for source in reversed(occurrences[:target - 1]):
-                same_app = (v621._operation_tokens(source["operation"])[0] ==
-                            v621._operation_tokens(target_row["operation"])[0])
-                # A coincidentally named slot is not evidence that another
-                # application's response is a valid input for this task.
-                dataflow = same_app and bool(set(source["outputs"]) & set(target_row["required_inputs"]))
-                public_dependency = (source["operation"], target_row["operation"]) in declared_edges
-                if not (dataflow or public_dependency):
+            for source_position, target_position, producer_slot, consumer_slot in attested:
+                if target_position != target:
                     continue
-                retained_edges.add((source["position"], target, "dataflow" if dataflow else "public_dependency"))
-                if source["position"] not in retained:
-                    retained.add(source["position"]); changed = True
+                retained_edges.add((source_position, target, producer_slot, consumer_slot))
+                if source_position not in retained:
+                    retained.add(source_position); changed = True
     # A response-attested verification step can follow the terminal write.
     # Preserve only steps reachable *from* that terminal through public
     # dataflow or a declared dependency; plain chronology is insufficient.
-    forward = {terminal_position}
+    forward = set(terminal_positions)
     changed = True
     while changed:
         changed = False
         for source_position in sorted(tuple(forward)):
-            source = occurrences[source_position - 1]
-            for target in occurrences[source_position:]:
-                same_app = (v621._operation_tokens(source["operation"])[0] ==
-                            v621._operation_tokens(target["operation"])[0])
-                dataflow = same_app and bool(set(source["outputs"]) & set(target["required_inputs"]))
-                public_dependency = (source["operation"], target["operation"]) in declared_edges
-                if not (dataflow or public_dependency):
+            for left, target_position, producer_slot, consumer_slot in attested:
+                if left != source_position:
                     continue
-                retained_edges.add((source_position, target["position"],
-                                    "dataflow" if dataflow else "public_dependency"))
-                if target["position"] not in forward:
-                    forward.add(target["position"]); retained.add(target["position"]); changed = True
+                retained_edges.add((source_position, target_position, producer_slot, consumer_slot))
+                if target_position not in forward:
+                    forward.add(target_position); retained.add(target_position); changed = True
     rows = [row for row in occurrences if row["position"] in retained]
     # Edges are dependencies, not duplicate semantic operations.  Deduplicate
     # only exact occurrence-edge triples and serialize by source/target order.
     edges = [{"from_occurrence_id": occurrences[left - 1]["occurrence_id"],
-              "to_occurrence_id": occurrences[right - 1]["occurrence_id"], "kind": kind}
-             for left, right, kind in sorted(retained_edges)]
+              "to_occurrence_id": occurrences[right - 1]["occurrence_id"],
+              "producer_slot": producer_slot, "consumer_slot": consumer_slot,
+              "kind": "attested_redacted_value_equality"}
+             for left, right, producer_slot, consumer_slot in sorted(retained_edges)]
     excluded = [row for row in occurrences if row["position"] not in retained]
-    projection = {"terminal_effect": terminal, "occurrences": rows, "dataflow_edges": edges,
+    projection = {"terminal_effect": terminal, "terminal_occurrence_id": terminal_id,
+                  "terminal_occurrence_ids": [occurrences[position - 1]["occurrence_id"] for position in sorted(terminal_positions)],
+                  "occurrences": rows, "dataflow_edges": edges,
                   "excluded_occurrences": [{"occurrence_id": row["occurrence_id"], "operation": row["operation"],
                                              "reason": "not_on_terminal_public_dependency_closure"} for row in excluded]}
     projection["semantic_projection_sha256"] = digest(projection)
@@ -200,7 +232,8 @@ def _features(schema_id: str, schema: Mapping[str, Any], query: Mapping[str, Any
     if named_apps and terminal_app not in named_apps:
         reasons.append("terminal_app_not_publicly_relevant")
     query_concepts = _query_concepts(query_ops)
-    produced: set[str] = set()
+    incoming = {(str(edge["to_occurrence_id"]), str(edge["consumer_slot"]))
+                for edge in projection.get("dataflow_edges", ())}
     unsupported_inputs: list[dict[str, str]] = []
     unsupported_apps: list[str] = []
     for row in projection.get("occurrences", []):
@@ -214,10 +247,10 @@ def _features(schema_id: str, schema: Mapping[str, Any], query: Mapping[str, Any
             # an unobserved prerequisite has usable task input.  External
             # slots require this very operation to be supported by the public
             # task query; otherwise only an earlier attested output suffices.
-            if slot not in produced and (operation not in query_ops or not concepts or
-                                         not concepts <= query_concepts):
+            supported_by_edge = (str(row["occurrence_id"]), slot) in incoming
+            if not supported_by_edge and (operation not in query_ops or not concepts or
+                                          not concepts <= query_concepts):
                 unsupported_inputs.append({"operation": operation, "input": slot})
-        produced.update(row["outputs"])
     if unsupported_apps:
         reasons.append("prerequisite_app_not_publicly_relevant")
     if unsupported_inputs:
@@ -250,23 +283,50 @@ def _features(schema_id: str, schema: Mapping[str, Any], query: Mapping[str, Any
 
 def _guidance(features: Mapping[str, Any]) -> str:
     projection = features["semantic_projection"]
-    lines = ["# Retrieved response-attested semantic schema", f"Terminal public effect: {features['terminal_effect']}"]
-    produced: set[str] = set()
-    for row in projection["occurrences"]:
+    lines = ["# Retrieved dispatcher-attested semantic schema", f"Terminal public effect: {features['terminal_effect']}"]
+    incoming = {(str(edge["to_occurrence_id"]), str(edge["consumer_slot"]))
+                for edge in projection.get("dataflow_edges", ())}
+    rows = list(projection["occurrences"])
+    cursor = 0
+    while cursor < len(rows):
+        row = rows[cursor]
+        end = cursor + 1
+        signature = (row["operation"], tuple(row["required_inputs"]), tuple(row["outputs"]))
+        while end < len(rows):
+            other = rows[end]
+            if (other["operation"], tuple(other["required_inputs"]), tuple(other["outputs"])) != signature:
+                break
+            end += 1
         required = ", ".join(row["required_inputs"]) or "no declared public input"
         outputs = ", ".join(row["outputs"]) or "no declared public output"
-        external = [slot for slot in row["required_inputs"] if slot not in produced]
+        external = [slot for slot in row["required_inputs"]
+                    if (str(row["occurrence_id"]), slot) not in incoming]
         caution = ("; verify current-task values for external inputs before use: " + ", ".join(external)
                    if external else "")
-        lines.append(f"{row['position']}. [{row['occurrence_id']}] {row['operation']}; public inputs: {required}; public outputs: {outputs}{caution}.")
-        produced.update(row["outputs"])
+        group = rows[cursor:end]
+        if len(group) == 1:
+            lines.append(f"{row['position']}. [{row['occurrence_id']}] {row['operation']}; public inputs: {required}; public outputs: {outputs}{caution}.")
+        else:
+            occurrence_inventory = digest([item["occurrence_id"] for item in group])
+            lines.append(f"{row['position']}-{group[-1]['position']}. Repeat {row['operation']} for each current-task item ({len(group)} attested occurrences; occurrence inventory {occurrence_inventory}); public inputs per item: {required}; public outputs per item: {outputs}{caution}.")
+        cursor = end
     return "\n".join(lines)
+
+
+def _schema_rows(state: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    raw = state.get("contrastive_v6_schemas", {})
+    if not isinstance(raw, Mapping):
+        raise ValueError("semantic bank schema container is malformed")
+    accepted = {"copromem-v6.1-semantic-graph-v1", LEARNING_POLICY_VERSION}
+    return {str(schema_id): schema for schema_id, schema in raw.items()
+            if isinstance(schema_id, str) and isinstance(schema, Mapping)
+            and schema.get("policy_version") in accepted}
 
 
 def retrieve(state: Mapping[str, Any], task_query: Mapping[str, Any], callable_registry: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
     if task_query.get("callable_registry_sha256") != callable_registry.get("registry_sha256"):
         raise ValueError("task query registry identity mismatch")
-    rows = v621._schema_rows(state)
+    rows = _schema_rows(state)
     # Sorting is serialization only; selection below never uses ID/order.
     candidates = [_features(schema_id, schema, task_query, callable_registry)
                   for schema_id, schema in sorted(rows.items())]

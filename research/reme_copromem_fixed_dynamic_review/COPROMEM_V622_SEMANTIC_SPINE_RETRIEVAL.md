@@ -1,13 +1,59 @@
-# CoProMem v6.2.2 semantic-spine retrieval
+# CoProMem v6.2.2 evidence-preserving semantic spine
 
-This is a versioned repair for three executor-facing v6.2.1 retrieval defects. The v6.2.1 implementation and its prior engineering evidence remain unchanged. The v6.2 common-core learning and winner policy are also unchanged.
+This is a separate method version. It does not rewrite v6.2.1 results.
 
-1. A schema is projected backward from its terminal effect. A preceding operation is retained only through same-app public dataflow or a declared registry dependency. A declared cross-app prerequisite also requires the app to be publicly relevant to the task. External input slots need a supported task-query operation and matching non-generic slot concepts, or a prior response-attested output. Otherwise retrieval abstains. Matching slot names across applications never establish dataflow. Guidance marks any external task value as requiring verification before use; semantic compatibility alone does not prove that a concrete value is available.
-2. Schema IDs and historical success counts cannot decide which of two compatible procedures fits the current task. Distinct nonterminal operations explicitly supported by the public task query are the only tie evidence. A remaining tie returns empty guidance with `semantic_tie_abstention` provenance.
-3. Each retained occurrence has a position and occurrence ID. The projection follows public dependencies both backward into the terminal effect and forward into response-attested verification steps after it. The guidance renderer emits every retained occurrence in order, including read → write → read when the write is the terminal effect. Positional typed constraints must cover the entire required sequence. Retrieval provenance records the exact projection and is reproduced offline before the versioned runner returns guidance.
+## Learning contract
 
-The separate `run_v622_semantic_spine_engineering.py` entrypoint requires a v6.2.2 allocation audit bound to this policy. No v6.2.1 runner or immutable engineering run is migrated automatically. These tests and this method repair do not establish efficacy or authorize a paid run.
+Every committed schema contains ordered occurrence identities, exactly covered
+typed constraints, one explicit terminal occurrence or one explicit consecutive
+terminal repetition group, and occurrence-level dataflow edges. A dataflow edge
+is admissible only when the same producer-output/consumer-input equality was
+recorded by the native dispatcher in every successful supporting trajectory.
+Registry dependency metadata and equal public slot names are compatibility
+metadata, never evidence that a concrete value flowed between calls.
 
-## Windows fixture note
+Semantic validation is the commit gate. A base-v6 validation success cannot
+commit a schema rejected by the occurrence/dataflow validator. Rejection is
+byte-identical to the pre-state and binds the exact semantic validation hash.
 
-`python -m pytest tests/reme_copromem/test_task_boundary_v6.py -ra` prints `4 passed` but exits with code 1 on this Windows host and emits no traceback. The cause is independent of pytest and v6.2.2: `python -c "import os; print(os.kill(os.getpid(), 0))"` prints `None` and exits with code 1. The old fixture's duplicate-lock case calls exactly that Windows-incompatible PID probe. This is a pre-existing platform fixture issue, not a v6.2.2 regression. The fixture was not changed or suppressed here.
+## Retrieval contract
+
+Retrieval starts from the explicit terminal occurrence set and traverses only
+committed attested edges. Input support is occurrence-specific: an input is
+supported by an incoming edge to that exact occurrence, or by the current
+public task query for that operation and slot concept. A global produced-slot
+set is prohibited. Registry edges cannot retain a prerequisite.
+
+Ambiguous semantic winners abstain. Historical success count, schema ID, bank
+order, and repeated-operation multiplicity cannot break a task-visible tie.
+Legacy schemas without occurrence witnesses may provide terminal-only guidance
+only when the terminal occurrence is unique and its inputs are independently
+supported by the current public query; they cannot reconstruct prerequisites.
+
+Every occurrence remains in provenance. Consecutive identical occurrences are
+rendered as one parameterized repetition instruction with count and a hashed
+occurrence inventory, preventing prompt inflation while preserving audit order.
+Nonconsecutive read -> write -> read occurrences are never collapsed.
+
+## Execution, restart, and terminal custody
+
+The scored artifact is immutable. A separate atomic sidecar binds its exact
+bytes to the task query, retrieval provenance, guidance, model-visible prompt,
+and the distinct semantic and runtime-record identity domains. Restart must
+recompute retrieval byte-for-byte from the frozen pre-state and validate that
+sidecar before accepting or skipping an artifact. Terminal reconciliation
+repeats the same checks for every CoProMem trajectory and binds the complete
+retrieval inventory into `run_reconciled`.
+
+Zero-action evidence receives both the semantic runtime identity and the hash
+of `runtime-identity.json`; neither may substitute for the other. Windows keeps
+native absolute evidence paths, while POSIX/WSL maps Windows drive paths to
+`/mnt/<drive>`.
+
+## Claim boundary
+
+Passing offline tests and an engineering integration run establishes method
+and custody integrity only. It does not establish efficacy, superiority, or
+submission readiness. A real confirmatory pilot still requires a newly frozen
+allocation, a clean detached executable checkout, zero-provider preflight, and
+successful terminal reconciliation.

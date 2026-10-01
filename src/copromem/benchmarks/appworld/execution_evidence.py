@@ -275,7 +275,7 @@ def load_registry(path: str | Path, expected_sha256: str) -> dict[str, Any]:
 def normalize_evidence_path(value: str | Path, *, require_e_backed: bool = True) -> Path:
     """Convert an explicit Windows E: path or WSL path to a stable absolute path."""
     text = str(value).strip()
-    if len(text) >= 3 and text[1:3] in {":\\", ":/"}:
+    if os.name == "posix" and len(text) >= 3 and text[1:3] in {":\\", ":/"}:
         drive = text[0].lower()
         text = f"/mnt/{drive}/" + text[3:].replace("\\", "/")
     path = Path(text)
@@ -285,8 +285,11 @@ def normalize_evidence_path(value: str | Path, *, require_e_backed: bool = True)
         resolved = path.resolve(strict=False)
     except OSError as exc:
         raise JournalPathError("resolve", path, exc) from exc
-    if require_e_backed and not str(resolved).startswith("/mnt/e/"):
-        raise JournalPathError("not_e_backed", resolved)
+    if require_e_backed:
+        e_backed = (str(resolved).startswith("/mnt/e/") if os.name == "posix"
+                    else str(getattr(resolved, "drive", "")).lower() == "e:")
+        if not e_backed:
+            raise JournalPathError("not_e_backed", resolved)
     return resolved
 
 

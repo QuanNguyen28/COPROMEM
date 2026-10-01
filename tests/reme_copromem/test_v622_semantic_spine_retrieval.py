@@ -7,7 +7,7 @@ from copromem.experiments.reme_copromem import task_conditioned_retrieval_v621 a
 from copromem.experiments.reme_copromem import task_conditioned_retrieval_v622 as v622
 from copromem.experiments.reme_copromem.runner import _copromem_prompt_memory_text, model_visible_memory_binding
 from copromem.contrastive_graph_v6 import Graph, commit, digest
-from copromem.semantic_graph_v61 import semantic_plan
+from copromem.semantic_spine_v622 import plan as semantic_spine_plan, validate as validate_semantic_spine, commit as commit_semantic_spine
 
 
 REGISTRY = {
@@ -31,14 +31,32 @@ QUERY = {
 
 
 def _schema(*, required, schema_id="schema", successes=2):
+    counts = {}
+    terminal_occurrence_id = None
+    for operation in required:
+        counts[operation] = counts.get(operation, 0) + 1
+        if operation == "apis.music.follow_artist":
+            terminal_occurrence_id = f"{operation}#{counts[operation]}"
+    edges = []
+    if "apis.music.search_artist" in required and "apis.music.follow_artist" in required:
+        edges = [{"from_occurrence_id": "apis.music.search_artist#1",
+                  "to_occurrence_id": "apis.music.follow_artist#1",
+                  "producer_slot": "artist_id", "consumer_slot": "artist_id",
+                  "attestation": "redacted_value_equality_in_every_success"}]
+    templates = {
+        "apis.docs.browse": {"required": [], "outputs": ["documentation"]},
+        "apis.music.search_artist": {"required": [], "outputs": ["artist_id"]},
+        "apis.music.follow_artist": {"required": ["artist_id"], "outputs": ["followed"]},
+        "apis.venmo.create_transaction": {"required": [], "outputs": ["transaction_id"]},
+    }
+    typed = [{"operation": operation, "occurrence_index": position, **templates[operation]}
+             for position, operation in enumerate(required, 1)]
     return schema_id, {
         "policy_version": "copromem-v6.1-semantic-graph-v1", "registry_sha256": "public-registry",
         "required_operations": required, "terminal_effect": "apis.music.follow_artist",
-        "typed_constraints": [
-            {"operation": "apis.docs.browse", "required": [], "outputs": ["documentation"]},
-            {"operation": "apis.music.search_artist", "required": [], "outputs": ["artist_id"]},
-            {"operation": "apis.music.follow_artist", "required": ["artist_id"], "outputs": ["followed"]},
-        ], "support": {"successes": successes, "failures": 0, "failure_counts": {}},
+        "typed_constraints": typed, "terminal_occurrence_id": terminal_occurrence_id,
+        "attested_dataflow_edges": edges,
+        "support": {"successes": successes, "failures": 0, "failure_counts": {}},
     }
 
 
@@ -64,6 +82,14 @@ def test_v622_preserves_identical_occurrences_and_order_to_model_visible_prompt(
         {"operation": "apis.music.search_artist", "occurrence_index": 1, "required": [], "outputs": ["artist_id_1"]},
         {"operation": "apis.music.search_artist", "occurrence_index": 2, "required": [], "outputs": ["artist_id_2"]},
         {"operation": "apis.music.follow_artist", "occurrence_index": 3, "required": ["artist_id_1", "artist_id_2"], "outputs": ["followed"]},
+    ]
+    schema["attested_dataflow_edges"] = [
+        {"from_occurrence_id": "apis.music.search_artist#1", "to_occurrence_id": "apis.music.follow_artist#1",
+         "producer_slot": "artist_id_1", "consumer_slot": "artist_id_1",
+         "attestation": "redacted_value_equality_in_every_success"},
+        {"from_occurrence_id": "apis.music.search_artist#2", "to_occurrence_id": "apis.music.follow_artist#1",
+         "producer_slot": "artist_id_2", "consumer_slot": "artist_id_2",
+         "attestation": "redacted_value_equality_in_every_success"},
     ]
     guidance, provenance = v622.retrieve(_state(("repeated", schema)), QUERY, REGISTRY)
     assert "[apis.music.search_artist#1]" in guidance
@@ -108,6 +134,11 @@ def test_repeated_query_matched_operation_does_not_win_by_multiplicity():
     one_id, one = _schema(required=["apis.music.search_artist", "apis.music.follow_artist"], schema_id="one")
     two_id, two = _schema(required=["apis.music.search_artist", "apis.music.search_artist",
                                       "apis.music.follow_artist"], schema_id="two")
+    two["typed_constraints"] = [
+        {"operation": "apis.music.search_artist", "occurrence_index": 1, "required": [], "outputs": ["artist_id"]},
+        {"operation": "apis.music.search_artist", "occurrence_index": 2, "required": [], "outputs": ["artist_id"]},
+        {"operation": "apis.music.follow_artist", "occurrence_index": 3, "required": ["artist_id"], "outputs": ["followed"]},
+    ]
     query = {**QUERY, "canonical_query_operations": ["apis.music.search_artist", "apis.music.follow_artist"]}
     guidance, provenance = v622.retrieve(_state((one_id, one), (two_id, two)), query, REGISTRY)
     assert guidance == "" and provenance["selection_decision"] == "semantic_tie_abstention"
@@ -185,8 +216,8 @@ def test_v622_declared_cross_app_prerequisite_without_task_app_support_abstains(
         {"operation": "apis.music.follow_artist", "required": ["artist_id"], "outputs": ["followed"]},
     ]
     guidance, provenance = v622.retrieve(_state(("mixed", schema)), QUERY, registry)
-    assert guidance == ""
-    assert "prerequisite_app_not_publicly_relevant" in provenance["candidate_scores"][0]["rejection_reasons"]
+    assert guidance and "apis.venmo.create_transaction" not in guidance
+    assert provenance["candidate_scores"][0]["semantic_projection"]["dataflow_edges"] == []
 
 
 def test_v622_abstains_when_required_public_input_lacks_task_or_dataflow_support():
@@ -215,10 +246,19 @@ def test_v622_noun_match_does_not_prove_input_for_unqueried_prerequisite():
 def test_v622_preserves_read_write_read_semantic_order():
     _, schema = _schema(required=["apis.music.search_artist", "apis.music.follow_artist", "apis.music.search_artist"])
     schema["terminal_effect"] = "apis.music.search_artist"
+    schema["terminal_occurrence_id"] = "apis.music.search_artist#2"
     schema["typed_constraints"] = [
         {"operation": "apis.music.search_artist", "occurrence_index": 1, "required": [], "outputs": ["artist_id"]},
         {"operation": "apis.music.follow_artist", "occurrence_index": 2, "required": ["artist_id"], "outputs": ["followed"]},
         {"operation": "apis.music.search_artist", "occurrence_index": 3, "required": ["followed"], "outputs": ["artist_id"]},
+    ]
+    schema["attested_dataflow_edges"] = [
+        {"from_occurrence_id": "apis.music.search_artist#1", "to_occurrence_id": "apis.music.follow_artist#1",
+         "producer_slot": "artist_id", "consumer_slot": "artist_id",
+         "attestation": "redacted_value_equality_in_every_success"},
+        {"from_occurrence_id": "apis.music.follow_artist#1", "to_occurrence_id": "apis.music.search_artist#2",
+         "producer_slot": "followed", "consumer_slot": "followed",
+         "attestation": "redacted_value_equality_in_every_success"},
     ]
     query = {**QUERY, "canonical_query_operations": ["apis.music.search_artist"]}
     guidance, provenance = v622.retrieve(_state(("loop", schema)), query, REGISTRY)
@@ -239,12 +279,17 @@ def test_learned_read_write_read_keeps_post_write_read_in_executor_guidance():
                   for position, (operation, requirements, outputs) in enumerate(zip(
                       operations, [[], ["artist_id"], ["followed"]],
                       [["artist_id"], ["followed"], ["artist_snapshot"]])))
-    graph = Graph("public-registry", nodes, (), digest({"nodes": nodes}))
+    edges = ({"kind": "redacted_dataflow", "from": 0, "to": 1,
+              "producer_slot": "artist_id", "consumer_slot": "artist_id"},
+             {"kind": "redacted_dataflow", "from": 1, "to": 2,
+              "producer_slot": "followed", "consumer_slot": "followed"})
+    graph = Graph("public-registry", nodes, edges, digest({"nodes": nodes, "edges": edges}))
     audit = {"semantic_projection_sha256": "projected", "provenance_sha256": "attested"}
-    plan = semantic_plan([graph, graph], [], {}, [audit, audit])
+    plan = semantic_spine_plan([graph, graph], [], {}, [audit, audit])
     assert plan["schema"]["required_operations"] == operations
     assert plan["schema"]["terminal_effect"] == "apis.music.follow_artist"
-    state, completion = commit({}, plan)
+    validation = validate_semantic_spine(plan, REGISTRY)
+    state, completion = commit_semantic_spine({}, plan, validation)
     assert completion["state"] == "committed"
     guidance, provenance = v622.retrieve(state, QUERY, REGISTRY)
     assert guidance and provenance["selected_schema_id"]
@@ -255,10 +300,36 @@ def test_learned_read_write_read_keeps_post_write_read_in_executor_guidance():
 
 def test_v622_rejects_misaligned_positional_constraint():
     _, schema = _schema(required=["apis.music.search_artist", "apis.music.follow_artist"])
-    schema["typed_constraints"][2]["occurrence_index"] = 1
+    schema["typed_constraints"][1]["occurrence_index"] = 1
     guidance, provenance = v622.retrieve(_state(("bad", schema)), QUERY, REGISTRY)
     assert guidance == "" and provenance["selected_schema_id"] is None
     assert any("semantic_projection_invalid" in reason for reason in provenance["candidate_scores"][0]["rejection_reasons"])
+
+
+def test_v622_rejects_extra_and_implicitly_reused_typed_constraints():
+    _, extra = _schema(required=["apis.music.follow_artist"])
+    extra["typed_constraints"].append({"operation": "apis.music.search_artist", "required": [], "outputs": []})
+    guidance, provenance = v622.retrieve(_state(("extra", extra)), QUERY, REGISTRY)
+    assert guidance == ""
+    assert "non-required" in provenance["candidate_scores"][0]["rejection_reasons"][0]
+    _, reused = _schema(required=["apis.music.search_artist", "apis.music.search_artist",
+                                  "apis.music.follow_artist"])
+    reused["typed_constraints"] = [
+        {"operation": "apis.music.search_artist", "required": [], "outputs": ["artist_id"]},
+        {"operation": "apis.music.follow_artist", "required": ["artist_id"], "outputs": ["followed"]},
+    ]
+    guidance, provenance = v622.retrieve(_state(("reused", reused)), QUERY, REGISTRY)
+    assert guidance == ""
+    assert "cover occurrences exactly" in provenance["candidate_scores"][0]["rejection_reasons"][0]
+
+
+def test_legacy_repeated_terminal_without_explicit_group_abstains():
+    _, schema = _schema(required=["apis.music.follow_artist", "apis.music.follow_artist"])
+    schema.pop("terminal_occurrence_id", None)
+    schema.pop("attested_dataflow_edges", None)
+    guidance, provenance = v622.retrieve(_state(("ambiguous", schema)), QUERY, REGISTRY)
+    assert guidance == ""
+    assert "terminal occurrence is ambiguous" in provenance["candidate_scores"][0]["rejection_reasons"][0]
 
 
 def test_v622_empty_and_duplicate_dependency_closure_is_deterministic():
@@ -267,3 +338,27 @@ def test_v622_empty_and_duplicate_dependency_closure_is_deterministic():
     first, one = v622.retrieve(_state(("one", copy.deepcopy(schema))), QUERY, REGISTRY)
     second, two = v622.retrieve(_state(("one", copy.deepcopy(schema))), QUERY, REGISTRY)
     assert first == second and one == two
+
+
+def test_attested_terminal_loop_is_parameterized_without_losing_occurrences():
+    nodes = ({"operation": "apis.music.search_artist", "effect_class": "read", "public_required": [],
+              "output_slots": ["artist_id"], "index": 0},) + tuple(
+        {"operation": "apis.music.follow_artist", "effect_class": "write", "public_required": ["artist_id"],
+         "output_slots": ["followed"], "index": index} for index in range(1, 20))
+    edges = tuple({"kind": "redacted_dataflow", "from": 0, "to": index,
+                   "producer_slot": "artist_id", "consumer_slot": "artist_id"}
+                  for index in range(1, 20))
+    graph = Graph("public-registry", nodes, edges, digest({"nodes": nodes, "edges": edges}))
+    audit = {"semantic_projection_sha256": "projected", "provenance_sha256": "attested"}
+    plan = semantic_spine_plan([graph, graph], [], {}, [audit, audit])
+    validation = validate_semantic_spine(plan, REGISTRY)
+    assert validation["passed"] is True
+    assert len(plan["schema"]["terminal_occurrence_ids"]) == 19
+    state, marker = commit_semantic_spine({}, plan, validation)
+    assert marker["state"] == "committed"
+    guidance, provenance = v622.retrieve(state, QUERY, REGISTRY)
+    assert guidance.count("apis.music.follow_artist") == 2
+    assert "19 attested occurrences" in guidance
+    projection = provenance["candidate_scores"][0]["semantic_projection"]
+    assert len(projection["terminal_occurrence_ids"]) == 19
+    assert len(projection["occurrences"]) == 20
