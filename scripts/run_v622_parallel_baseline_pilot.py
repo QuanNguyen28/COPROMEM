@@ -29,10 +29,11 @@ from copromem.integrations.reasoning_bank.shared_embedding import (
     SharedAzureOpenRouterEmbedder,
 )
 from copromem.integrations.reme.transport import verify_locked_chat_route_available
+from copromem.integrations.reme.transport import PROVIDER as CHAT_PROVIDER
 
 
-PROTOCOL = "v6_2_2_parallel_baseline_pilot_001"
-RUN_NAME = "v6_2_2_parallel_baseline_pilot_001"
+PROTOCOL = "v6_2_2_parallel_baseline_pilot_002_deepinfra"
+RUN_NAME = "v6_2_2_parallel_baseline_pilot_002_deepinfra"
 REASONINGBANK_ARM = "reasoningbank_dynamic"  # persisted compatibility ID; report label is ReasoningBank
 ARMS = ["no_memory", "official_upstream_reme_fixed", "official_upstream_reme_dynamic",
         REASONINGBANK_ARM, "copromem_v6_2_2_fixed", "copromem_v6_2_2_dynamic"]
@@ -177,10 +178,14 @@ def prepare(run: Path) -> None:
     template_path = run / "template.json"; template = json.loads(template_path.read_text(encoding="utf-8"))
     rb = _rb_manifest_record(run)
     template["protocol"] = PROTOCOL; template["arms"] = list(ARMS)
+    template["execution"]["provider_only"] = CHAT_PROVIDER
     template["evaluation"]["expected_trajectories"] = len(template["evaluation"]["task_ids"]) * len(template["evaluation"]["seeds"]) * len(ARMS)
     template["banks"]["reasoningbank_sha256"] = rb["semantic_state_sha256"]
     template["method"]["reasoningbank"] = "official top-1/no-abstention retrieval from a frozen engineering-validated bank"
     template["method"]["comparison_design"] = "shared executor/scorer/model/task/seed; exposed integration diagnostic"
+    template["method"]["provider_amendment"] = (
+        "all chat arms pin DeepInfra with fallback disabled after the direct DeepSeek endpoint became unavailable"
+    )
     template["method_policy"]["reasoningbank"] = dict(rb)
     # Register the six fixed-bank query embeddings. The conservative base bound
     # is retained and augmented rather than recomputed with a weaker formula.

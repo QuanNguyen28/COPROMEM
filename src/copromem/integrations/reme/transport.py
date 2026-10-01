@@ -25,7 +25,11 @@ except ImportError:  # Allow Windows-side static imports and fixture tests.
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "deepseek/deepseek-v4.1-flash"
-PROVIDER = "deepseek"
+# The direct DeepSeek endpoint became unavailable during the exposed pilot on
+# 2026-10-02.  This separately versioned successor pins DeepInfra for every
+# chat call while retaining the exact same OpenRouter model ID.  Fallbacks
+# remain disabled, so all experimental arms share one explicit serving route.
+PROVIDER = "deepinfra"
 ENDPOINTS_URL = f"https://openrouter.ai/api/v1/models/{MODEL}/endpoints"
 # These limits are frozen in the corrected fixed/dynamic manifest.  They must
 # be expressed in tokens, never in UTF-8 bytes divided by an assumed average.
