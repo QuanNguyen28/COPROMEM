@@ -312,7 +312,21 @@ class LockedChatCompletions:
                 headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json",
                          "X-OpenRouter-Metadata": "enabled"})
             with urllib.request.urlopen(request, timeout=90) as response:
-                data = json.loads(response.read().decode("utf-8"))
+                raw_response = response.read()
+                response_status = int(getattr(response, "status", 0) or 0)
+                response_content_type = str(response.headers.get("content-type") or "").split(";", 1)[0].lower()
+                response_request_id = str(response.headers.get("x-request-id") or
+                                          response.headers.get("x-openrouter-request-id") or "")[:128] or None
+                try:
+                    data = json.loads(raw_response.decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    self._progress({"event": "call_response_invalid", "id": call_id, "role": self.role,
+                                    "http_status": response_status,
+                                    "content_type": response_content_type or None,
+                                    "request_id": response_request_id,
+                                    "response_length": len(raw_response),
+                                    "response_sha256": hashlib.sha256(raw_response).hexdigest()})
+                    raise DispatchFailure("OpenRouter returned a non-JSON response") from None
         except Exception as exc:
             self._progress({"event": "call_failed", "id": call_id, "role": self.role,
                             "error_type": type(exc).__name__})

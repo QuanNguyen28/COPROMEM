@@ -7,7 +7,7 @@ from copromem.integrations.reme import transport
 
 class _Response:
     status = 200
-    headers = {}
+    headers = {"content-type": "application/json", "x-request-id": "request-test"}
 
     def __init__(self, payload):
         self.payload = payload
@@ -109,3 +109,24 @@ def test_ambiguous_selected_endpoints_fail_closed(monkeypatch, tmp_path):
     rejected = json.loads((tmp_path / "progress.jsonl").read_text().splitlines()[-1])
     assert rejected["rejection_reasons"] == ["provider"]
     assert rejected["provider_evidence"] == "absent"
+
+
+def test_non_json_response_records_only_sanitized_transport_evidence(monkeypatch, tmp_path):
+    response = _Response({})
+    response.payload = None
+    response.read = lambda: b"not-json-and-never-persisted"
+    response.headers = {"content-type": "text/html; charset=utf-8", "x-request-id": "safe-id"}
+    monkeypatch.setattr(transport, "count_chat_tokens", lambda *_: 10)
+    monkeypatch.setattr(transport.urllib.request, "urlopen", lambda *_args, **_kwargs: response)
+    client, _ = _client(tmp_path)
+
+    with pytest.raises(transport.DispatchFailure, match="non-JSON"):
+        client.create(model=transport.MODEL, messages=[{"role": "user", "content": "x"}])
+
+    progress = json.loads((tmp_path / "progress.jsonl").read_text().splitlines()[-1])
+    assert progress["event"] == "call_response_invalid"
+    assert progress["http_status"] == 200
+    assert progress["content_type"] == "text/html"
+    assert progress["request_id"] == "safe-id"
+    assert progress["response_length"] == len(b"not-json-and-never-persisted")
+    assert "not-json" not in json.dumps(progress)
