@@ -1,0 +1,2484 @@
+{
+  "audit_sha256": "a82a17ba40fd33751a38132d05888d3ef40115b41ab3b52907f7cfdcbac72a86",
+  "copromem_dynamic_boundaries": [
+    {
+      "both_trials_scored_before_update": true,
+      "commit_persisted": true,
+      "duplicate_commit_idempotency": "validated_by_durable_checkpoint_reconciliation",
+      "newly_retrieval_visible_schema_ids": [
+        "schema_2e81e8a7c38832fc"
+      ],
+      "next_task_authorized": true,
+      "plan_persisted": true,
+      "post_state_persisted": true,
+      "post_state_semantic_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "pre_state_semantic_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "restart_reproduction": "validated_by_run_reconciled_marker",
+      "semantic_state_changed": true,
+      "state": "committed",
+      "task_id": "3aa1a22_2",
+      "task_index": 1,
+      "validation_persisted": true,
+      "winner_schema_id": "schema_2e81e8a7c38832fc"
+    },
+    {
+      "both_trials_scored_before_update": true,
+      "commit_persisted": true,
+      "duplicate_commit_idempotency": "validated_by_durable_checkpoint_reconciliation",
+      "newly_retrieval_visible_schema_ids": [],
+      "next_task_authorized": true,
+      "plan_persisted": true,
+      "post_state_persisted": true,
+      "post_state_semantic_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "pre_state_semantic_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "restart_reproduction": "validated_by_run_reconciled_marker",
+      "semantic_state_changed": false,
+      "state": "rejected",
+      "task_id": "3aa1a22_3",
+      "task_index": 2,
+      "validation_persisted": true,
+      "winner_schema_id": null
+    },
+    {
+      "both_trials_scored_before_update": true,
+      "commit_persisted": true,
+      "duplicate_commit_idempotency": "validated_by_durable_checkpoint_reconciliation",
+      "newly_retrieval_visible_schema_ids": [
+        "schema_b16376ae57ac9c4a"
+      ],
+      "next_task_authorized": true,
+      "plan_persisted": true,
+      "post_state_persisted": true,
+      "post_state_semantic_sha256": "29ae38184cff705b1184489b5519cfdbe9cb7fb00d6bb0d2d7c19e072890cb68",
+      "pre_state_semantic_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "restart_reproduction": "validated_by_run_reconciled_marker",
+      "semantic_state_changed": true,
+      "state": "committed",
+      "task_id": "024c982_3",
+      "task_index": 3,
+      "validation_persisted": true,
+      "winner_schema_id": "schema_b16376ae57ac9c4a"
+    }
+  ],
+  "copromem_gates": {
+    "compatible_nonempty_and_selected": true,
+    "negative_control_empty_and_unselected": true,
+    "negative_prompt_identical_to_no_memory": true,
+    "no_reme_fallback_for_empty_copromem": "verified by absence of ReMe roles for CoProMem arms in settled ledger",
+    "offline_reproduction": true
+  },
+  "copromem_retrieval_rows": [
+    {
+      "action_count": 28,
+      "arm": "copromem_v6_2_1_fixed",
+      "candidate_schema_ids": [
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "compatible",
+      "compatibility_features": {
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        }
+      },
+      "guidance_length": 505,
+      "guidance_nonempty": true,
+      "guidance_sha256": "bb9569597c624ab7e7d09e806b211765466ef4a2cb050cf8a0a0e5db9b5da291",
+      "initial_model_visible_prompt_sha256": "a15989356f578390b340b823f9c2638baf19211ee66e036bb1b564af503a5eea",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": null,
+      "prompt_injection_sha256": "0f66b4daa8bb53c92892db12efc27c04cf38f0896b545a2f1698f37d1806ee1e",
+      "score": 1.0,
+      "seed": 11001,
+      "selected_schema_id": "schema_8035bac89a226b2d",
+      "semantic_post_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "semantic_pre_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "task_id": "3aa1a22_2",
+      "task_query_sha256": "9f82785b55eb0522d2290d096e911fb3a3b253f5722d8de5b3df3639e2a8fe35",
+      "trial": 1
+    },
+    {
+      "action_count": 30,
+      "arm": "copromem_v6_2_1_fixed",
+      "candidate_schema_ids": [
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "compatible",
+      "compatibility_features": {
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        }
+      },
+      "guidance_length": 505,
+      "guidance_nonempty": true,
+      "guidance_sha256": "bb9569597c624ab7e7d09e806b211765466ef4a2cb050cf8a0a0e5db9b5da291",
+      "initial_model_visible_prompt_sha256": "a15989356f578390b340b823f9c2638baf19211ee66e036bb1b564af503a5eea",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": null,
+      "prompt_injection_sha256": "0f66b4daa8bb53c92892db12efc27c04cf38f0896b545a2f1698f37d1806ee1e",
+      "score": 0.8571428571428571,
+      "seed": 11002,
+      "selected_schema_id": "schema_8035bac89a226b2d",
+      "semantic_post_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "semantic_pre_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "task_id": "3aa1a22_2",
+      "task_query_sha256": "9f82785b55eb0522d2290d096e911fb3a3b253f5722d8de5b3df3639e2a8fe35",
+      "trial": 2
+    },
+    {
+      "action_count": 20,
+      "arm": "copromem_v6_2_1_dynamic",
+      "candidate_schema_ids": [
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "compatible",
+      "compatibility_features": {
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        }
+      },
+      "guidance_length": 505,
+      "guidance_nonempty": true,
+      "guidance_sha256": "bb9569597c624ab7e7d09e806b211765466ef4a2cb050cf8a0a0e5db9b5da291",
+      "initial_model_visible_prompt_sha256": "a15989356f578390b340b823f9c2638baf19211ee66e036bb1b564af503a5eea",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": "committed",
+      "prompt_injection_sha256": "0f66b4daa8bb53c92892db12efc27c04cf38f0896b545a2f1698f37d1806ee1e",
+      "score": 1.0,
+      "seed": 11001,
+      "selected_schema_id": "schema_8035bac89a226b2d",
+      "semantic_post_state_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "semantic_pre_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "task_id": "3aa1a22_2",
+      "task_query_sha256": "9f82785b55eb0522d2290d096e911fb3a3b253f5722d8de5b3df3639e2a8fe35",
+      "trial": 1
+    },
+    {
+      "action_count": 18,
+      "arm": "copromem_v6_2_1_dynamic",
+      "candidate_schema_ids": [
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "compatible",
+      "compatibility_features": {
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        }
+      },
+      "guidance_length": 505,
+      "guidance_nonempty": true,
+      "guidance_sha256": "bb9569597c624ab7e7d09e806b211765466ef4a2cb050cf8a0a0e5db9b5da291",
+      "initial_model_visible_prompt_sha256": "a15989356f578390b340b823f9c2638baf19211ee66e036bb1b564af503a5eea",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": "committed",
+      "prompt_injection_sha256": "0f66b4daa8bb53c92892db12efc27c04cf38f0896b545a2f1698f37d1806ee1e",
+      "score": 1.0,
+      "seed": 11002,
+      "selected_schema_id": "schema_8035bac89a226b2d",
+      "semantic_post_state_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "semantic_pre_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "task_id": "3aa1a22_2",
+      "task_query_sha256": "9f82785b55eb0522d2290d096e911fb3a3b253f5722d8de5b3df3639e2a8fe35",
+      "trial": 2
+    },
+    {
+      "action_count": 25,
+      "arm": "copromem_v6_2_1_fixed",
+      "candidate_schema_ids": [
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "compatible",
+      "compatibility_features": {
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        }
+      },
+      "guidance_length": 505,
+      "guidance_nonempty": true,
+      "guidance_sha256": "bb9569597c624ab7e7d09e806b211765466ef4a2cb050cf8a0a0e5db9b5da291",
+      "initial_model_visible_prompt_sha256": "785830abc387584eec7371060535b01bb0f47dd50d25c23061d2e7ea0a43d296",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": null,
+      "prompt_injection_sha256": "0f66b4daa8bb53c92892db12efc27c04cf38f0896b545a2f1698f37d1806ee1e",
+      "score": 1.0,
+      "seed": 11001,
+      "selected_schema_id": "schema_8035bac89a226b2d",
+      "semantic_post_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "semantic_pre_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "task_id": "3aa1a22_3",
+      "task_query_sha256": "ccd0978bc3a98175656a49e17cf0a3229f8484d986e092d5c08f75e968a9e162",
+      "trial": 1
+    },
+    {
+      "action_count": 21,
+      "arm": "copromem_v6_2_1_fixed",
+      "candidate_schema_ids": [
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "compatible",
+      "compatibility_features": {
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        }
+      },
+      "guidance_length": 505,
+      "guidance_nonempty": true,
+      "guidance_sha256": "bb9569597c624ab7e7d09e806b211765466ef4a2cb050cf8a0a0e5db9b5da291",
+      "initial_model_visible_prompt_sha256": "785830abc387584eec7371060535b01bb0f47dd50d25c23061d2e7ea0a43d296",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": null,
+      "prompt_injection_sha256": "0f66b4daa8bb53c92892db12efc27c04cf38f0896b545a2f1698f37d1806ee1e",
+      "score": 0.2857142857142857,
+      "seed": 11002,
+      "selected_schema_id": "schema_8035bac89a226b2d",
+      "semantic_post_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "semantic_pre_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "task_id": "3aa1a22_3",
+      "task_query_sha256": "ccd0978bc3a98175656a49e17cf0a3229f8484d986e092d5c08f75e968a9e162",
+      "trial": 2
+    },
+    {
+      "action_count": 30,
+      "arm": "copromem_v6_2_1_dynamic",
+      "candidate_schema_ids": [
+        "schema_2e81e8a7c38832fc",
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "compatible",
+      "compatibility_features": {
+        "schema_2e81e8a7c38832fc": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "schema_has_reversed_public_dependency",
+          "terminal_effect_supported": true
+        },
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        }
+      },
+      "guidance_length": 505,
+      "guidance_nonempty": true,
+      "guidance_sha256": "bb9569597c624ab7e7d09e806b211765466ef4a2cb050cf8a0a0e5db9b5da291",
+      "initial_model_visible_prompt_sha256": "785830abc387584eec7371060535b01bb0f47dd50d25c23061d2e7ea0a43d296",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": "rejected",
+      "prompt_injection_sha256": "0f66b4daa8bb53c92892db12efc27c04cf38f0896b545a2f1698f37d1806ee1e",
+      "score": 0.42857142857142855,
+      "seed": 11001,
+      "selected_schema_id": "schema_8035bac89a226b2d",
+      "semantic_post_state_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "semantic_pre_state_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "task_id": "3aa1a22_3",
+      "task_query_sha256": "ccd0978bc3a98175656a49e17cf0a3229f8484d986e092d5c08f75e968a9e162",
+      "trial": 1
+    },
+    {
+      "action_count": 17,
+      "arm": "copromem_v6_2_1_dynamic",
+      "candidate_schema_ids": [
+        "schema_2e81e8a7c38832fc",
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "compatible",
+      "compatibility_features": {
+        "schema_2e81e8a7c38832fc": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "schema_has_reversed_public_dependency",
+          "terminal_effect_supported": true
+        },
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": true,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": null,
+          "terminal_effect_supported": true
+        }
+      },
+      "guidance_length": 505,
+      "guidance_nonempty": true,
+      "guidance_sha256": "bb9569597c624ab7e7d09e806b211765466ef4a2cb050cf8a0a0e5db9b5da291",
+      "initial_model_visible_prompt_sha256": "785830abc387584eec7371060535b01bb0f47dd50d25c23061d2e7ea0a43d296",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": "rejected",
+      "prompt_injection_sha256": "0f66b4daa8bb53c92892db12efc27c04cf38f0896b545a2f1698f37d1806ee1e",
+      "score": 0.8571428571428571,
+      "seed": 11002,
+      "selected_schema_id": "schema_8035bac89a226b2d",
+      "semantic_post_state_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "semantic_pre_state_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "task_id": "3aa1a22_3",
+      "task_query_sha256": "ccd0978bc3a98175656a49e17cf0a3229f8484d986e092d5c08f75e968a9e162",
+      "trial": 2
+    },
+    {
+      "action_count": 9,
+      "arm": "copromem_v6_2_1_fixed",
+      "candidate_schema_ids": [
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "negative_control",
+      "compatibility_features": {
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        }
+      },
+      "guidance_length": 0,
+      "guidance_nonempty": false,
+      "guidance_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "initial_model_visible_prompt_sha256": "aba1dbee7e5525893eab8ab9a41cbda49c9977a8cc05b3450dd4e45b0df2f684",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": null,
+      "prompt_injection_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "score": 1.0,
+      "seed": 11001,
+      "selected_schema_id": null,
+      "semantic_post_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "semantic_pre_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "task_id": "024c982_3",
+      "task_query_sha256": "ec74b3386f77526a443b3012c98574bb2a1cb93fa557adbf729b2604fb8c3c2e",
+      "trial": 1
+    },
+    {
+      "action_count": 7,
+      "arm": "copromem_v6_2_1_fixed",
+      "candidate_schema_ids": [
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "negative_control",
+      "compatibility_features": {
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        }
+      },
+      "guidance_length": 0,
+      "guidance_nonempty": false,
+      "guidance_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "initial_model_visible_prompt_sha256": "aba1dbee7e5525893eab8ab9a41cbda49c9977a8cc05b3450dd4e45b0df2f684",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": null,
+      "prompt_injection_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "score": 1.0,
+      "seed": 11002,
+      "selected_schema_id": null,
+      "semantic_post_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "semantic_pre_state_sha256": "add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448",
+      "task_id": "024c982_3",
+      "task_query_sha256": "ec74b3386f77526a443b3012c98574bb2a1cb93fa557adbf729b2604fb8c3c2e",
+      "trial": 2
+    },
+    {
+      "action_count": 8,
+      "arm": "copromem_v6_2_1_dynamic",
+      "candidate_schema_ids": [
+        "schema_2e81e8a7c38832fc",
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "negative_control",
+      "compatibility_features": {
+        "schema_2e81e8a7c38832fc": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        }
+      },
+      "guidance_length": 0,
+      "guidance_nonempty": false,
+      "guidance_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "initial_model_visible_prompt_sha256": "aba1dbee7e5525893eab8ab9a41cbda49c9977a8cc05b3450dd4e45b0df2f684",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": "committed",
+      "prompt_injection_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "score": 1.0,
+      "seed": 11001,
+      "selected_schema_id": null,
+      "semantic_post_state_sha256": "29ae38184cff705b1184489b5519cfdbe9cb7fb00d6bb0d2d7c19e072890cb68",
+      "semantic_pre_state_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "task_id": "024c982_3",
+      "task_query_sha256": "ec74b3386f77526a443b3012c98574bb2a1cb93fa557adbf729b2604fb8c3c2e",
+      "trial": 1
+    },
+    {
+      "action_count": 13,
+      "arm": "copromem_v6_2_1_dynamic",
+      "candidate_schema_ids": [
+        "schema_2e81e8a7c38832fc",
+        "schema_40460eb08c5f2b52",
+        "schema_4cd8d5125a1f4478",
+        "schema_58232919c89b63d0",
+        "schema_8035bac89a226b2d",
+        "schema_9a5136a3ab1e58b1",
+        "schema_a68721363f8c68b0",
+        "schema_b6202872e2a30512",
+        "schema_b727d661ba7a386b",
+        "schema_ca9ebcc9b13e82e1",
+        "schema_e539b1a9a26aaaed",
+        "schema_e98d3807c825daf7"
+      ],
+      "compatibility_class": "negative_control",
+      "compatibility_features": {
+        "schema_2e81e8a7c38832fc": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_40460eb08c5f2b52": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_4cd8d5125a1f4478": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_58232919c89b63d0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_8035bac89a226b2d": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_9a5136a3ab1e58b1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_a68721363f8c68b0": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 0,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b6202872e2a30512": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_b727d661ba7a386b": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_ca9ebcc9b13e82e1": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_effect_not_supported_by_public_query",
+          "terminal_effect_supported": false
+        },
+        "schema_e539b1a9a26aaaed": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 2,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        },
+        "schema_e98d3807c825daf7": {
+          "compatible": false,
+          "negative_failure_count": 0,
+          "positive_success_count": 2,
+          "public_dependency_edge_count": 1,
+          "rejection_reason": "terminal_app_not_publicly_relevant",
+          "terminal_effect_supported": false
+        }
+      },
+      "guidance_length": 0,
+      "guidance_nonempty": false,
+      "guidance_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "initial_model_visible_prompt_sha256": "aba1dbee7e5525893eab8ab9a41cbda49c9977a8cc05b3450dd4e45b0df2f684",
+      "offline_reproduction_passed": true,
+      "post_task_update_marker": "committed",
+      "prompt_injection_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "score": 1.0,
+      "seed": 11002,
+      "selected_schema_id": null,
+      "semantic_post_state_sha256": "29ae38184cff705b1184489b5519cfdbe9cb7fb00d6bb0d2d7c19e072890cb68",
+      "semantic_pre_state_sha256": "ab32922aad31a3ef41f19deeec295049f25abeaedfd73539f383cb66906bca3a",
+      "task_id": "024c982_3",
+      "task_query_sha256": "ec74b3386f77526a443b3012c98574bb2a1cb93fa557adbf729b2604fb8c3c2e",
+      "trial": 2
+    }
+  ],
+  "integrity": {
+    "discrepancies": [
+      "live-summary state remains 'reconciling' although runner-status is completed; counts, costs, terminal reconciliation, and final-report bindings reconcile."
+    ],
+    "fixed_bank_immutable": true,
+    "history_and_evidence_contracts_valid": 30,
+    "ledger": {
+      "reservation_count": 632,
+      "settled_usd": 3.528784515,
+      "settlement_count": 632,
+      "unresolved_reservation_count": 0
+    },
+    "terminal_binding": {
+      "final_report_manifest_match": true,
+      "run_marker_manifest_match": true
+    },
+    "unique_registered_trajectories": 30
+  },
+  "interpretation": {
+    "causal_categories": {
+      "deterministic_integration_evidence": "hash-bound retrieval, prompt injection, checkpoint, and replay invariants",
+      "model_provider_stochasticity": "different outcomes with identical retrieval/prompt bindings may reflect stochastic generation",
+      "not_causally_attributable": "aggregate arm ordering in this three-task compatibility-conditioned diagnostic",
+      "suggestive_memory_quality_evidence": "paired scores only",
+      "task_difficulty": "score variation across task/trial"
+    },
+    "classification": "ENGINEERING-VALIDATED",
+    "permitted_claim": "CoProMem v6.2.1 task-conditioned retrieval is engineering-validated on the preregistered compatible/negative-control diagnostic.",
+    "prohibited_claims": [
+      "efficacy",
+      "superiority",
+      "transfer",
+      "generalization",
+      "causal improvement from aggregate score differences"
+    ]
+  },
+  "reme_dynamic_checkpoint_chain": [
+    {
+      "marker_sha256": "6dd1e813d9e245ac8f65e9523e8245ae6da67ff00112327d92fd4fc69d031152",
+      "post_state_semantic_sha256": "3079e852687b8f9a7beb69f9453c1da12a62929efa513456a905902fc5f33459",
+      "pre_state_semantic_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0",
+      "summary_produced": true,
+      "trajectory_id": "evaluation:official_upstream_reme_dynamic:3aa1a22_2:trial=1:seed=11001",
+      "update_index": 1
+    },
+    {
+      "marker_sha256": "ccaf79395f784018828579010375e22321d0dea9187f3b33eb653163d9a4c9e0",
+      "post_state_semantic_sha256": "6d3995238cf85783ee81a389e3f7be5ce9d1c956bdc9db1a058853f3b18d9a2f",
+      "pre_state_semantic_sha256": "3079e852687b8f9a7beb69f9453c1da12a62929efa513456a905902fc5f33459",
+      "summary_produced": true,
+      "trajectory_id": "evaluation:official_upstream_reme_dynamic:3aa1a22_2:trial=2:seed=11002",
+      "update_index": 2
+    },
+    {
+      "marker_sha256": "bfc84978a1a6647c765de48b16870a18776d2a1939c787ae7c6c987a84541dd7",
+      "post_state_semantic_sha256": "fa29b93a3e67669998008de5a1cde902755950d7a1151dc2c78a117c4d2bca66",
+      "pre_state_semantic_sha256": "6d3995238cf85783ee81a389e3f7be5ce9d1c956bdc9db1a058853f3b18d9a2f",
+      "summary_produced": true,
+      "trajectory_id": "evaluation:official_upstream_reme_dynamic:3aa1a22_3:trial=1:seed=11001",
+      "update_index": 3
+    },
+    {
+      "marker_sha256": "c073ab8370ccb2dbc731cf9a4954cfb55984d0c042ef46401223bfc952a835a8",
+      "post_state_semantic_sha256": "92d1ed76d8d3230820b178fee5ad789b3b7e6f4469f8d2ef17487130950712e9",
+      "pre_state_semantic_sha256": "fa29b93a3e67669998008de5a1cde902755950d7a1151dc2c78a117c4d2bca66",
+      "summary_produced": true,
+      "trajectory_id": "evaluation:official_upstream_reme_dynamic:3aa1a22_3:trial=2:seed=11002",
+      "update_index": 4
+    },
+    {
+      "marker_sha256": "e7bbe4e2bddc821cb87ce98523533ad4eecc67e4ab7ce9b5d3ca40f2c4ceecc0",
+      "post_state_semantic_sha256": "093fa591a1dba32b087a90c582b25661ee9c8e3fe196b5a038a80b87cee21c2f",
+      "pre_state_semantic_sha256": "92d1ed76d8d3230820b178fee5ad789b3b7e6f4469f8d2ef17487130950712e9",
+      "summary_produced": true,
+      "trajectory_id": "evaluation:official_upstream_reme_dynamic:024c982_3:trial=1:seed=11001",
+      "update_index": 5
+    },
+    {
+      "marker_sha256": "c811b291fc4c09a19592af548b696bf8b337666a664ab90c0901c21b89086a4e",
+      "post_state_semantic_sha256": "d197691dce29c13f20f09fa655c364663c96ca69b5018799fcf54cb2a1f27ace",
+      "pre_state_semantic_sha256": "093fa591a1dba32b087a90c582b25661ee9c8e3fe196b5a038a80b87cee21c2f",
+      "summary_produced": true,
+      "trajectory_id": "evaluation:official_upstream_reme_dynamic:024c982_3:trial=2:seed=11002",
+      "update_index": 6
+    }
+  ],
+  "reme_retrieval_rows": [
+    {
+      "action_count": 30,
+      "arm": "official_upstream_reme_fixed",
+      "dynamic_update_index": null,
+      "fixed_dynamic_retrieval_equal": true,
+      "ordered_memory_hashes": [
+        "b916709d40597e2088fbb71892af39accd5be959c80b5ada98d271392d6c4ffd",
+        "1e71085ee869c784bf1636d1674a8420b279475825622c01bcc6e527cab524ee",
+        "9ee9ab9dd4c53f2382c1052f0c4573c6cc774f90b1dd299946d8ee972c27aefc",
+        "58ff8cb27453ecdc2acf249613aae2271200461c5314d962959b6145f771b679",
+        "f47ffc9e95ff6328805da7f187cc5e972ae66d52b62671409c59bf8614e3d460"
+      ],
+      "ordered_retrieval_sha256": "3d021413033c71911bf1b7b493f3cb503a5d0a0cb513fb33e4a90dc07994afc8",
+      "post_update_state_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0",
+      "prompt_memory_hash": "9f6460d7dc2a28c491585a1de35c5e4134eb0b474c5eca6704519479c80d12c0",
+      "prompt_memory_length": 3467,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 0.8571428571428571,
+      "seed": 11001,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "not_applicable_for_fixed",
+      "task_id": "3aa1a22_2",
+      "trial": 1
+    },
+    {
+      "action_count": 17,
+      "arm": "official_upstream_reme_fixed",
+      "dynamic_update_index": null,
+      "fixed_dynamic_retrieval_equal": false,
+      "ordered_memory_hashes": [
+        "b916709d40597e2088fbb71892af39accd5be959c80b5ada98d271392d6c4ffd",
+        "1e71085ee869c784bf1636d1674a8420b279475825622c01bcc6e527cab524ee",
+        "9ee9ab9dd4c53f2382c1052f0c4573c6cc774f90b1dd299946d8ee972c27aefc",
+        "58ff8cb27453ecdc2acf249613aae2271200461c5314d962959b6145f771b679",
+        "f47ffc9e95ff6328805da7f187cc5e972ae66d52b62671409c59bf8614e3d460"
+      ],
+      "ordered_retrieval_sha256": "3d021413033c71911bf1b7b493f3cb503a5d0a0cb513fb33e4a90dc07994afc8",
+      "post_update_state_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0",
+      "prompt_memory_hash": "9f6460d7dc2a28c491585a1de35c5e4134eb0b474c5eca6704519479c80d12c0",
+      "prompt_memory_length": 3467,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 1.0,
+      "seed": 11002,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "not_applicable_for_fixed",
+      "task_id": "3aa1a22_2",
+      "trial": 2
+    },
+    {
+      "action_count": 30,
+      "arm": "official_upstream_reme_fixed",
+      "dynamic_update_index": null,
+      "fixed_dynamic_retrieval_equal": false,
+      "ordered_memory_hashes": [
+        "e28c6dc03bbea3e44c02d2ab649731a1bcd1b1681c7ff16b3d6f46f4631a0ddb",
+        "15935988e27d58fd09ac98169100815a4bd8d16c6f2fb4f3c3a474f0376b1b9e",
+        "6507d11d9c1cff66ecd3c608632a4fde0dc7e8562e2ec3239234f5552c672996",
+        "511a90d298aab0c5b7c381550c9e54773b594d0e156c416bb8e2644d1e6eb1ab",
+        "bd19c320ea8a157b9d4df2a830c8784058c81283fe450324170be9714847615f"
+      ],
+      "ordered_retrieval_sha256": "a09e1d285467e7e2efb996ad3652f81ed1048709f6f0a4c4e9144823fa8a9f4d",
+      "post_update_state_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0",
+      "prompt_memory_hash": "121c52023ad645c0078c8f2fabd667212a6f118e64dffc22d15206cc79676456",
+      "prompt_memory_length": 3610,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 0.7142857142857143,
+      "seed": 11001,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "not_applicable_for_fixed",
+      "task_id": "3aa1a22_3",
+      "trial": 1
+    },
+    {
+      "action_count": 29,
+      "arm": "official_upstream_reme_fixed",
+      "dynamic_update_index": null,
+      "fixed_dynamic_retrieval_equal": false,
+      "ordered_memory_hashes": [
+        "e28c6dc03bbea3e44c02d2ab649731a1bcd1b1681c7ff16b3d6f46f4631a0ddb",
+        "15935988e27d58fd09ac98169100815a4bd8d16c6f2fb4f3c3a474f0376b1b9e",
+        "6507d11d9c1cff66ecd3c608632a4fde0dc7e8562e2ec3239234f5552c672996",
+        "511a90d298aab0c5b7c381550c9e54773b594d0e156c416bb8e2644d1e6eb1ab",
+        "bd19c320ea8a157b9d4df2a830c8784058c81283fe450324170be9714847615f"
+      ],
+      "ordered_retrieval_sha256": "a09e1d285467e7e2efb996ad3652f81ed1048709f6f0a4c4e9144823fa8a9f4d",
+      "post_update_state_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0",
+      "prompt_memory_hash": "121c52023ad645c0078c8f2fabd667212a6f118e64dffc22d15206cc79676456",
+      "prompt_memory_length": 3610,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 1.0,
+      "seed": 11002,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "not_applicable_for_fixed",
+      "task_id": "3aa1a22_3",
+      "trial": 2
+    },
+    {
+      "action_count": 8,
+      "arm": "official_upstream_reme_fixed",
+      "dynamic_update_index": null,
+      "fixed_dynamic_retrieval_equal": false,
+      "ordered_memory_hashes": [
+        "b8971983ddd4fd06b2ad2fc419be8d25342c27955803ae64814cbbb890dbaba3",
+        "a05245246876d04e92da23ae06f4014aaa5c8e9c93fcd9c1cc79a282ae334d60",
+        "f181a96b7841083656cd185e29a22f14defb2770f5237588cc7fe5bde3ceca23",
+        "7ea37157cd7c4bb8a3c2ca5a07e4d9f5b5a873d783bb1ce1ee23357987fe05be",
+        "2a1c7c1127b4385bb5994d91602c3b65797f40c8178d484ba2a272bdc9eb7182"
+      ],
+      "ordered_retrieval_sha256": "f0e7ca015feee7eff77abe949af3289dbb245d24ab603e1b6705dcccf673ebdb",
+      "post_update_state_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0",
+      "prompt_memory_hash": "0653f62a3c4bbf84380b65e1f965b349f39b217e8d3d98bac6a856a9a5f3b7ba",
+      "prompt_memory_length": 3607,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 1.0,
+      "seed": 11001,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "not_applicable_for_fixed",
+      "task_id": "024c982_3",
+      "trial": 1
+    },
+    {
+      "action_count": 18,
+      "arm": "official_upstream_reme_fixed",
+      "dynamic_update_index": null,
+      "fixed_dynamic_retrieval_equal": false,
+      "ordered_memory_hashes": [
+        "b8971983ddd4fd06b2ad2fc419be8d25342c27955803ae64814cbbb890dbaba3",
+        "a05245246876d04e92da23ae06f4014aaa5c8e9c93fcd9c1cc79a282ae334d60",
+        "f181a96b7841083656cd185e29a22f14defb2770f5237588cc7fe5bde3ceca23",
+        "7ea37157cd7c4bb8a3c2ca5a07e4d9f5b5a873d783bb1ce1ee23357987fe05be",
+        "2a1c7c1127b4385bb5994d91602c3b65797f40c8178d484ba2a272bdc9eb7182"
+      ],
+      "ordered_retrieval_sha256": "f0e7ca015feee7eff77abe949af3289dbb245d24ab603e1b6705dcccf673ebdb",
+      "post_update_state_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0",
+      "prompt_memory_hash": "0653f62a3c4bbf84380b65e1f965b349f39b217e8d3d98bac6a856a9a5f3b7ba",
+      "prompt_memory_length": 3607,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 1.0,
+      "seed": 11002,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "not_applicable_for_fixed",
+      "task_id": "024c982_3",
+      "trial": 2
+    },
+    {
+      "action_count": 30,
+      "arm": "official_upstream_reme_dynamic",
+      "dynamic_update_index": 1,
+      "fixed_dynamic_retrieval_equal": true,
+      "ordered_memory_hashes": [
+        "b916709d40597e2088fbb71892af39accd5be959c80b5ada98d271392d6c4ffd",
+        "1e71085ee869c784bf1636d1674a8420b279475825622c01bcc6e527cab524ee",
+        "9ee9ab9dd4c53f2382c1052f0c4573c6cc774f90b1dd299946d8ee972c27aefc",
+        "58ff8cb27453ecdc2acf249613aae2271200461c5314d962959b6145f771b679",
+        "f47ffc9e95ff6328805da7f187cc5e972ae66d52b62671409c59bf8614e3d460"
+      ],
+      "ordered_retrieval_sha256": "3d021413033c71911bf1b7b493f3cb503a5d0a0cb513fb33e4a90dc07994afc8",
+      "post_update_state_sha256": "3079e852687b8f9a7beb69f9453c1da12a62929efa513456a905902fc5f33459",
+      "prompt_memory_hash": "9f6460d7dc2a28c491585a1de35c5e4134eb0b474c5eca6704519479c80d12c0",
+      "prompt_memory_length": 3467,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 1.0,
+      "seed": 11001,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "post_score_update_marker",
+      "task_id": "3aa1a22_2",
+      "trial": 1
+    },
+    {
+      "action_count": 0,
+      "arm": "official_upstream_reme_dynamic",
+      "dynamic_update_index": 2,
+      "fixed_dynamic_retrieval_equal": false,
+      "ordered_memory_hashes": [
+        "f8cc54069c99e067e4e970a3504ea50d58f94cec4c0663afdb9cc6c6846010a2",
+        "f70aea5cf8de2ca5b16da8bd4c05f951e8f35b0f7f23a88b19e7890f8b878fba",
+        "76f50ebf085b3b524127ad821187afe17888163bbe92044e087d788298aff628",
+        "31052ae1040583715b770e95ebb23683a7c06ac7b73366ddcf3958c606aaa83a",
+        "17dcbc371ad093d46714f4bd272c262cd4e7a3c448cf4ec78889d661b43d9708"
+      ],
+      "ordered_retrieval_sha256": "58b18128ef95322f5c14b832e1a3a5fabefa3bfc7eb2e125e1139765a2b2a968",
+      "post_update_state_sha256": "6d3995238cf85783ee81a389e3f7be5ce9d1c956bdc9db1a058853f3b18d9a2f",
+      "prompt_memory_hash": "d9b2d7eb5307a4ebd955cf5f62b90c3c13d97e2040e14421b658672179a923b9",
+      "prompt_memory_length": 3538,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 0.2857142857142857,
+      "seed": 11002,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "post_score_update_marker",
+      "task_id": "3aa1a22_2",
+      "trial": 2
+    },
+    {
+      "action_count": 12,
+      "arm": "official_upstream_reme_dynamic",
+      "dynamic_update_index": 3,
+      "fixed_dynamic_retrieval_equal": false,
+      "ordered_memory_hashes": [
+        "5f941b5bec5faf31691117f8f5f3cd72731be5a89f2b966f39eae408f7041924",
+        "3c8977cdc67a7cfd7484f98f8e408154504492a487412dd42ed7fb9be5c49f9a",
+        "48c1223986ebeb231bbf5512dbd8bf43c80ac87dbfd337449dc8fb995470c615",
+        "6507d11d9c1cff66ecd3c608632a4fde0dc7e8562e2ec3239234f5552c672996",
+        "53201b6ecb09f301522b1e0287a06e85104d389916370b7c40aac9d0ce703cc4"
+      ],
+      "ordered_retrieval_sha256": "6b1e1571a89503789bf133e431dbb7a68b186b80beb473761dde68d4b63eecc5",
+      "post_update_state_sha256": "fa29b93a3e67669998008de5a1cde902755950d7a1151dc2c78a117c4d2bca66",
+      "prompt_memory_hash": "1e500907b342337fc76390c42ae4239e26a3a38c85632db3f228ea7a4b82d21e",
+      "prompt_memory_length": 3797,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 0.2857142857142857,
+      "seed": 11001,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "post_score_update_marker",
+      "task_id": "3aa1a22_3",
+      "trial": 1
+    },
+    {
+      "action_count": 30,
+      "arm": "official_upstream_reme_dynamic",
+      "dynamic_update_index": 4,
+      "fixed_dynamic_retrieval_equal": false,
+      "ordered_memory_hashes": [
+        "b8abda0dc7c48fda2b4a263bcb7a79311866fad6ed940a8b70453fa60d4e66af",
+        "d479334b17282d934686e839f3ab48c627903eafc16b4524d603e654dde8d46d",
+        "47c99f1e0808029a9235b942f5e95fef11ea70ea465a4834c5c247cb17842a2a",
+        "8e39cd043e2f6c0a2b08f6046de54361b59cea9e6fd94fbc8497f517b5e2ef34",
+        "9851a1507a36229036248ae4c8c26f819c00d79c11d63ddff77e2216490b8103"
+      ],
+      "ordered_retrieval_sha256": "e40c71c440d1a11f54d6306bb7510102b3beb3c7e5cee0261188f69267f7542e",
+      "post_update_state_sha256": "92d1ed76d8d3230820b178fee5ad789b3b7e6f4469f8d2ef17487130950712e9",
+      "prompt_memory_hash": "1e500907b342337fc76390c42ae4239e26a3a38c85632db3f228ea7a4b82d21e",
+      "prompt_memory_length": 3797,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 0.2857142857142857,
+      "seed": 11002,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "post_score_update_marker",
+      "task_id": "3aa1a22_3",
+      "trial": 2
+    },
+    {
+      "action_count": 8,
+      "arm": "official_upstream_reme_dynamic",
+      "dynamic_update_index": 5,
+      "fixed_dynamic_retrieval_equal": false,
+      "ordered_memory_hashes": [
+        "c20c4872fb618bc7d6347f9b445d75995b366fc06c9e0cd94b9e23f86debe164",
+        "8b42c68ce51235e67a4431c105475d9bb8ff5a9b7f33ce0e68ed2de051a4404f",
+        "ed14213ad3a8b02d3e15a044e1c5c91f26832940c112840522275a5ea7080684",
+        "7ea37157cd7c4bb8a3c2ca5a07e4d9f5b5a873d783bb1ce1ee23357987fe05be",
+        "2a1c7c1127b4385bb5994d91602c3b65797f40c8178d484ba2a272bdc9eb7182"
+      ],
+      "ordered_retrieval_sha256": "e3c8a129df99d468f03210e0df34410c251390907e2454f087d6c85322f6749c",
+      "post_update_state_sha256": "093fa591a1dba32b087a90c582b25661ee9c8e3fe196b5a038a80b87cee21c2f",
+      "prompt_memory_hash": "0653f62a3c4bbf84380b65e1f965b349f39b217e8d3d98bac6a856a9a5f3b7ba",
+      "prompt_memory_length": 3607,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 1.0,
+      "seed": 11001,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "post_score_update_marker",
+      "task_id": "024c982_3",
+      "trial": 1
+    },
+    {
+      "action_count": 19,
+      "arm": "official_upstream_reme_dynamic",
+      "dynamic_update_index": 6,
+      "fixed_dynamic_retrieval_equal": false,
+      "ordered_memory_hashes": [
+        "c4b4e445f179fd4279e6630bfadc2dbe8331b92fa25da0aea9c331582808c0c4",
+        "edb9ed4cc562abf56d8b74ea90ea823a56cc11c73f59b3f8e952d204fb162157",
+        "20e330878502bb283aee79395a80adaf44086b491599aca5031cda0aed104416",
+        "d41596891aac2344e4a763f3d9b3f961e11130b0aad5f9ae4433ac3d5d3e1ea5",
+        "152c8c9e4897b04b6fc007440f022df939d1d66e6a1733c0238f41c4de3faf85"
+      ],
+      "ordered_retrieval_sha256": "9ce527bcedd4f969517680a81d4348baf99ab7746cf1bcf64836578088a0e84b",
+      "post_update_state_sha256": "d197691dce29c13f20f09fa655c364663c96ca69b5018799fcf54cb2a1f27ace",
+      "prompt_memory_hash": "2dd5908ba99e4887de87817dced0ec8abbac210aaf8b0d4dd1906a8b08463e30",
+      "prompt_memory_length": 3963,
+      "retrieval_empty": false,
+      "retrieved_memory_count": 5,
+      "score": 1.0,
+      "seed": 11002,
+      "semantic_relevance_classification": "not_deterministically-established_from_hash-only_upstream_provenance",
+      "summary_production": "post_score_update_marker",
+      "task_id": "024c982_3",
+      "trial": 2
+    }
+  ],
+  "run": {
+    "completed_trajectories": 30,
+    "executable_commit": "5a9decb5c05060443bdce1d797578e1d078e4d16",
+    "manifest_sha256": "4039749f27c88768f893f8fdd32a7836dfe6b547a85e478293eef209a58c5bd5",
+    "name": "v6_2_1_task_conditioned_retrieval_engineering_003",
+    "publication_commit": "1039815c3729b7f5a56b81341f25c3905a45dd70",
+    "run_reconciled_sha256": "b89e09165aad35481c818af1df6e2d176e899ba99c2ff3aea9195df2c7f17f7f",
+    "runtime_content_identity_version": "runtime-content-identity-v3",
+    "runtime_identity_sha256": "1598649ffc70bcbc6d1caa2a14b6ba7d7723f99f2645cae352d85c8d7da0ed0d",
+    "terminal_reconciliation_valid": true
+  },
+  "sanitization": {
+    "excluded": [
+      "task instructions",
+      "histories",
+      "journals",
+      "ledger rows",
+      "memory text",
+      "scorer payloads",
+      "provider responses"
+    ]
+  },
+  "score_analysis": {
+    "all_per_task_trial_scores": [
+      {
+        "action_count": 11,
+        "arm": "no_memory",
+        "score": 0.2857142857142857,
+        "seed": 11001,
+        "task_id": "3aa1a22_2",
+        "trial": 1
+      },
+      {
+        "action_count": 30,
+        "arm": "official_upstream_reme_fixed",
+        "score": 0.8571428571428571,
+        "seed": 11001,
+        "task_id": "3aa1a22_2",
+        "trial": 1
+      },
+      {
+        "action_count": 30,
+        "arm": "official_upstream_reme_dynamic",
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "3aa1a22_2",
+        "trial": 1
+      },
+      {
+        "action_count": 28,
+        "arm": "copromem_v6_2_1_fixed",
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "3aa1a22_2",
+        "trial": 1
+      },
+      {
+        "action_count": 20,
+        "arm": "copromem_v6_2_1_dynamic",
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "3aa1a22_2",
+        "trial": 1
+      },
+      {
+        "action_count": 23,
+        "arm": "no_memory",
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "3aa1a22_2",
+        "trial": 2
+      },
+      {
+        "action_count": 17,
+        "arm": "official_upstream_reme_fixed",
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "3aa1a22_2",
+        "trial": 2
+      },
+      {
+        "action_count": 0,
+        "arm": "official_upstream_reme_dynamic",
+        "score": 0.2857142857142857,
+        "seed": 11002,
+        "task_id": "3aa1a22_2",
+        "trial": 2
+      },
+      {
+        "action_count": 30,
+        "arm": "copromem_v6_2_1_fixed",
+        "score": 0.8571428571428571,
+        "seed": 11002,
+        "task_id": "3aa1a22_2",
+        "trial": 2
+      },
+      {
+        "action_count": 18,
+        "arm": "copromem_v6_2_1_dynamic",
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "3aa1a22_2",
+        "trial": 2
+      },
+      {
+        "action_count": 28,
+        "arm": "no_memory",
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "3aa1a22_3",
+        "trial": 1
+      },
+      {
+        "action_count": 30,
+        "arm": "official_upstream_reme_fixed",
+        "score": 0.7142857142857143,
+        "seed": 11001,
+        "task_id": "3aa1a22_3",
+        "trial": 1
+      },
+      {
+        "action_count": 12,
+        "arm": "official_upstream_reme_dynamic",
+        "score": 0.2857142857142857,
+        "seed": 11001,
+        "task_id": "3aa1a22_3",
+        "trial": 1
+      },
+      {
+        "action_count": 25,
+        "arm": "copromem_v6_2_1_fixed",
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "3aa1a22_3",
+        "trial": 1
+      },
+      {
+        "action_count": 30,
+        "arm": "copromem_v6_2_1_dynamic",
+        "score": 0.42857142857142855,
+        "seed": 11001,
+        "task_id": "3aa1a22_3",
+        "trial": 1
+      },
+      {
+        "action_count": 30,
+        "arm": "no_memory",
+        "score": 0.5714285714285714,
+        "seed": 11002,
+        "task_id": "3aa1a22_3",
+        "trial": 2
+      },
+      {
+        "action_count": 29,
+        "arm": "official_upstream_reme_fixed",
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "3aa1a22_3",
+        "trial": 2
+      },
+      {
+        "action_count": 30,
+        "arm": "official_upstream_reme_dynamic",
+        "score": 0.2857142857142857,
+        "seed": 11002,
+        "task_id": "3aa1a22_3",
+        "trial": 2
+      },
+      {
+        "action_count": 21,
+        "arm": "copromem_v6_2_1_fixed",
+        "score": 0.2857142857142857,
+        "seed": 11002,
+        "task_id": "3aa1a22_3",
+        "trial": 2
+      },
+      {
+        "action_count": 17,
+        "arm": "copromem_v6_2_1_dynamic",
+        "score": 0.8571428571428571,
+        "seed": 11002,
+        "task_id": "3aa1a22_3",
+        "trial": 2
+      },
+      {
+        "action_count": 11,
+        "arm": "no_memory",
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "024c982_3",
+        "trial": 1
+      },
+      {
+        "action_count": 8,
+        "arm": "official_upstream_reme_fixed",
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "024c982_3",
+        "trial": 1
+      },
+      {
+        "action_count": 8,
+        "arm": "official_upstream_reme_dynamic",
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "024c982_3",
+        "trial": 1
+      },
+      {
+        "action_count": 9,
+        "arm": "copromem_v6_2_1_fixed",
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "024c982_3",
+        "trial": 1
+      },
+      {
+        "action_count": 8,
+        "arm": "copromem_v6_2_1_dynamic",
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "024c982_3",
+        "trial": 1
+      },
+      {
+        "action_count": 7,
+        "arm": "no_memory",
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "024c982_3",
+        "trial": 2
+      },
+      {
+        "action_count": 18,
+        "arm": "official_upstream_reme_fixed",
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "024c982_3",
+        "trial": 2
+      },
+      {
+        "action_count": 19,
+        "arm": "official_upstream_reme_dynamic",
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "024c982_3",
+        "trial": 2
+      },
+      {
+        "action_count": 7,
+        "arm": "copromem_v6_2_1_fixed",
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "024c982_3",
+        "trial": 2
+      },
+      {
+        "action_count": 13,
+        "arm": "copromem_v6_2_1_dynamic",
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "024c982_3",
+        "trial": 2
+      }
+    ],
+    "paired_against_no_memory": {
+      "copromem_v6_2_1_dynamic": {
+        "losses": 1,
+        "mean_paired_difference": 0.07142857142857144,
+        "ties": 3,
+        "wins": 2
+      },
+      "copromem_v6_2_1_fixed": {
+        "losses": 2,
+        "mean_paired_difference": 0.047619047619047616,
+        "ties": 3,
+        "wins": 1
+      },
+      "official_upstream_reme_dynamic": {
+        "losses": 3,
+        "mean_paired_difference": -0.16666666666666666,
+        "ties": 2,
+        "wins": 1
+      },
+      "official_upstream_reme_fixed": {
+        "losses": 1,
+        "mean_paired_difference": 0.11904761904761905,
+        "ties": 3,
+        "wins": 2
+      }
+    },
+    "per_task_trial": [
+      {
+        "arm": "official_upstream_reme_fixed",
+        "no_memory_score": 0.2857142857142857,
+        "paired_difference": 0.5714285714285714,
+        "score": 0.8571428571428571,
+        "seed": 11001,
+        "task_id": "3aa1a22_2",
+        "trial": 1
+      },
+      {
+        "arm": "official_upstream_reme_fixed",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "3aa1a22_2",
+        "trial": 2
+      },
+      {
+        "arm": "official_upstream_reme_fixed",
+        "no_memory_score": 1.0,
+        "paired_difference": -0.2857142857142857,
+        "score": 0.7142857142857143,
+        "seed": 11001,
+        "task_id": "3aa1a22_3",
+        "trial": 1
+      },
+      {
+        "arm": "official_upstream_reme_fixed",
+        "no_memory_score": 0.5714285714285714,
+        "paired_difference": 0.4285714285714286,
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "3aa1a22_3",
+        "trial": 2
+      },
+      {
+        "arm": "official_upstream_reme_fixed",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "024c982_3",
+        "trial": 1
+      },
+      {
+        "arm": "official_upstream_reme_fixed",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "024c982_3",
+        "trial": 2
+      },
+      {
+        "arm": "official_upstream_reme_dynamic",
+        "no_memory_score": 0.2857142857142857,
+        "paired_difference": 0.7142857142857143,
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "3aa1a22_2",
+        "trial": 1
+      },
+      {
+        "arm": "official_upstream_reme_dynamic",
+        "no_memory_score": 1.0,
+        "paired_difference": -0.7142857142857143,
+        "score": 0.2857142857142857,
+        "seed": 11002,
+        "task_id": "3aa1a22_2",
+        "trial": 2
+      },
+      {
+        "arm": "official_upstream_reme_dynamic",
+        "no_memory_score": 1.0,
+        "paired_difference": -0.7142857142857143,
+        "score": 0.2857142857142857,
+        "seed": 11001,
+        "task_id": "3aa1a22_3",
+        "trial": 1
+      },
+      {
+        "arm": "official_upstream_reme_dynamic",
+        "no_memory_score": 0.5714285714285714,
+        "paired_difference": -0.2857142857142857,
+        "score": 0.2857142857142857,
+        "seed": 11002,
+        "task_id": "3aa1a22_3",
+        "trial": 2
+      },
+      {
+        "arm": "official_upstream_reme_dynamic",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "024c982_3",
+        "trial": 1
+      },
+      {
+        "arm": "official_upstream_reme_dynamic",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "024c982_3",
+        "trial": 2
+      },
+      {
+        "arm": "copromem_v6_2_1_fixed",
+        "no_memory_score": 0.2857142857142857,
+        "paired_difference": 0.7142857142857143,
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "3aa1a22_2",
+        "trial": 1
+      },
+      {
+        "arm": "copromem_v6_2_1_fixed",
+        "no_memory_score": 1.0,
+        "paired_difference": -0.1428571428571429,
+        "score": 0.8571428571428571,
+        "seed": 11002,
+        "task_id": "3aa1a22_2",
+        "trial": 2
+      },
+      {
+        "arm": "copromem_v6_2_1_fixed",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "3aa1a22_3",
+        "trial": 1
+      },
+      {
+        "arm": "copromem_v6_2_1_fixed",
+        "no_memory_score": 0.5714285714285714,
+        "paired_difference": -0.2857142857142857,
+        "score": 0.2857142857142857,
+        "seed": 11002,
+        "task_id": "3aa1a22_3",
+        "trial": 2
+      },
+      {
+        "arm": "copromem_v6_2_1_fixed",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "024c982_3",
+        "trial": 1
+      },
+      {
+        "arm": "copromem_v6_2_1_fixed",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "024c982_3",
+        "trial": 2
+      },
+      {
+        "arm": "copromem_v6_2_1_dynamic",
+        "no_memory_score": 0.2857142857142857,
+        "paired_difference": 0.7142857142857143,
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "3aa1a22_2",
+        "trial": 1
+      },
+      {
+        "arm": "copromem_v6_2_1_dynamic",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "3aa1a22_2",
+        "trial": 2
+      },
+      {
+        "arm": "copromem_v6_2_1_dynamic",
+        "no_memory_score": 1.0,
+        "paired_difference": -0.5714285714285714,
+        "score": 0.42857142857142855,
+        "seed": 11001,
+        "task_id": "3aa1a22_3",
+        "trial": 1
+      },
+      {
+        "arm": "copromem_v6_2_1_dynamic",
+        "no_memory_score": 0.5714285714285714,
+        "paired_difference": 0.2857142857142857,
+        "score": 0.8571428571428571,
+        "seed": 11002,
+        "task_id": "3aa1a22_3",
+        "trial": 2
+      },
+      {
+        "arm": "copromem_v6_2_1_dynamic",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11001,
+        "task_id": "024c982_3",
+        "trial": 1
+      },
+      {
+        "arm": "copromem_v6_2_1_dynamic",
+        "no_memory_score": 1.0,
+        "paired_difference": 0.0,
+        "score": 1.0,
+        "seed": 11002,
+        "task_id": "024c982_3",
+        "trial": 2
+      }
+    ]
+  },
+  "version": "v6.2.1-engineering-003-terminal-audit-v1",
+  "zero_provider": true
+}
