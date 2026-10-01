@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ...contrastive_graph_v6 import digest
+from .runtime_identity_binding import RuntimeIdentityBindingError, artifact_domains
 
 
 VERSION = "copromem-v6.2.2-retrieval-execution-binding-v1"
@@ -65,8 +66,12 @@ def expected(*, artifact_path: Path, retrieval_path: Path,
     runtime_record_sha = _file_sha(runtime_identity_record_path)
     runtime_record = _load(runtime_identity_record_path)
     runtime_semantic_sha = runtime_record.get("runtime_identity_sha256")
-    if (artifact.get("runtime_identity_record_sha256") != runtime_record_sha
-            or artifact.get("runtime_identity_semantic_sha256") != runtime_semantic_sha):
+    try:
+        artifact_runtime = artifact_domains(artifact)
+    except RuntimeIdentityBindingError as exc:
+        raise ValueError("artifact runtime identity domains are invalid") from exc
+    if (artifact_runtime["runtime_identity_record_sha256"] != runtime_record_sha
+            or artifact_runtime["runtime_identity_sha256"] != runtime_semantic_sha):
         raise ValueError("artifact runtime identity domains differ from frozen runtime")
     record = {
         "version": VERSION,

@@ -39,3 +39,31 @@ def verify(run_root: Path, value: Mapping[str, object]) -> dict[str, str]:
     if semantic == record_hash or semantic != observed["runtime_identity_sha256"] or record_hash != observed["runtime_identity_record_sha256"]:
         raise RuntimeIdentityBindingError("runtime semantic identity and record identity use different domains")
     return observed
+
+
+def artifact_domains(value: Mapping[str, object]) -> dict[str, str]:
+    """Return the two runtime identity domains bound by a scored artifact.
+
+    Production artifacts use ``runtime_identity_sha256`` for the semantic
+    identity.  A short-lived v6.2.2 sidecar fixture used the more verbose
+    ``runtime_identity_semantic_sha256`` alias.  Accept that alias only for
+    historical evidence and fail closed if both spellings disagree.
+    """
+    canonical = value.get("runtime_identity_sha256")
+    legacy_alias = value.get("runtime_identity_semantic_sha256")
+    if canonical is None:
+        canonical = legacy_alias
+    elif legacy_alias is not None and legacy_alias != canonical:
+        raise RuntimeIdentityBindingError(
+            "artifact contains conflicting semantic runtime identities"
+        )
+    semantic = _valid(canonical)
+    record_hash = _valid(value.get("runtime_identity_record_sha256"))
+    if semantic == record_hash:
+        raise RuntimeIdentityBindingError(
+            "artifact runtime semantic and record identities share a domain"
+        )
+    return {
+        "runtime_identity_sha256": semantic,
+        "runtime_identity_record_sha256": record_hash,
+    }

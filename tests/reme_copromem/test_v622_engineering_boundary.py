@@ -123,15 +123,19 @@ def test_v622_leaves_v621_source_and_dynamic_prefix_policy_unchanged(tmp_path):
     v621_path = Path(v621.__file__)
     # This digest pins the frozen v6.2.1 retrieval implementation in this
     # versioned branch; v6.2.2 must be additive rather than a silent rewrite.
-    assert hashlib.sha256(v621_path.read_bytes()).hexdigest() == "5229fc831fd505f3edddecdcf1506524dae13f298a52464228af13c800123ca3"
+    # Pin source content rather than checkout-specific CRLF/LF bytes.  Git may
+    # materialize either form on Windows, but the versioned method is the same.
+    normalized = v621_path.read_bytes().replace(b"\r\n", b"\n")
+    assert hashlib.sha256(normalized).hexdigest() == "4dba54953c4659f3f06c51b5beea1f7bffa81af2acd96feaa5fe0de2be897bbd"
     root = Path(__file__).resolve().parents[2]
     frozen_common_core = {
-        "src/copromem/contrastive_graph_v6.py": "79cadedf2a46808d2ce5955ec3d2674198d6abc6cbaefdcc2fc5b70c47a14bba",
-        "src/copromem/semantic_graph_v61.py": "a7a218b607471a019e4fea352decad5196189bd10116efcbf36bfb368116b287",
-        "src/copromem/experiments/reme_copromem/copromem_dynamic_checkpoint.py": "2104f937e0e5ea6b930135399ab1b39f2e4e65c5357fb0093b056d99c6f6c949",
+        "src/copromem/contrastive_graph_v6.py": "33a34e2f0513f9e3c0098fb4f9e38579bf6c412be77ff62dd195edee9c73d3ff",
+        "src/copromem/semantic_graph_v61.py": "5afd430b42fc735132dca9506f2f16ef0e99e2a6f80311efc4c81e01d05621f2",
+        "src/copromem/experiments/reme_copromem/copromem_dynamic_checkpoint.py": "bb9842ebd09495f44f70573ad03ae71b3a068c82149330e28fa8f40017913bf5",
     }
     for relative, expected in frozen_common_core.items():
-        assert hashlib.sha256((root / relative).read_bytes()).hexdigest() == expected
+        source = (root / relative).read_bytes().replace(b"\r\n", b"\n")
+        assert hashlib.sha256(source).hexdigest() == expected
     assert v622.frozen_policy()["dynamic"] == v621.frozen_policy()["dynamic"] == "exact_durable_pre_task_prefix_only"
     state, _marker = _learned_bank()
     manager = CoProMemDynamicCheckpointManager(

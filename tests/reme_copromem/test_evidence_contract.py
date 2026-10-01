@@ -72,7 +72,14 @@ def test_artifact_to_journal_binding_rejects_tamper(tmp_path):
 def _zero_action_fixture(tmp_path: pathlib.Path) -> dict[str, object]:
     manifest = {"git_commit": "frozen-source"}
     (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
-    (tmp_path / "runtime-identity.json").write_text(json.dumps({"runtime": "fixture"}), encoding="utf-8")
+    runtime_semantic = "b" * 64
+    runtime_path = tmp_path / "runtime-identity.json"
+    runtime_path.write_text(json.dumps({"runtime_identity_sha256": runtime_semantic}), encoding="utf-8")
+    runtime_record = hashlib.sha256(runtime_path.read_bytes()).hexdigest()
+    (tmp_path / "runtime-identity.binding.json").write_text(json.dumps({
+        "runtime_identity_sha256": runtime_semantic,
+        "runtime_identity_record_sha256": runtime_record,
+    }), encoding="utf-8")
     journal = tmp_path / "journals" / "telemetry.jsonl"; journal.parent.mkdir()
     journal.write_bytes(b"")
     scorer = tmp_path / "journals" / "scorer.jsonl"
@@ -95,8 +102,8 @@ def _zero_action_fixture(tmp_path: pathlib.Path) -> dict[str, object]:
                          "tool_call_present":False,"content_sha256":"a" * 64},
         manifest_sha256=hashlib.sha256((tmp_path / "manifest.json").read_bytes()).hexdigest(),
         source_commit="frozen-source", task_id="t", arm="no_memory", trial_id=1, seed=1,
-        history_sha256="history", runtime_identity_sha256=hashlib.sha256(
-            (tmp_path / "runtime-identity.json").read_bytes()).hexdigest())
+        history_sha256="history", runtime_identity_sha256=runtime_semantic,
+        runtime_identity_record_sha256=runtime_record)
 
 
 def test_settled_length_terminal_zero_action_is_canonically_bound(tmp_path):

@@ -28,7 +28,7 @@ def _fixture(tmp_path: Path):
                 "initial_prompt_messages_sha256": "p", "model_visible_prompt_sha256": "p",
                 "model_visible_memory_binding_sha256": "b",
                 "runtime_identity_record_sha256": runtime_record,
-                "runtime_identity_semantic_sha256": runtime_semantic}
+                "runtime_identity_sha256": runtime_semantic}
     retrieval = {"guidance": guidance, "task_query": query, "provenance": provenance}
     artifact_path, retrieval_path = tmp_path / "artifact.json", tmp_path / "retrieval.json"
     _write(artifact_path, artifact); _write(retrieval_path, retrieval)
@@ -58,3 +58,22 @@ def test_binding_rejects_every_immutable_input_change(tmp_path, target):
         validate(artifact_path=artifact, retrieval_path=retrieval, binding_path=binding,
                  runtime_identity_record_path=runtime, state={}, registry={},
                  reproduce=lambda state, query, registry, provenance: record["guidance"])
+
+
+def test_binding_accepts_unambiguous_historical_semantic_alias(tmp_path):
+    artifact, retrieval, runtime, binding, _record = _fixture(tmp_path)
+    value = json.loads(artifact.read_text(encoding="utf-8"))
+    value["runtime_identity_semantic_sha256"] = value.pop("runtime_identity_sha256")
+    _write(artifact, value)
+    assert create(artifact_path=artifact, retrieval_path=retrieval, binding_path=binding,
+                  runtime_identity_record_path=runtime)["runtime_identity_semantic_sha256"] == "a" * 64
+
+
+def test_binding_rejects_conflicting_semantic_identity_spellings(tmp_path):
+    artifact, retrieval, runtime, binding, _record = _fixture(tmp_path)
+    value = json.loads(artifact.read_text(encoding="utf-8"))
+    value["runtime_identity_semantic_sha256"] = "c" * 64
+    _write(artifact, value)
+    with pytest.raises(ValueError, match="runtime identity domains are invalid"):
+        create(artifact_path=artifact, retrieval_path=retrieval, binding_path=binding,
+               runtime_identity_record_path=runtime)
