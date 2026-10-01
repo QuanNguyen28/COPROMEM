@@ -49,9 +49,12 @@ ReasoningBank memories because the paper uses an LLM self-judge at test time.
    this boundary must be hash-audited in a fixture before paid execution.
 3. If the comparison uses the existing DeepSeek executor, then the agent,
    judge and extractor backbone differs from the paper's Gemini/Claude tables.
-4. Any non-Gemini embedding route is a retrieval-model deviation and must be
-   named in the manifest.  The primary fidelity profile should use
-   `gemini-embedding-001` if Vertex credentials are available.
+4. This controlled AppWorld port deliberately uses the maintained shared
+   embedding route: `openai/text-embedding-3-small` through OpenRouter pinned
+   to Azure, 1024 float dimensions, fallback disabled, and unit-L2 cosine
+   normalization. It is a documented deviation from the paper's Gemini route,
+   made to compare memory formulation and lifecycle under common available
+   model and embedding infrastructure.
 5. A warm-start bank built from shared acquisition trajectories is a study
    design choice, not the paper's empty-bank streaming setup.  Report it as a
    separate arm/profile.
@@ -83,4 +86,3 @@ python -m pytest -q tests/reasoning_bank
 ```
 
 These commands do not open AppWorld task payloads or make provider calls.
-

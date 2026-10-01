@@ -3,8 +3,18 @@
   "appworld_official_scorer_used_for_analysis_only": true,
   "appworld_official_scorer_used_for_memory_label": false,
   "benchmark": "AppWorld",
-  "claim": "adapted ReasoningBank baseline on AppWorld; not an official paper reproduction",
+  "claim": "ReasoningBank-AppWorld shared-backbone/shared-embedding controlled port; not an official paper reproduction",
   "consolidation": "append_only_no_pruning",
+  "embedding": {
+    "dimensions": 1024,
+    "encoding_format": "float",
+    "model": "openai/text-embedding-3-small",
+    "normalization": "unit_l2_before_cosine",
+    "provider": "azure",
+    "provider_fallback": false,
+    "transport": "OpenRouter",
+    "transport_identity": "copromem.integrations.reme.transport.LockedEmbeddings"
+  },
   "extractor_temperature": 1.0,
   "judge_temperature": 0.0,
   "memory_schema": [

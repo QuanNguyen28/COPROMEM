@@ -123,6 +123,16 @@ class AppendOnlyLedger:
             return "reme_embedding"
         if text.startswith("copromem_decomposition:"):
             return "copromem_decomposition"
+        # ReasoningBank's judge, extractor, and embeddings are separate
+        # provider boundaries.  They intentionally share this transport's
+        # accounting, retry, pricing, and route validation rather than
+        # duplicating an OpenRouter client.
+        if text == "reasoningbank_judge":
+            return "reasoningbank_judge"
+        if text == "reasoningbank_extraction":
+            return "reasoningbank_extraction"
+        if text == "reasoningbank_embedding":
+            return "reasoningbank_embedding"
         return None
 
     def _append(self, record: dict[str, Any]) -> None:
