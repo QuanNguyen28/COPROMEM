@@ -1,0 +1,16 @@
+{
+  "run": "reasoningbank_appworld_engineering_003_recovery",
+  "purpose": "engineering_recovery_only",
+  "manifest_sha256": "b303dafe0456b863f24eb0393274e471304901af08f177ab28161d04cc1b7bba",
+  "executable_source_commit": "7ad9ebac16cfa806485291542ff5378e02b7149e",
+  "source_manifest_sha256": "dfe5418729d5f867955415ae14fb5d6e7834263729f41ad038e370d790bb9753",
+  "imported_key": "no_memory/fac291d_1/trial-1/seed-9701",
+  "imported_artifact_sha256": "6dae6fab4531e70151701e26633c3570aac8ec5b3276ee7687dea8942d04114e",
+  "imported_journal_sha256": "a054d0b9f5ff2b99df19232931ca9dc97aa2cb3140d2e91384eba713e8b8570d",
+  "historical_carry_id": "historical-infrastructure-carry",
+  "historical_carry_usd": 0.022584288,
+  "expected_trajectories": 12,
+  "imported_completed": 1,
+  "pending": 11,
+  "next_key": "no_memory/fac291d_1/trial-2/seed-9702"
+}
