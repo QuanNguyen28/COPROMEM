@@ -31,6 +31,12 @@ from copromem.integrations.reasoning_bank.checkpoints import ReasoningBankDynami
 from copromem.integrations.reasoning_bank.dynamic_runtime import ReasoningBankDynamicRuntime
 from copromem.integrations.reasoning_bank.lifecycle import ReasoningBankLifecycle
 from copromem.integrations.reasoning_bank.providers import ReasoningBankProviders
+from copromem.integrations.reasoning_bank.recovery import (
+    build_envelope as build_recovery_envelope,
+    load_marker as load_recovery_marker,
+    publish_marker as publish_recovery_marker,
+    validate_envelope as validate_recovery_envelope,
+)
 from copromem.integrations.reasoning_bank.shared_embedding import SharedAzureOpenRouterEmbedder
 from copromem.integrations.reme.transport import INPUT_PRICE, MAX_OUTPUT_TOKENS, OUTPUT_PRICE
 
@@ -231,6 +237,13 @@ def _historical_exposure() -> float:
     return value
 
 
+def _publication_commit() -> str:
+    value = os.environ.get("REASONINGBANK_PUBLICATION_COMMIT", "").strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", value):
+        raise RuntimeError("REASONINGBANK_PUBLICATION_COMMIT must identify the frozen allocation publication")
+    return value
+
+
 def _budget(historical_exposure_usd: float) -> dict[str, Any]:
     limits = {"executor": 12 * 30, "reasoningbank_judge": 6,
               "reasoningbank_extraction": 6, "reasoningbank_embedding": 12}
@@ -288,36 +301,25 @@ def prepare(run: Path) -> None:
 
 def _recovery_envelope(source_run: Path) -> dict[str, Any]:
     """Validate the one permitted immutable predecessor artifact read-only."""
-    source = source_run.resolve()
-    source_manifest = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
-    if file_sha(source / "manifest.json") != (source / "manifest.sha256").read_text(encoding="utf-8").strip():
-        raise RuntimeError("recovery source manifest is hash-inconsistent")
-    task, arm, trial, seed = "fac291d_1", "no_memory", 1, 9701
-    artifact_path = source / "artifacts" / task / arm / "trial-1.json"
-    row = json.loads(artifact_path.read_text(encoding="utf-8"))
-    validate_evidence(row, run_root=source, expected_registry_sha256=source_manifest["registry_sha256"])
-    if (row.get("task_id"), row.get("arm"), row.get("trial_id"), row.get("seed")) != (task, arm, trial, seed):
-        raise RuntimeError("recovery artifact identity is not the frozen completed key")
-    if not isinstance(row.get("official_scorer_evidence"), Mapping):
-        raise RuntimeError("recovery artifact lacks official scorer evidence")
-    calls: dict[str, set[str]] = {"reserve": set(), "settle": set()}
-    for line in (source / "ledger.jsonl").read_text(encoding="utf-8").splitlines():
-        item = json.loads(line)
-        if str(item.get("role", "")).startswith("executor:no_memory:fac291d_1:trial=1:seed=9701"):
-            calls[str(item.get("event"))].add(str(item.get("id")))
-    if not calls["reserve"] or calls["reserve"] != calls["settle"]:
-        raise RuntimeError("recovery artifact executor settlements are incomplete")
-    journal = Path(str(row["execution_evidence_path"]))
-    return {"version": "reasoningbank-recovery-import-v1", "source_run_path_sha256": sha256(str(source)),
-            "source_manifest_sha256": file_sha(source / "manifest.json"),
-            "source_artifact_path_sha256": sha256(str(artifact_path)), "source_artifact_sha256": file_sha(artifact_path),
-            "source_journal_sha256": str(row["execution_evidence_sha256"]),
-            "source_journal_rows": int(row["execution_evidence_rows"]),
-            "source_official_score": float(row["after_score"]), "source_actions": int(row["actions"]),
-            "source_history_sha256": str(row["history_sha256"]),
-            "source_executor_settlement_ids": sorted(calls["settle"]),
-            "key": {"task_id": task, "arm": arm, "trial_id": trial, "seed": seed,
-                    "trajectory_id": str(row["trajectory_id"])}}
+    return build_recovery_envelope(source_run, task_id="fac291d_1", arm="no_memory", trial_id=1, seed=9701)
+
+
+def _schedule(manifest: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
+    seeds = [int(item) for item in manifest["evaluation"]["seeds"]]
+    return [(arm, str(task), trial, seed)
+            for task in manifest["evaluation"]["task_ids"]
+            for arm in manifest["arms"]
+            for trial, seed in enumerate(seeds, 1)]
+
+
+def _frozen_next_key(manifest: Mapping[str, Any], envelope: Mapping[str, Any]) -> dict[str, Any]:
+    schedule = _schedule(manifest); position = int(envelope["successor_allocation_position"])
+    key = envelope["key"]
+    imported = (str(key["arm"]), str(key["task_id"]), int(key["trial_id"]), int(key["seed"]))
+    if position >= len(schedule) or schedule[position] != imported or position + 1 >= len(schedule):
+        raise RuntimeError("recovery envelope does not identify the expected schedule prefix")
+    arm, task, trial, seed = schedule[position + 1]
+    return {"arm": arm, "task_id": task, "trial_id": trial, "seed": seed}
 
 
 def prepare_recovery(run: Path, source_run: Path) -> None:
@@ -328,11 +330,15 @@ def prepare_recovery(run: Path, source_run: Path) -> None:
     historical = _historical_exposure(); budget = _budget(historical)
     if budget["all_in_usd"] > HARD_CAP:
         raise RuntimeError("registered conservative bound exceeds the hard cap")
-    template = {**source_manifest, "version": "reasoningbank-appworld-engineering-recovery-v1",
+    if source_manifest.get("initial_bank", {}).get("experiences") != []:
+        raise RuntimeError("recovery predecessor does not have the frozen empty initial bank")
+    template = {**source_manifest, "version": "reasoningbank-appworld-engineering-recovery-v2",
                 "git_commit": source_commit(), "budget": budget,
+                "allocation_publication_commit": _publication_commit(),
                 "historical_infrastructure_exposure_usd": historical,
                 "historical_carry_forward_id": HISTORICAL_CARRY_ID,
-                "recovery_import": envelope}
+                "recovery_import": envelope,
+                "recovery_next_key": _frozen_next_key(source_manifest, envelope)}
     run.mkdir(parents=True, exist_ok=True); _fsync_json(run / "template.json", template)
 
 
@@ -343,28 +349,41 @@ def import_recovery(run: Path) -> None:
         raise RuntimeError("recovery manifest lacks its import envelope")
     source = (Path("/mnt/e/Project/AAMAS/reasoningbank-appworld-artifacts/reasoningbank_appworld_engineering_002")
               if os.name == "posix" else Path("E:/Project/AAMAS/reasoningbank-appworld-artifacts/reasoningbank_appworld_engineering_002"))
-    actual = _recovery_envelope(source)
-    if actual != expected:
-        raise RuntimeError("recovery import evidence no longer matches the frozen envelope")
-    payload = {**actual, "transition": "recovery_import_completed"}
-    payload["record_sha256"] = sha256(payload)
-    _fsync_json(run / "recovery-import-completed.json", payload)
-    # Read back verifies the marker before it is allowed to count.
-    loaded = json.loads((run / "recovery-import-completed.json").read_text(encoding="utf-8"))
-    copy = dict(loaded); marker_hash = copy.pop("record_sha256")
-    if marker_hash != sha256(copy):
-        raise RuntimeError("recovery import completion marker reload failed")
+    actual = validate_recovery_envelope(expected, source)
+    publish_recovery_marker(run / "recovery-import-completed.json", envelope=actual)
 
 
 def _imported_key(manifest: Mapping[str, Any], run: Path) -> tuple[str, str, int, int] | None:
     path = run / "recovery-import-completed.json"
     if not path.is_file(): return None
-    value = json.loads(path.read_text(encoding="utf-8")); copy = dict(value); digest = copy.pop("record_sha256", None)
-    if digest != sha256(copy):
-        raise RuntimeError("recovery import completion marker is malformed")
-    key = value.get("key")
+    expected = manifest.get("recovery_import")
+    if not isinstance(expected, Mapping):
+        raise RuntimeError("recovery manifest has no frozen import envelope")
+    value = load_recovery_marker(path, envelope=expected)
+    key = value.get("envelope", {}).get("key")
     if not isinstance(key, Mapping): raise RuntimeError("recovery import key is absent")
     return str(key["arm"]), str(key["task_id"]), int(key["trial_id"]), int(key["seed"])
+
+
+def _reconcile_execution_prefix(manifest: Mapping[str, Any], run: Path) -> tuple[int, tuple[str, str, int, int] | None]:
+    schedule = _schedule(manifest); completed: set[tuple[str, str, int, int]] = set()
+    imported = _imported_key(manifest, run)
+    if imported is not None: completed.add(imported)
+    for arm, task, trial, seed in schedule:
+        path = run / "artifacts" / task / arm / f"trial-{trial}.json"
+        if not path.is_file(): continue
+        row = json.loads(path.read_text(encoding="utf-8"))
+        validate_evidence(row, run_root=run, expected_registry_sha256=manifest["registry_sha256"])
+        if (str(row.get("arm")), str(row.get("task_id")), int(row.get("trial_id")), int(row.get("seed"))) != (arm, task, trial, seed):
+            raise RuntimeError("successor artifact identity differs from its schedule key")
+        completed.add((arm, task, trial, seed))
+    prefix = 0
+    for key in schedule:
+        if key not in completed: break
+        prefix += 1
+    if completed != set(schedule[:prefix]):
+        raise RuntimeError("successor completed work is not an ordered schedule prefix")
+    return prefix, None if prefix == len(schedule) else schedule[prefix]
 
 
 def freeze(run: Path) -> None:
@@ -411,12 +430,13 @@ def _summary(run: Path, manifest: Mapping[str, Any], state: str, final: bool = F
                                  expected_trajectories=12, registered_arms=ARMS)
     summary = dict(summary); imported = _imported_key(manifest, run)
     if imported:
-        envelope = manifest["recovery_import"]; arm, _task, _trial, _seed = imported
+        envelope = manifest["recovery_import"]; result = envelope["result"]; arm, _task, _trial, _seed = imported
         stats = dict(summary["arms"][arm]); prior = int(stats["Completed"]); completed = prior + 1
+        successes = int(stats["Successes"]) + int(float(result["official_score"]) == 1.0)
         stats.update({"Completed": completed,
-            "Successes": stats["Successes"] + int(float(envelope["source_official_score"]) == 1.0),
-            "AvgScore": (stats["AvgScore"] * prior + float(envelope["source_official_score"])) / completed,
-            "AvgActions": (stats["AvgActions"] * prior + int(envelope["source_actions"])) / completed})
+            "Successes": successes, "SuccessRate": successes / completed,
+            "AvgScore": (stats["AvgScore"] * prior + float(result["official_score"])) / completed,
+            "AvgActions": (stats["AvgActions"] * prior + int(result["actions"])) / completed})
         summary["arms"] = {**summary["arms"], arm: stats}; summary["completed"] += 1
     if final and summary["completed"] != 12:
         raise RuntimeError("terminal reconciliation requires the imported prefix plus eleven new trajectories")
@@ -428,6 +448,9 @@ def _reconciled_marker(run: Path, manifest: Mapping[str, Any]) -> dict[str, Any]
                "source_commit": manifest["git_commit"], "artifact_inventory_sha256": sha256(sorted(file_sha(path) for path in (run / "artifacts").glob("**/*.json"))),
                "checkpoint_inventory_sha256": sha256(sorted(file_sha(path) for path in (run / "reasoningbank-dynamic-checkpoints").glob("**/*.json"))),
                "ledger_sha256": file_sha(run / "ledger.jsonl"), "live_summary_sha256": file_sha(run / "live-summary.json")}
+    if manifest.get("recovery_import"):
+        payload.update({"recovery_envelope_sha256": manifest["recovery_import"]["envelope_sha256"],
+                        "recovery_import_marker_sha256": file_sha(run / "recovery-import-completed.json")})
     payload["record_sha256"] = sha256(payload)
     _fsync_json(run / "run-reconciled.json", payload)
     return payload
@@ -456,6 +479,13 @@ def run(run: Path, *, preflight: bool = False) -> None:
         imported = _imported_key(manifest, run)
         if manifest.get("recovery_import") and imported is None:
             raise RuntimeError("recovery import marker is absent")
+        prefix_count, next_key = _reconcile_execution_prefix(manifest, run)
+        if prefix_count == 1:
+            expected_next = manifest.get("recovery_next_key")
+            observed_next = None if next_key is None else {"arm": next_key[0], "task_id": next_key[1],
+                                                           "trial_id": next_key[2], "seed": next_key[3]}
+            if observed_next != expected_next:
+                raise RuntimeError("recovery prefix does not admit the exact frozen next trajectory")
         key = _credential(); _storage_guard("launch")
         ledger = AppendOnlyLedger(run / "ledger.jsonl", HARD_CAP, manifest["budget"]["call_limits"])
         # The reconciler requires a single carried-exposure record.  This is
