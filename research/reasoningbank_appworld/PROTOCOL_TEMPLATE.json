@@ -1,0 +1,29 @@
+{
+  "agent_temperature": 0.7,
+  "appworld_official_scorer_used_for_analysis_only": true,
+  "appworld_official_scorer_used_for_memory_label": false,
+  "benchmark": "AppWorld",
+  "claim": "adapted ReasoningBank baseline on AppWorld; not an official paper reproduction",
+  "consolidation": "append_only_no_pruning",
+  "extractor_temperature": 1.0,
+  "judge_temperature": 0.0,
+  "memory_schema": [
+    "title",
+    "description",
+    "content"
+  ],
+  "memory_sources": [
+    "self_judged_success",
+    "self_judged_failure"
+  ],
+  "method": "reasoningbank-appworld-port-v1",
+  "profile": "appworld-shared-harness-comparison-v1",
+  "retrieval": {
+    "k": 1,
+    "key": "task_query",
+    "similarity": "cosine"
+  },
+  "upstream_commit": "ed80611788292ea739f1effd31f16c53823b8a0d",
+  "upstream_license": "Apache-2.0",
+  "upstream_repository": "https://github.com/google-research/reasoning-bank"
+}

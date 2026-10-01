@@ -1,0 +1,16 @@
+{
+  "appworld_tasks_executed": 0,
+  "payloads_opened": 0,
+  "prompt_parity": {
+    "failed": true,
+    "successful": true
+  },
+  "provider_calls": 0,
+  "status": "zero_provider_preflight_passed",
+  "upstream_commit": "ed80611788292ea739f1effd31f16c53823b8a0d",
+  "upstream_source_sha256": {
+    "WebArena/induce_memory.py": "9efa53164f22772f1716476667577bd222597bdcba24a210ee1f6cb5c2eae169",
+    "WebArena/memory_management.py": "ac40e71d216668ed5af49bb5c94b77cf7906ef0149c74e4e55ade792e88fd4e2",
+    "WebArena/prompts/memory_instruction.py": "323008cd67cd545b300521e02f36c5e96c246b73c836551a3e7a581cb32b0ce5"
+  }
+}
