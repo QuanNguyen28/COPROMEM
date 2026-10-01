@@ -5,12 +5,14 @@
 set -euo pipefail
 set +x
 
-usage() { echo "usage: $0 --stage-dir <absolute-dir> -- <command...>" >&2; exit 64; }
-[[ "$#" -ge 4 && "$1" == "--stage-dir" && "$3" == "--" ]] || usage
+usage() { echo "usage: $0 --stage-dir <absolute-dir> --cwd <absolute-dir> -- <command...>" >&2; exit 64; }
+[[ "$#" -ge 6 && "$1" == "--stage-dir" && "$3" == "--cwd" && "$5" == "--" ]] || usage
 stage_dir="$2"
-shift 3
-[[ "$stage_dir" == /* && "$#" -gt 0 ]] || usage
+cwd="$4"
+shift 5
+[[ "$stage_dir" == /* && "$cwd" == /* && "$#" -gt 0 ]] || usage
 mkdir -p "$stage_dir"
+cd "$cwd"
 
 record() {
   local name="$1" stage="$2" code="$3" tmp

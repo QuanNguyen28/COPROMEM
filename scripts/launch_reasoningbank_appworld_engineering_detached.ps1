@@ -2,7 +2,9 @@ param(
     [Parameter(Mandatory = $true)][string]$RuntimeRoot,
     [Parameter(Mandatory = $true)][string]$RunDirectory,
     [Parameter(Mandatory = $true)][string]$ProtectedEnvFile,
-    [string]$PythonExecutable = "python3"
+    [string]$PythonExecutable = "python3",
+    [string]$Entrypoint = "",
+    [string[]]$ChildArguments = @('run')
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,7 +22,9 @@ function Convert-ToWslPath([string]$Path) {
     try {
         [Environment]::SetEnvironmentVariable($name, $Path, 'Process')
         [Environment]::SetEnvironmentVariable('WSLENV', $(if ($priorWslEnv) { "$priorWslEnv`:$name/p" } else { "$name/p" }), 'Process')
-        $raw = @(& wsl.exe -d Ubuntu -- sh -c 'test -e -- "$COPROMEM_WSL_TRANSPORT_PATH" && printf "%s\n" "$COPROMEM_WSL_TRANSPORT_PATH"')
+        # This command is intentionally POSIX/dash-only.  Bash-only syntax
+        # belongs solely in the explicitly Bash shebang launcher scripts.
+        $raw = @(& wsl.exe -d Ubuntu -- /bin/sh -c 'test -e "$COPROMEM_WSL_TRANSPORT_PATH" && printf "%s\n" "$COPROMEM_WSL_TRANSPORT_PATH"')
     } finally {
         [Environment]::SetEnvironmentVariable($name, $priorPath, 'Process')
         [Environment]::SetEnvironmentVariable('WSLENV', $priorWslEnv, 'Process')
@@ -36,10 +40,11 @@ function Convert-ToWslPath([string]$Path) {
 $runtime = Convert-ToWslPath $RuntimeRoot
 $run = Convert-ToWslPath $RunDirectory
 $launcher = "$runtime/scripts/launch_reasoningbank_appworld_engineering_detached_wsl.sh"
-$runner = "$runtime/scripts/run_reasoningbank_appworld_engineering.py"
+$entrypoint = if ($Entrypoint) { Convert-ToWslPath $Entrypoint } else { "$runtime/scripts/run_reasoningbank_appworld_engineering.py" }
 $stage = "$run/launcher-stages"
-$arguments = @('-d', 'Ubuntu', '--', 'env', "REASONINGBANK_PROTECTED_ENV_FILE=$ProtectedEnvFile", $launcher,
-    '--run', $run, '--stage-dir', $stage, '--', $PythonExecutable, $runner, 'run', '--run', $run)
+$pythonPath = "$runtime`:$runtime/src"
+$arguments = @('-d', 'Ubuntu', '--', 'env', "REASONINGBANK_PROTECTED_ENV_FILE=$ProtectedEnvFile", "PYTHONPATH=$pythonPath", $launcher,
+    '--run', $run, '--stage-dir', $stage, '--', $PythonExecutable, $entrypoint) + $ChildArguments + @('--run', $run)
 & wsl.exe @arguments
 if ($LASTEXITCODE -ne 0) { throw "detached WSL dispatcher failed with exit code $LASTEXITCODE" }
 [pscustomobject]@{ dispatcher_exit_code = 0; stage_directory = $stage } | ConvertTo-Json -Compress

@@ -21,7 +21,7 @@ def _powershell_wslpath(*paths: str) -> list[str]:
         "foreach ($path in $paths) {",
         "  $env:COPROMEM_WSL_TRANSPORT_PATH = $path",
         "  $env:WSLENV = 'COPROMEM_WSL_TRANSPORT_PATH/p'",
-        "  $result = @(& wsl.exe -d Ubuntu -- sh -c 'printf \"%s\\n\" \"$COPROMEM_WSL_TRANSPORT_PATH\"')",
+        "  $result = @(& wsl.exe -d Ubuntu -- /bin/sh -c 'test -e \"$COPROMEM_WSL_TRANSPORT_PATH\" && printf \"%s\\n\" \"$COPROMEM_WSL_TRANSPORT_PATH\"')",
         "  if ($LASTEXITCODE -ne 0 -or $result.Count -ne 1) { throw 'wslpath failed' }",
         "  [Console]::WriteLine($result[0].Trim())",
         "}",
@@ -38,9 +38,12 @@ def test_powershell_direct_argv_preserves_real_runtime_path():
     ]
 
 
-def test_powershell_direct_argv_preserves_spaces_parentheses_apostrophes_and_unicode():
-    converted = _powershell_wslpath(r"C:\fixture path\(parentheses)\O'Brien\Δ")
-    assert converted == ["/mnt/c/fixture path/(parentheses)/O'Brien/Δ"]
+def test_powershell_direct_argv_preserves_spaces_parentheses_apostrophes_and_unicode(tmp_path: Path):
+    target = tmp_path / "fixture path" / "(parentheses)" / "O'Brien Δ"
+    target.mkdir(parents=True)
+    converted = _powershell_wslpath(str(target))
+    windows = target.resolve().as_posix()
+    assert converted == [f"/mnt/{windows[0].lower()}{windows[2:]}"]
 
 
 def test_powershell_launcher_uses_wslenv_path_transport_and_fail_closed_checks():
@@ -48,6 +51,7 @@ def test_powershell_launcher_uses_wslenv_path_transport_and_fail_closed_checks()
     assert "$PSNativeCommandArgumentPassing = 'Standard'" in source
     assert 'COPROMEM_WSL_TRANSPORT_PATH' in source
     assert '"$name/p"' in source
-    assert "test -e --" in source
+    assert "test -e \"$COPROMEM_WSL_TRANSPORT_PATH\"" in source
+    assert "/bin/sh -c" in source
     assert "WSLENV path conversion failed" in source
     assert "bash -lc" not in source

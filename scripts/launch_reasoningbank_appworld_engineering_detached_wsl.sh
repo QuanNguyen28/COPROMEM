@@ -36,7 +36,7 @@ record launcher-received launcher-received 0
 : > "$run/runner.stderr.log"
 record stdio-ready stdio-ready 0
 setsid -f env REASONINGBANK_LAUNCH_STAGE_DIR="$stage_dir" "$credential_wrapper" \
-  "$supervisor" --stage-dir "$stage_dir" -- "$@" \
+  "$supervisor" --stage-dir "$stage_dir" --cwd "$run" -- "$@" \
   > "$run/runner.stdout.log" 2> "$run/runner.stderr.log" < /dev/null
 record detached-dispatched detached-dispatched 0
 trap - EXIT
