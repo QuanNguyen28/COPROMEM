@@ -100,8 +100,21 @@ def _family(task_id: str) -> str:
 
 def _hard_exposed_task_ids() -> tuple[set[str], dict[str, list[str]]]:
     """Find only execution/scoring evidence; textual mentions do not exclude."""
-    roots = [ROOT / "artifacts", Path("E:/Project/AAMAS/COPROMEM/artifacts"),
-             Path("E:/Project/AAMAS/COPROMEM-review/artifacts")]
+    raw_roots = os.environ.get("REASONINGBANK_CUSTODY_ROOTS_JSON")
+    if raw_roots:
+        try:
+            configured = json.loads(raw_roots)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("ReasoningBank custody roots are malformed") from exc
+        if not isinstance(configured, list) or not all(isinstance(item, str) for item in configured):
+            raise RuntimeError("ReasoningBank custody roots must be a JSON string list")
+        roots = [Path(item).expanduser() for item in configured]
+    else:
+        # A Windows-side offline audit has a useful conservative default.
+        # Linux detached runners must pass explicit /mnt/e roots; never infer
+        # an E drive from the worker current directory.
+        roots = [ROOT / "artifacts", Path("E:/Project/AAMAS/COPROMEM/artifacts"),
+                 Path("E:/Project/AAMAS/COPROMEM-review/artifacts")]
     exposed: set[str] = set(); trace: dict[str, list[str]] = {}
     for root in roots:
         if not root.is_dir():
