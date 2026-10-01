@@ -130,3 +130,26 @@ def test_non_json_response_records_only_sanitized_transport_evidence(monkeypatch
     assert progress["request_id"] == "safe-id"
     assert progress["response_length"] == len(b"not-json-and-never-persisted")
     assert "not-json" not in json.dumps(progress)
+
+
+def test_public_route_preflight_accepts_only_healthy_exact_provider(monkeypatch):
+    payload = {"data": {"endpoints": [
+        {"name": "Other | model", "provider_name": "Other", "status": 0},
+        {"name": "DeepSeek | model", "provider_name": "DeepSeek", "status": 0},
+    ]}}
+    monkeypatch.setattr(transport.urllib.request, "urlopen",
+                        lambda *_args, **_kwargs: _Response(payload))
+    record = transport.verify_locked_chat_route_available()
+    assert record == {"model": transport.MODEL, "provider": transport.PROVIDER,
+                      "status": 0, "endpoint_name": "DeepSeek | model"}
+
+
+@pytest.mark.parametrize("status", [-5, -2, 1, None, "bad"])
+def test_public_route_preflight_rejects_unhealthy_or_malformed_status(monkeypatch, status):
+    payload = {"data": {"endpoints": [
+        {"name": "DeepSeek | model", "provider_name": "DeepSeek", "status": status},
+    ]}}
+    monkeypatch.setattr(transport.urllib.request, "urlopen",
+                        lambda *_args, **_kwargs: _Response(payload))
+    with pytest.raises(transport.DispatchFailure):
+        transport.verify_locked_chat_route_available()

@@ -28,6 +28,7 @@ from copromem.integrations.reasoning_bank.shared_embedding import (
     DIMENSIONS, ENCODING_FORMAT, MODEL as EMBEDDING_MODEL, PROVIDER as EMBEDDING_PROVIDER,
     SharedAzureOpenRouterEmbedder,
 )
+from copromem.integrations.reme.transport import verify_locked_chat_route_available
 
 
 PROTOCOL = "v6_2_2_parallel_baseline_pilot_001"
@@ -201,7 +202,11 @@ def main() -> None:
     _configure(run); base.EXTRA_RUNTIME_FACTORY = _capturing_factory
     if args.command == "prepare": prepare(run)
     elif args.command == "freeze": base.freeze(run)
-    elif args.command == "preflight": base.load(run); _rb_manifest_record(run); base.st(run, "preflight_passed")
+    elif args.command == "preflight":
+        base.load(run); _rb_manifest_record(run)
+        route = verify_locked_chat_route_available()
+        write_json(run / "provider-route-preflight.json", route)
+        base.st(run, "preflight_passed", provider_route=route)
     else: base.run(run)
 
 

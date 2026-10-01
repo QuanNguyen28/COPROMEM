@@ -26,6 +26,7 @@ except ImportError:  # Allow Windows-side static imports and fixture tests.
 URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "deepseek/deepseek-v4.1-flash"
 PROVIDER = "deepseek"
+ENDPOINTS_URL = f"https://openrouter.ai/api/v1/models/{MODEL}/endpoints"
 # These limits are frozen in the corrected fixed/dynamic manifest.  They must
 # be expressed in tokens, never in UTF-8 bytes divided by an assumed average.
 # ``o200k_base`` is a real BPE tokenizer available in the pinned ReMe service
@@ -59,6 +60,38 @@ class TruncationTermination(DispatchFailure):
         super().__init__("completion token ceiling reached")
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
+
+
+def verify_locked_chat_route_available(timeout: float = 15.0) -> dict[str, Any]:
+    """Fail before paid dispatch when the frozen provider endpoint is down.
+
+    OpenRouter's public endpoint inventory reports each hosting provider and a
+    numeric status.  The frozen direct DeepSeek route is admissible only when
+    exactly one matching endpoint reports status zero.  This check neither
+    needs a credential nor opens a model/task payload.
+    """
+    try:
+        request = urllib.request.Request(ENDPOINTS_URL, method="GET",
+                                         headers={"Accept": "application/json"})
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except Exception:
+        raise DispatchFailure("locked chat route availability could not be verified") from None
+    root = data.get("data") if isinstance(data, dict) else None
+    endpoints = root.get("endpoints") if isinstance(root, dict) else None
+    matches = [item for item in endpoints or [] if isinstance(item, dict) and
+               str(item.get("provider_name") or "").strip().lower() == PROVIDER]
+    if len(matches) != 1:
+        raise DispatchFailure("locked chat provider endpoint is absent or ambiguous")
+    status = matches[0].get("status")
+    try:
+        normalized_status = int(status)
+    except (TypeError, ValueError):
+        raise DispatchFailure("locked chat provider endpoint status is malformed") from None
+    if normalized_status != 0:
+        raise DispatchFailure("locked chat provider endpoint is unavailable")
+    return {"model": MODEL, "provider": PROVIDER, "status": normalized_status,
+            "endpoint_name": str(matches[0].get("name") or "")[:256] or None}
 
 
 def count_chat_tokens(messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None) -> int:
