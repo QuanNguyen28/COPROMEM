@@ -60,6 +60,27 @@ def test_prepare_freezes_separate_historical_infrastructure_exposure(monkeypatch
                                                                 + manifest["budget"]["contingency_usd"] + .020932692)
 
 
+def test_prepare_keeps_previous_engineering_allocation_out_of_successor(monkeypatch, tmp_path):
+    runner = _runner()
+    inventory = tmp_path / "public-dev.json"
+    inventory.write_text(json.dumps({"split": "dev", "public_only": True, "tasks": [
+        {"task_id": "aaaaaaa_1", "instruction": "List top 3 indie songs", "app_descriptions": {}},
+        {"task_id": "aaaaaaa_2", "instruction": "List top 4 rock songs", "app_descriptions": {}},
+        {"task_id": "ccccccc_1", "instruction": "List top 3 indie songs", "app_descriptions": {}},
+        {"task_id": "ccccccc_2", "instruction": "List top 4 rock songs", "app_descriptions": {}},
+        {"task_id": "bbbbbbb_1", "instruction": "Create a note for tomorrow", "app_descriptions": {}},
+        {"task_id": "ddddddd_1", "instruction": "Send a different note tomorrow", "app_descriptions": {}},
+    ]}), encoding="utf-8")
+    monkeypatch.setenv("REASONINGBANK_PUBLIC_DEV_DESCRIPTORS", str(inventory))
+    monkeypatch.setenv("REASONINGBANK_PROTOCOL_EXCLUDED_TASK_IDS_JSON", '["aaaaaaa_1", "aaaaaaa_2", "bbbbbbb_1"]')
+    monkeypatch.setattr(runner, "_hard_exposed_task_ids", lambda: (set(), {}))
+    run = tmp_path / "run"; runner.prepare(run)
+    allocation = json.loads((run / "template.json").read_text(encoding="utf-8"))["allocation"]
+    assert allocation["protocol_exclusion_count"] == 3
+    assert set(allocation["selected"][key]["task_id"] for key in ("a", "b", "negative")).isdisjoint(
+        {"aaaaaaa_1", "aaaaaaa_2", "bbbbbbb_1"})
+
+
 def test_runner_source_wires_strict_dynamic_callback_and_no_reme_boundary():
     path = Path(__file__).parents[2] / "scripts" / "run_reasoningbank_appworld_engineering.py"
     source = path.read_text(encoding="utf-8")

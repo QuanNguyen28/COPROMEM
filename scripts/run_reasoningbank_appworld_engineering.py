@@ -157,12 +157,31 @@ def _hard_exposed_task_ids() -> tuple[set[str], dict[str, list[str]]]:
     return exposed, trace
 
 
+def _protocol_excluded_task_ids() -> set[str]:
+    """Read an explicit pre-execution allocation exclusion, if registered.
+
+    Hard custody is evidence-driven.  A successor may additionally exclude a
+    previously frozen engineering triple as a protocol decision even where a
+    withheld member has no hard execution evidence.  Keeping the categories
+    separate prevents a public mention from being misreported as execution.
+    """
+    raw = os.environ.get("REASONINGBANK_PROTOCOL_EXCLUDED_TASK_IDS_JSON", "[]")
+    try:
+        values = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("ReasoningBank protocol exclusion list is malformed") from exc
+    if not isinstance(values, list) or not all(isinstance(item, str) and item for item in values):
+        raise RuntimeError("ReasoningBank protocol exclusion list must be a string list")
+    return set(values)
+
+
 def _allocation() -> dict[str, Any]:
     inventory_path = _public_inventory_path()
     raw = json.loads(inventory_path.read_text(encoding="utf-8"))
     if raw.get("split") != "dev" or raw.get("public_only") is not True or not isinstance(raw.get("tasks"), list):
         raise RuntimeError("descriptor inventory is not the permitted public development inventory")
     exposed, trace = _hard_exposed_task_ids()
+    protocol_excluded = _protocol_excluded_task_ids()
     rows = []
     for item in raw["tasks"]:
         if not isinstance(item, Mapping) or not isinstance(item.get("task_id"), str) or not isinstance(item.get("instruction"), str):
@@ -172,7 +191,7 @@ def _allocation() -> dict[str, Any]:
                       "public_app_descriptions_sha256": sha256(item.get("app_descriptions", {}))}
         rows.append({"task_id": task, "family": _family(task), "descriptor": descriptor,
                      "descriptor_sha256": sha256(descriptor)})
-    eligible = [row for row in rows if row["task_id"] not in exposed]
+    eligible = [row for row in rows if row["task_id"] not in exposed | protocol_excluded]
     pairs: list[dict[str, Any]] = []
     for left_index, left in enumerate(sorted(eligible, key=lambda row: row["task_id"])):
         for right in sorted(eligible, key=lambda row: row["task_id"])[left_index + 1:]:
@@ -192,6 +211,9 @@ def _allocation() -> dict[str, Any]:
             "inventory_sha256": file_sha(inventory_path), "inventory_count": len(rows),
             "hard_exclusion_count": len(exposed), "hard_exclusion_sha256": sha256(sorted(exposed)),
             "hard_exposure_evidence_sha256": sha256({key: sorted(value) for key, value in sorted(trace.items())}),
+            "protocol_exclusion_count": len(protocol_excluded),
+            "protocol_exclusion_sha256": sha256(sorted(protocol_excluded)),
+            "protocol_exclusion_reason": "previously_frozen_engineering_allocation",
             "candidate_list_sha256": sha256(pairs), "candidate_count": len(pairs),
             "ordering_rule": "(A descriptor SHA-256, A ID, B ID, N descriptor SHA-256, N ID)",
             "selected": selected}
