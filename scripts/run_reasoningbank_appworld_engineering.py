@@ -249,17 +249,44 @@ def _publication_commit() -> str:
     return value
 
 
-RUNTIME_IDENTITY_VERSION = "reasoningbank-appworld-runtime-content-v1"
+RUNTIME_IDENTITY_VERSION = "reasoningbank-appworld-runtime-content-v2"
+
+
+def _capture_python_runtime_identity() -> dict[str, Any]:
+    """Capture the one interpreter contract allowed in a new frozen manifest."""
+    import importlib.util
+    checker_path = ROOT / "scripts" / "check_reasoningbank_appworld_runtime.py"
+    spec = importlib.util.spec_from_file_location("copromem_python_runtime_gate", checker_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("production Python runtime gate module is unavailable")
+    checker = importlib.util.module_from_spec(spec); spec.loader.exec_module(checker)
+    interpreter = Path(os.environ.get("REASONINGBANK_PRODUCTION_PYTHON", "/home/xiqhq/copromem-appworld/venv/bin/python"))
+    agent_root = Path(os.environ.get("REASONINGBANK_APPWORLD_AGENT_ROOT", "/home/xiqhq/copromem-reme/benchmark/appworld"))
+    return checker.build_identity(expected_python=interpreter, agent_root=agent_root, runtime_root=ROOT)
+
+
+def _python_runtime_manifest(manifest: Mapping[str, Any]) -> Mapping[str, Any]:
+    value = manifest.get("python_runtime")
+    required = {"version", "python_executable", "python_version", "python_prefix", "python_base_prefix",
+                "ray_version", "appworld_version", "dependency_set_sha256", "appworld_react_agent_sha256",
+                "appworld_module_sha256", "entrypoint_sha256", "imports", "runtime_identity_sha256"}
+    if not isinstance(value, Mapping) or set(value) != required:
+        raise RuntimeError("frozen manifest lacks a complete production Python runtime identity")
+    if not isinstance(value["python_executable"], str) or not value["python_executable"].startswith("/"):
+        raise RuntimeError("frozen manifest production Python executable is not absolute")
+    return value
 
 
 def _runtime_identity_material(manifest: Mapping[str, Any]) -> dict[str, Any]:
     """Use only frozen manifest content; never infer identity from HEAD at dispatch."""
+    python_runtime = _python_runtime_manifest(manifest)
     return {"version": RUNTIME_IDENTITY_VERSION, "executable_commit": str(manifest.get("git_commit") or ""),
             "protocol_sha256": str(manifest.get("protocol_sha256") or ""),
             "registry_sha256": str(manifest.get("registry_sha256") or ""),
             "initial_bank_sha256": str(manifest.get("initial_bank_sha256") or ""),
             "execution_sha256": sha256(manifest.get("execution")), "embedding_sha256": sha256(manifest.get("embedding")),
             "allocation_sha256": sha256(manifest.get("allocation")),
+            "python_runtime_identity_sha256": str(python_runtime["runtime_identity_sha256"]),
             "recovery_envelope_sha256": str((manifest.get("recovery_import") or {}).get("envelope_sha256") or "")}
 
 
@@ -286,6 +313,17 @@ def _runtime_identity(run: Path, manifest: Mapping[str, Any]) -> str:
     else:
         _fsync_json(path, record)
     return file_sha(path)
+
+
+def _verify_python_runtime_identity(run: Path, manifest: Mapping[str, Any]) -> None:
+    expected = dict(_python_runtime_manifest(manifest))
+    path = run / "python-runtime-identity.json"
+    try:
+        observed = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError("production Python dependency gate record is absent or malformed") from exc
+    if observed != expected:
+        raise RuntimeError("production Python runtime identity differs from the frozen manifest")
 
 
 def _budget(historical_exposure_usd: float) -> dict[str, Any]:
@@ -325,6 +363,7 @@ def prepare(run: Path) -> None:
         raise RuntimeError("registered conservative bound exceeds the hard cap")
     registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
     selected = allocation["selected"]
+    python_runtime = _capture_python_runtime_identity()
     template = {"version": RUN_VERSION, "engineering_validation_only": True, "git_commit": source_commit(),
                 "protocol": protocol_record(), "protocol_sha256": sha256(protocol_record()),
                 "evaluation": {"split": "dev", "task_ids": [selected["a"]["task_id"], selected["b"]["task_id"], selected["negative"]["task_id"]],
@@ -339,7 +378,7 @@ def prepare(run: Path) -> None:
                 "initial_bank": ReasoningBank().state(), "initial_bank_sha256": ReasoningBank().state()["semantic_state_sha256"],
                 "allocation": allocation, "budget": budget,
                 "historical_infrastructure_exposure_usd": historical_exposure,
-                "historical_carry_forward_id": HISTORICAL_CARRY_ID}
+                "historical_carry_forward_id": HISTORICAL_CARRY_ID, "python_runtime": python_runtime}
     template.update({"runtime_identity_version": RUNTIME_IDENTITY_VERSION})
     template["runtime_identity_sha256"] = _runtime_identity_digest(template)
     _fsync_json(run / "template.json", template)
@@ -380,6 +419,7 @@ def prepare_recovery(run: Path, source_run: Path) -> None:
         raise RuntimeError("recovery predecessor does not have the frozen empty initial bank")
     template = {**source_manifest, "version": "reasoningbank-appworld-engineering-recovery-v2",
                 "git_commit": source_commit(), "budget": budget,
+                "python_runtime": _capture_python_runtime_identity(),
                 "allocation_publication_commit": _publication_commit(),
                 "historical_infrastructure_exposure_usd": historical,
                 "historical_carry_forward_id": HISTORICAL_CARRY_ID,
@@ -551,6 +591,7 @@ def _write_final(run: Path, manifest: Mapping[str, Any], marker: Mapping[str, An
 
 def run(run: Path, *, preflight: bool = False) -> None:
     manifest = load(run)
+    _verify_python_runtime_identity(run, manifest)
     runtime_identity_sha256 = _runtime_identity(run, manifest)
     _status(run, "preflight_passed", manifest_sha256=file_sha(run / "manifest.json"))
     if preflight:

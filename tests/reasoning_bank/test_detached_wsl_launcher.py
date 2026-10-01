@@ -9,6 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DETACHED = ROOT / "scripts" / "launch_reasoningbank_appworld_engineering_detached_wsl.sh"
+PRODUCTION_PYTHON = "/home/xiqhq/copromem-appworld/venv/bin/python"
+AGENT_ROOT = "/home/xiqhq/copromem-reme/benchmark/appworld"
 
 
 def _wsl(path: Path) -> str:
@@ -33,9 +35,13 @@ def _launch(tmp_path: Path, body: str) -> tuple[Path, subprocess.CompletedProces
     protected.write_text("export OPENROUTER_API_KEY=synthetic_fixture_value\n", encoding="utf-8")
     child = tmp_path / "child.sh"
     child.write_text("#!/usr/bin/env bash\nset -euo pipefail\n" + body, encoding="utf-8", newline="\n")
+    runtime = _wsl(ROOT)
     shell = (f"REASONINGBANK_PROTECTED_ENV_FILE={shlex.quote(_wsl(protected))} "
+             f"PYTHONPATH={shlex.quote(runtime + ':' + runtime + '/src:' + AGENT_ROOT)} "
              f"exec {shlex.quote(_wsl(DETACHED))} --run {shlex.quote(_wsl(probe))} "
-             f"--stage-dir {shlex.quote(_wsl(stage))} -- bash {shlex.quote(_wsl(child))}")
+             f"--stage-dir {shlex.quote(_wsl(stage))} --python {shlex.quote(PRODUCTION_PYTHON)} "
+             f"--runtime-root {shlex.quote(runtime)} --agent-root {shlex.quote(AGENT_ROOT)} "
+             f"-- bash {shlex.quote(_wsl(child))}")
     result = subprocess.run(["wsl.exe", "bash", "-lc", shell], text=True, capture_output=True, check=False)
     return probe, result
 
@@ -53,6 +59,7 @@ def test_detached_wrapper_propagates_credential_survives_parent_and_captures_str
     assert terminal["stage"] == "child-exited" and terminal["exit_code"] == 0
     assert (tmp_path / "credential-marker").read_text(encoding="utf-8") == "present"
     assert (probe / "launcher-stages" / "child-started.json").is_file()
+    assert json.loads((probe / "launcher-stages" / "python-dependency-gate.json").read_text(encoding="utf-8"))["stage"] == "python-dependency-gate-passed"
     assert (probe / "runner.stdout.log").read_text(encoding="utf-8") == "detached-stdout"
     assert (probe / "runner.stderr.log").read_text(encoding="utf-8") == "detached-stderr"
     assert "synthetic_fixture_value" not in result.stdout + result.stderr
@@ -85,3 +92,13 @@ def test_detached_wrapper_child_can_acknowledge_repository_import_and_entrypoint
     terminal = _wait_terminal(probe / "launcher-stages")
     assert terminal["exit_code"] == 0
     assert "repository-import" in (probe / "runner.stdout.log").read_text(encoding="utf-8")
+
+
+def test_detached_and_foreground_use_the_same_explicit_appworld_python(tmp_path: Path):
+    foreground = subprocess.run(["wsl.exe", "--", PRODUCTION_PYTHON, "-c", "import sys; print(sys.executable)"],
+                                text=True, capture_output=True, check=True).stdout.strip()
+    marker = _wsl(tmp_path / "python-executable")
+    probe, result = _launch(tmp_path, f"{shlex.quote(PRODUCTION_PYTHON)} -c 'import sys; print(sys.executable)' > {shlex.quote(marker)}\n")
+    assert result.returncode == 0
+    assert _wait_terminal(probe / "launcher-stages")["exit_code"] == 0
+    assert (tmp_path / "python-executable").read_text(encoding="utf-8").strip() == foreground

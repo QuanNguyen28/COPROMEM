@@ -16,9 +16,16 @@ def _runner():
 
 
 def _manifest(runner):
+    python_runtime = {"version": "reasoningbank-appworld-python-runtime-v1", "python_executable": "/venv/bin/python",
+                      "python_version": "3.12.3", "python_prefix": "/venv", "python_base_prefix": "/usr",
+                      "ray_version": "2.58.0", "appworld_version": "0.1.3.post1", "dependency_set_sha256": "e" * 64,
+                      "appworld_react_agent_sha256": "f" * 64, "appworld_module_sha256": "0" * 64,
+                      "entrypoint_sha256": "1" * 64,
+                      "imports": ["ray", "appworld", "appworld_react_agent", "copromem.experiments.reme_copromem.runner", "reasoningbank_entrypoint"],
+                      "runtime_identity_sha256": "2" * 64}
     value = {"git_commit": "a" * 40, "protocol_sha256": "b" * 64, "registry_sha256": "c" * 64,
              "initial_bank_sha256": "d" * 64, "execution": {"model": "fixture"},
-             "embedding": {"model": "fixture"}, "allocation": {"frozen": True}}
+             "embedding": {"model": "fixture"}, "allocation": {"frozen": True}, "python_runtime": python_runtime}
     value["runtime_identity_version"] = runner.RUNTIME_IDENTITY_VERSION
     value["runtime_identity_sha256"] = runner._runtime_identity_digest(value)
     return value
@@ -78,6 +85,14 @@ def test_frozen_production_identity_has_nonempty_hashes_and_cannot_mutate(tmp_pa
     assert identity["registry_sha256"] == manifest["registry_sha256"]
     with pytest.raises(TypeError):
         identity["manifest_sha256"] = "0" * 64
+
+
+def test_runtime_identity_changes_when_python_dependency_identity_changes():
+    runner = _runner(); first = _manifest(runner); second = _manifest(runner)
+    second["python_runtime"] = {**second["python_runtime"], "dependency_set_sha256": "3" * 64,
+                                "runtime_identity_sha256": "4" * 64}
+    second["runtime_identity_sha256"] = runner._runtime_identity_digest(second)
+    assert first["runtime_identity_sha256"] != second["runtime_identity_sha256"]
 
 
 def test_execution_boundary_rejects_a_missing_or_mismatched_runtime_identity_before_agent_load():

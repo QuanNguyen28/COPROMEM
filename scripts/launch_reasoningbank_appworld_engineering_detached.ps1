@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory = $true)][string]$RuntimeRoot,
     [Parameter(Mandatory = $true)][string]$RunDirectory,
     [Parameter(Mandatory = $true)][string]$ProtectedEnvFile,
-    [string]$PythonExecutable = "python3",
+    [string]$PythonExecutable = "/home/xiqhq/copromem-appworld/venv/bin/python",
+    [string]$AppWorldAgentRoot = "/home/xiqhq/copromem-reme/benchmark/appworld",
     [string]$Entrypoint = "",
     [string[]]$ChildArguments = @('run')
 )
@@ -39,12 +40,15 @@ function Convert-ToWslPath([string]$Path) {
 
 $runtime = Convert-ToWslPath $RuntimeRoot
 $run = Convert-ToWslPath $RunDirectory
+$python = $PythonExecutable.Trim()
+$agentRoot = $AppWorldAgentRoot.Trim()
+if ($python -notmatch '^/[^\r\n]+$' -or $agentRoot -notmatch '^/[^\r\n]+$') { throw "production Python and AppWorld agent root must be absolute WSL paths" }
 $launcher = "$runtime/scripts/launch_reasoningbank_appworld_engineering_detached_wsl.sh"
 $entrypoint = if ($Entrypoint) { Convert-ToWslPath $Entrypoint } else { "$runtime/scripts/run_reasoningbank_appworld_engineering.py" }
 $stage = "$run/launcher-stages"
-$pythonPath = "$runtime`:$runtime/src"
+$pythonPath = "$runtime`:$runtime/src`:$agentRoot"
 $arguments = @('-d', 'Ubuntu', '--', 'env', "REASONINGBANK_PROTECTED_ENV_FILE=$ProtectedEnvFile", "PYTHONPATH=$pythonPath", $launcher,
-    '--run', $run, '--stage-dir', $stage, '--', $PythonExecutable, $entrypoint) + $ChildArguments + @('--run', $run)
+    '--run', $run, '--stage-dir', $stage, '--python', $python, '--runtime-root', $runtime, '--agent-root', $agentRoot, '--', $python, $entrypoint) + $ChildArguments + @('--run', $run)
 & wsl.exe @arguments
 if ($LASTEXITCODE -ne 0) { throw "detached WSL dispatcher failed with exit code $LASTEXITCODE" }
 [pscustomobject]@{ dispatcher_exit_code = 0; stage_directory = $stage } | ConvertTo-Json -Compress
