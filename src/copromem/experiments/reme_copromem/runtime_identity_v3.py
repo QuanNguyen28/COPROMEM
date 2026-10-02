@@ -65,18 +65,13 @@ def _repo_relative(root: Path, path: Path) -> str:
     ``Path.resolve`` performs a filesystem round trip.  On WSL /mnt that made
     clean runtime verification issue one expensive 9P operation per tracked
     file.  Candidates are constructed from the already-resolved repository
-    root, so lexical containment is sufficient for normal files; retain a
-    physical containment check only for the exceptional symlink case.
+    root, so lexical containment is sufficient here.  The executable
+    inventory separately rejects Git-mode symlinks before this helper runs.
     """
     try:
         relative = path.relative_to(root)
     except ValueError as exc:
         raise RuntimeIdentityError("runtime identity input escapes the source checkout") from exc
-    if path.is_symlink():
-        try:
-            path.resolve().relative_to(root)
-        except ValueError as exc:
-            raise RuntimeIdentityError("runtime identity symlink escapes the source checkout") from exc
     return relative.as_posix()
 
 
@@ -111,7 +106,22 @@ def executable_paths(root: Path, policy: Mapping[str, Any]) -> list[Path]:
     # for a Windows worktree viewed through WSL /mnt.  A v3 executable
     # inventory is explicitly a tracked-source policy, so Git's inventory is
     # also the more precise authority.
-    tracked = set(_git(root, ["ls-files", "-z"]).decode("utf-8").split("\0"))
+    # Git mode 120000 denotes a symlink.  Do this as one Git metadata read
+    # rather than calling ``Path.is_symlink`` for every source file across a
+    # WSL-mounted checkout.  Symlinked executable inputs are deliberately
+    # unsupported: rejecting them is stricter than resolving potentially
+    # escaping paths one at a time.
+    tracked_modes: dict[str, str] = {}
+    for row in _git(root, ["ls-files", "-s", "-z"]).decode("utf-8").split("\0"):
+        if not row:
+            continue
+        try:
+            metadata, relative_text = row.split("\t", 1)
+            mode = metadata.split(" ", 1)[0]
+        except ValueError as exc:
+            raise RuntimeIdentityError("runtime Git inventory is malformed") from exc
+        tracked_modes[relative_text] = mode
+    tracked = set(tracked_modes)
     paths: set[Path] = set()
     source_roots = [Path(raw_root) for raw_root in policy["source_roots"]]
     for source_root in source_roots:
@@ -124,11 +134,15 @@ def executable_paths(root: Path, policy: Mapping[str, Any]) -> list[Path]:
         if relative.suffix not in suffixes or _is_ignored(relative, policy):
             continue
         if any(relative.is_relative_to(source_root) for source_root in source_roots):
+            if tracked_modes[relative_text] == "120000":
+                raise RuntimeIdentityError("symlinked executable source is unsupported")
             paths.add(root / relative)
     for raw in [*policy["entry_points"], *policy["runtime_configuration_files"]]:
-        candidate = (root / raw).resolve()
+        candidate = root / raw
         if not candidate.is_file():
             raise RuntimeIdentityError("declared runtime entry point or schema is absent")
+        if raw in tracked_modes and tracked_modes[raw] == "120000":
+            raise RuntimeIdentityError("symlinked executable source is unsupported")
         paths.add(root / raw)
     # The policy intentionally covers *tracked* source.  A newly created
     # runtime-shaped file is audited below as untracked dirt rather than being
