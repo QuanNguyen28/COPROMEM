@@ -17,6 +17,7 @@ from typing import Any, Mapping
 from scripts import run_v61_exploratory_evaluation as runner
 from scripts import run_v622_parallel_baseline_pilot as parallel
 from scripts import run_v622_parallel_real_pilot_recovery_002 as recovery
+from copromem.contrastive_graph_v6 import digest
 from copromem.experiments.reme_copromem.recovery_import import RecoveryImportError, file_sha256
 from copromem.experiments.reme_copromem.retrieval_binding_v622 import validate as validate_copro_binding
 
@@ -25,8 +26,11 @@ PROTOCOL = "v6.2.2-real-pilot-100-recovery-003-v1"
 SOURCE_PROTOCOL = "v6.2.2-real-pilot-100-recovery-002-v1"
 SOURCE_RUN = parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_015_recovery"
 PREFIX_COUNT = 18
+COPRO_FIXED_ARM = "copromem_v6_2_2_fixed"
+COPRO_DYNAMIC_ARM = "copromem_v6_2_2_dynamic"
 _SOURCE_REASONINGBANK_CONTEXTS: dict[Path, Mapping[str, Any]] = {}
 LEGACY_UNSEALED_REASONINGBANK_PROTOCOL = "v6.2.2-real-pilot-100-recovery-002-v1"
+LEGACY_REASONINGBANK_AUDIT = "reasoningbank-legacy-custody.json"
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -69,10 +73,26 @@ def _validate_carried_copromem(run: Path, _manifest: Mapping[str, Any], artifact
         raise RecoveryImportError("imported CoProMem retrieval custody is incomplete")
     if retrieval_path.read_bytes() != source_retrieval.read_bytes():
         raise RecoveryImportError("imported CoProMem retrieval bytes differ from source")
+    # Each carried first-task record is bound to the predecessor's frozen
+    # pre-task snapshot.  Never substitute the successor's in-memory state:
+    # identical semantic hashes alone do not imply byte-identical provenance.
+    initial_path = source_run / "copromem-dynamic-checkpoints" / "initial.json"
+    initial = _load(initial_path)
+    state_field = ("fixed_initial_state", "fixed_initial_state_sha256") \
+        if source["arm"] == COPRO_FIXED_ARM else \
+        ("dynamic_initial_state", "dynamic_initial_state_sha256") \
+        if source["arm"] == COPRO_DYNAMIC_ARM else (None, None)
+    state_name, state_hash_name = state_field
+    source_state = initial.get(state_name) if state_name is not None else None
+    expected_state_hash = initial.get(state_hash_name) if state_hash_name is not None else None
+    if (not isinstance(source_state, Mapping)
+            or not isinstance(expected_state_hash, str)
+            or digest(source_state) != expected_state_hash):
+        raise RecoveryImportError("carried CoProMem source pre-state is invalid")
     validate_copro_binding(artifact_path=source_artifact, retrieval_path=source_retrieval,
                            binding_path=source_binding,
                            runtime_identity_record_path=source_run / "runtime-identity.json",
-                           state=state, registry=registry, reproduce=reproduce)
+                           state=source_state, registry=registry, reproduce=reproduce)
     for field in ("copromem_callback_guidance_sha256", "copromem_callback_guidance_nonempty",
                   "injected_memory_sha256", "initial_prompt_messages_sha256",
                   "model_visible_prompt_sha256"):
@@ -116,6 +136,7 @@ def _validate_carried_reasoningbank(context: Mapping[str, Any] | None, run: Path
     modern_seal_matches = (isinstance(binding, Mapping)
                            and source.get("initial_prompt_messages_sha256")
                            == binding.get("initial_prompt_messages_sha256"))
+    legacy_unsealed = False
     if not modern_seal_matches:
         # The three predecessor records predate persisted prompt bindings.
         # They are admissible only as explicitly legacy, source-bound custody:
@@ -125,12 +146,35 @@ def _validate_carried_reasoningbank(context: Mapping[str, Any] | None, run: Path
             raise RecoveryImportError("unsealed ReasoningBank retrieval is outside the legacy custody protocol")
         if not isinstance(source.get("initial_prompt_messages_sha256"), str):
             raise RecoveryImportError("legacy ReasoningBank artifact lacks its recorded prompt digest")
+        legacy_unsealed = True
     target_retrieval = run / "retrievals" / task / f"{arm}-{trial}.json"
     if (not source_retrieval.is_file() or not target_retrieval.is_file()
             or target_retrieval.read_bytes() != source_retrieval.read_bytes()):
         raise RecoveryImportError("imported ReasoningBank retrieval bytes differ from source")
     if target.get("initial_prompt_messages_sha256") != source.get("initial_prompt_messages_sha256"):
         raise RecoveryImportError("imported ReasoningBank prompt binding differs from source")
+    if legacy_unsealed:
+        audit_path = run / LEGACY_REASONINGBANK_AUDIT
+        audit = _load(audit_path) if audit_path.is_file() else {
+            "version": "reasoningbank-legacy-custody-v1",
+            "source_protocol": LEGACY_UNSEALED_REASONINGBANK_PROTOCOL,
+            "records": [],
+        }
+        if (audit.get("version") != "reasoningbank-legacy-custody-v1"
+                or audit.get("source_protocol") != LEGACY_UNSEALED_REASONINGBANK_PROTOCOL
+                or not isinstance(audit.get("records"), list)):
+            raise RecoveryImportError("legacy ReasoningBank custody audit is invalid")
+        identity = {
+            "trajectory_id": target.get("trajectory_id"), "task_id": task,
+            "arm": arm, "trial_id": trial, "seed": seed,
+            "source_artifact_sha256": file_sha256(source_artifact),
+            "source_retrieval_sha256": file_sha256(source_retrieval),
+            "prompt_binding": "legacy_unsealed_predecessor_evidence",
+        }
+        if identity not in audit["records"]:
+            audit["records"].append(identity)
+            audit["records"].sort(key=lambda row: (str(row["task_id"]), int(row["trial_id"])))
+            runner.write_json(audit_path, audit)
 
 
 def _terminal_check(run: Path, manifest: Mapping[str, Any]) -> Mapping[str, Any]:

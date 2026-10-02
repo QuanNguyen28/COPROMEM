@@ -8,6 +8,7 @@ occurrences stay distinct through rendering and provenance.
 """
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -359,6 +360,8 @@ def reproduce_retrieval(state: Mapping[str, Any], task_query: Mapping[str, Any],
     if dict(task_query) != provenance.get("task_query"):
         raise ValueError("retrieval task-query mismatch")
     guidance, expected = retrieve(state, task_query, callable_registry)
-    if dict(provenance) != expected:
+    observed_json = json.loads(json.dumps(provenance, ensure_ascii=False, sort_keys=True))
+    expected_json = json.loads(json.dumps(expected, ensure_ascii=False, sort_keys=True))
+    if observed_json != expected_json:
         raise ValueError("retrieval provenance mismatch")
     return guidance
