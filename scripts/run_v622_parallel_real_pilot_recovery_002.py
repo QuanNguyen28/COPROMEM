@@ -273,8 +273,14 @@ def recover(run: pathlib.Path) -> None:
         return records
     marker = publish_atomic_import(target_run=run, specification=spec, materialize=materialize)
     ledger = AppendOnlyLedger(run / "ledger.jsonl", base.HARD_CAP_USD, manifest["budget"]["call_limits"])
-    ledger.reserve(HISTORICAL_CARRY_ID, float(exposure), {"role": "historical_carry_forward"})
-    ledger.settle(HISTORICAL_CARRY_ID, float(exposure), {"role": "historical_carry_forward"})
+    # An interruption after the atomic import marker but before
+    # ``recovery-admission.json`` is durable progress, not permission to
+    # duplicate the historical carry-forward call.  Preserve the one
+    # canonical reserve/settle pair and let the shared ledger reconciler
+    # validate it below on every retry.
+    if not base._has_ledger_reservation(run / "ledger.jsonl", HISTORICAL_CARRY_ID):
+        ledger.reserve(HISTORICAL_CARRY_ID, float(exposure), {"role": "historical_carry_forward"})
+        ledger.settle(HISTORICAL_CARRY_ID, float(exposure), {"role": "historical_carry_forward"})
     _install_source_marker_validation(dynamic_ids)
     # Reconciliation validates the restored source checkpoint chain without
     # provider activity; it must expose update 4 as the next Dynamic update.
