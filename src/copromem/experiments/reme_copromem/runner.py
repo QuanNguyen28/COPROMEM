@@ -143,8 +143,11 @@ def v5_budget_bound(*, call_limits: dict[str, int], historical_usd: float = 0.0,
         LockedEmbeddings,
     )
     required = {"executor", "reme_lifecycle", "reme_embedding", "copromem_decomposition"}
-    if set(call_limits) != required or any(int(value) < 0 for value in call_limits.values()):
-        raise ValueError("v5 budget must register exactly the four provider-call roles")
+    optional = {"reasoningbank_embedding"}
+    if (not required.issubset(call_limits) or not set(call_limits).issubset(required | optional)
+            or any(isinstance(value, bool) or not isinstance(value, int) or value < 0
+                   for value in call_limits.values())):
+        raise ValueError("v5 budget contains an unsupported or invalid provider-call role")
     executor_per_call = INPUT_TOKEN_CEILING * INPUT_PRICE + MAX_OUTPUT_TOKENS * OUTPUT_PRICE
     lifecycle_per_call = lifecycle_input_ceiling * INPUT_PRICE + MAX_OUTPUT_TOKENS * OUTPUT_PRICE
     embedding_per_call = 10 * LockedEmbeddings.MAX_TOKENS_PER_ITEM * (0.02 / 1_000_000)
@@ -155,11 +158,19 @@ def v5_budget_bound(*, call_limits: dict[str, int], historical_usd: float = 0.0,
         "embedding_usd": int(call_limits["reme_embedding"]) * embedding_per_call,
         "copromem_decomposition_usd": int(call_limits["copromem_decomposition"]) * decomposition_per_call,
     }
+    # The frozen ReasoningBank baseline embeds exactly one query per retrieval;
+    # unlike upstream ReMe it never batches ten items in this protocol.
+    if "reasoningbank_embedding" in call_limits:
+        contributions["reasoningbank_embedding_usd"] = (
+            int(call_limits["reasoningbank_embedding"])
+            * LockedEmbeddings.MAX_TOKENS_PER_ITEM * (0.02 / 1_000_000)
+        )
     dispatchable = sum(contributions.values()) + float(historical_usd)
     contingency = dispatchable * 0.15
     return {**contributions, "executor_calls": int(call_limits["executor"]),
             "reme_lifecycle_calls": int(call_limits["reme_lifecycle"]),
             "embedding_calls": int(call_limits["reme_embedding"]),
+            "reasoningbank_embedding_calls": int(call_limits.get("reasoningbank_embedding", 0)),
             "copromem_decomposition_calls": int(call_limits["copromem_decomposition"]),
             "historical_charged_or_reserved_usd": float(historical_usd),
             "dispatchable_usd": dispatchable, "non_dispatchable_contingency_usd": contingency,

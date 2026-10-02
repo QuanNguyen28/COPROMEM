@@ -158,6 +158,11 @@ def prepare(run: pathlib.Path) -> None:
     _validate_dynamic_chain()
     run.mkdir(parents=True, exist_ok=True)
     _copy_preallocation(run)
+    # ``real.prepare`` deliberately calls its own configurator.  At this
+    # point the run must therefore contain only that entry point's three
+    # permitted preallocation files.  Recovery records are added immediately
+    # afterward and then incorporated into the successor runtime identity.
+    real.prepare(run)
     amendment = {
         "version": PROTOCOL,
         "source_run": str(SOURCE_RUN.resolve()),
@@ -171,7 +176,6 @@ def prepare(run: pathlib.Path) -> None:
     }
     write_json(run / "recovery-amendment.json", amendment)
     _configure(run, historical_exposure=exposure)
-    real.prepare(run)
     template_path = run / "template.json"; template = _load(template_path)
     template.update({"protocol": PROTOCOL, "recovery_amendment_sha256": file_sha256(run / "recovery-amendment.json"),
                      "predecessor": {"manifest_sha256": source_sha, "prefix_count": PREFIX_COUNT,
@@ -212,9 +216,17 @@ def recover(run: pathlib.Path) -> None:
     if file_sha256(run / "manifest.json") != (run / "manifest.sha256").read_text(encoding="utf-8").strip():
         raise RecoveryImportError("successor manifest hash mismatch")
     expected_ids = [item["trajectory_id"] for item in prefix]
+    # ``prefix`` carries local ``Path`` objects for the importer.  The frozen
+    # specification must instead be portable, JSON-serializable custody data;
+    # bind only the immutable artifact identities and their byte hashes.
+    prefix_inventory = [
+        {"identity": item["identity"], "sha256": item["sha256"],
+         "trajectory_id": item["trajectory_id"]}
+        for item in prefix
+    ]
     spec = {"version": PROTOCOL, "source_run": str(SOURCE_RUN.resolve()), "source_manifest_sha256": source_sha,
             "source_ledger_sha256": file_sha256(SOURCE_RUN / "ledger.jsonl"), "successor_manifest_sha256": file_sha256(run / "manifest.json"),
-            "expected_trajectory_ids": expected_ids, "source_prefix_artifact_sha256": canonical_sha256(prefix),
+            "expected_trajectory_ids": expected_ids, "source_prefix_artifact_sha256": canonical_sha256(prefix_inventory),
             "source_dynamic_checkpoint_inventory_sha256": canonical_sha256([{"path": str(path.relative_to(SOURCE_RUN)), "sha256": file_sha256(path)} for path in chain])}
     def materialize(staging: pathlib.Path):
         write_json(staging / "recovery-import-spec.json", spec)

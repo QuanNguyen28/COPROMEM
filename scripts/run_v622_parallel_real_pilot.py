@@ -150,9 +150,10 @@ def prepare(run: Path) -> None:
     template["method_policy"] = dict(frozen_policy())
     template["method_policy"]["reasoningbank"] = dict(rb)
     template["budget"].update({"hard_cap_usd": HARD_CAP_USD, "historical_settled_exposure": allocation["historical_settled_exposure_usd"],
-                                "historical_unresolved_reserved_exposure": allocation["historical_unresolved_reserved_exposure_usd"],
-                                "reasoningbank_embedding_usd": TASK_COUNT * len(SEEDS) * 8192 * (0.02 / 1_000_000)})
-    template["budget"]["all_in_usd"] += template["budget"]["reasoningbank_embedding_usd"] * 1.15
+                                "historical_unresolved_reserved_exposure": allocation["historical_unresolved_reserved_exposure_usd"]})
+    expected_rb_usd = TASK_COUNT * len(SEEDS) * 8192 * (0.02 / 1_000_000)
+    if template["budget"].get("reasoningbank_embedding_usd") != expected_rb_usd:
+        raise RuntimeError("ReasoningBank embedding budget differs from the registered call-limit contract")
     runtime, inputs = build_evaluation_identity_v3(root=v622.ROOT, manifest=template)
     write_json(run / "runtime-identity.json", runtime)
     write_json(run / "runtime-identity.binding.json", {"runtime_identity_sha256": runtime["runtime_identity_sha256"],
