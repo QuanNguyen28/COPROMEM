@@ -175,12 +175,11 @@ def _git(root: Path, args: Iterable[str]) -> bytes:
         windows_root = (f"{root_parts[2].upper()}:/{'/'.join(root_parts[3:])}"
                         if native_git and len(root_parts) >= 3 else None)
         if native_git and windows_root:
-            if pointer.is_file():
-                raw = pointer.read_text(encoding="utf-8").strip()
-                if raw.lower().startswith("gitdir: ") and len(raw) > 11 and raw[8].isalpha() and raw[9:11] == ":/":
-                    env["GIT_DIR"] = raw[8:]
-                    env["GIT_WORK_TREE"] = windows_root
-                    return subprocess.check_output([native_git, *args], env=env)
+            # ``GIT_DIR`` + ``GIT_WORK_TREE`` is not equivalent to ``-C`` for
+            # a linked Git-for-Windows worktree: Git can resolve the common
+            # repository's HEAD instead of this worktree's detached HEAD.
+            # ``-C`` follows the worktree's own pointer and is therefore the
+            # only native path accepted for a runtime identity calculation.
             return subprocess.check_output([native_git, "-C", windows_root, *args], env=env)
         # Git-for-Windows follows the linked-worktree pointer directly.  WSL
         # Git needs the Windows pointer translated, but only for this exact
