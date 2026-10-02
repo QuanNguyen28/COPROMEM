@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from copromem.experiments.reme_copromem.evidence_contract import VERSION, bind
+from copromem.experiments.reme_copromem.evidence_contract import VERSION, bind, validate
 from copromem.experiments.reme_copromem.recovery_import import RecoveryImportError, import_scored_artifact, publish_atomic_import
 from copromem.experiments.reme_copromem.live_summary import reconcile_ledger
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger
@@ -61,6 +61,33 @@ def test_recovery_import_uses_one_historical_carry_and_does_not_recharge_prefix(
     assert not recovered.unresolved_reservation_ids
     assert float(recovered.historical_settled_exposure) == 2.435839694
     assert float(recovered.settled_evaluation_cost) == 0.0
+
+
+def test_atomic_staging_binds_final_journal_locator_before_publish(tmp_path: Path):
+    source, run = tmp_path / "source", tmp_path / "successor"
+    trajectory = "evaluation:arm:task:trial=1:seed=1"
+    history = [{"role": "assistant", "content": "call"}]
+    history_sha = hashlib.sha256(json.dumps(history, ensure_ascii=False, sort_keys=True,
+                                            separators=(",", ":")).encode("utf-8")).hexdigest()
+    execution, scorer = source / "journals" / "execution.jsonl", source / "journals" / "scorer.jsonl"
+    _write(execution, {"callable_registry_sha256": "registry", "monotonic_index": 0})
+    _write(scorer, {"event": "official_score", "score_phase": "post_trajectory", "trajectory_id": trajectory,
+                    "task_id": "task", "pass_count": 1, "fail_count": 0})
+    artifact = {"arm": "arm", "task_id": "task", "trial_id": 1, "seed": 1, "trajectory_id": trajectory,
+                "after_score": 1.0, "actions": 1, "history": history, "history_sha256": history_sha}
+    artifact.update(bind(journal=execution, run_root=source, registry_sha256="registry", scorer_journal=scorer,
+                         trajectory_id=trajectory, task_id="task", after_score=1.0, history_sha256=history_sha))
+    source_artifact = source / "artifacts" / "task" / "arm" / "trial-1.json"; _write(source_artifact, artifact)
+
+    def materialize(staging: Path):
+        target = staging / "artifacts" / "task" / "arm" / "trial-1.json"
+        return [import_scored_artifact(source_artifact=source_artifact, source_run=source, target_artifact=target,
+                                       target_run=run, evidence_write_root=staging, source_manifest_sha256="manifest")]
+
+    publish_atomic_import(target_run=run, specification={"expected_trajectory_ids": [trajectory]}, materialize=materialize)
+    carried = json.loads((run / "artifacts" / "task" / "arm" / "trial-1.json").read_text(encoding="utf-8"))
+    assert carried["execution_evidence_path"].startswith(str(run.resolve()))
+    validate(carried, run_root=run)
 
 
 def test_atomic_import_publishes_only_complete_ordered_inventory_and_is_idempotent(tmp_path: Path):

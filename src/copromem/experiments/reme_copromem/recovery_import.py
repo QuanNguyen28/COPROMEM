@@ -157,7 +157,8 @@ def copy_evidence_file(source: pathlib.Path, destination: pathlib.Path) -> str:
 
 def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib.Path,
                            target_artifact: pathlib.Path, target_run: pathlib.Path,
-                           source_manifest_sha256: str) -> dict[str, Any]:
+                           source_manifest_sha256: str,
+                           evidence_write_root: pathlib.Path | None = None) -> dict[str, Any]:
     """Copy one valid scored artifact with journal paths rebound to ``target_run``.
 
     The original artifact remains untouched.  The derived artifact retains the
@@ -166,6 +167,7 @@ def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib
     journals beneath the successor run root.
     """
     source_run, target_run = source_run.resolve(), target_run.resolve()
+    write_root = (evidence_write_root or target_run).resolve()
     try:
         source = load_artifact(source_artifact)
         execution_source = validate(source, run_root=source_run)
@@ -185,17 +187,23 @@ def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib
         raise RecoveryImportError("source scored artifact lacks canonical scorer binding")
     if not scorer_source.is_absolute() or not scorer_source.is_file():
         raise RecoveryImportError("source scorer journal is absent")
+    # Atomic recovery imports write bytes beneath a staging root, but the
+    # durable artifact must already point at their *post-publication* location
+    # beneath the final run.  Persisting the staging path makes a valid
+    # journal unreachable as soon as ``publish_atomic_import`` renames it.
+    execution_write_target = write_root / "journals" / execution_source.name
+    scorer_write_target = write_root / "journals" / scorer_source.name
     execution_target = target_run / "journals" / execution_source.name
     scorer_target = target_run / "journals" / scorer_source.name
-    _durable_copy(execution_source, execution_target)
-    _durable_copy(scorer_source, scorer_target)
+    _durable_copy(execution_source, execution_write_target)
+    _durable_copy(scorer_source, scorer_write_target)
     result = json.loads(json.dumps(source, ensure_ascii=False, sort_keys=True))
     result[PATH] = str(execution_target.resolve())
     # Preserve the current platform's canonical relative representation; the
     # evidence contract deliberately performs the same conversion.
     result[RELATIVE] = str(execution_target.resolve().relative_to(target_run))
-    result[HASH] = file_sha256(execution_target)
-    result[ROWS] = len(execution_target.read_bytes().splitlines())
+    result[HASH] = file_sha256(execution_write_target)
+    result[ROWS] = len(execution_write_target.read_bytes().splitlines())
     carried = {
         "source_manifest_sha256": source_manifest_sha256,
         "source_artifact_sha256": file_sha256(source_artifact),
@@ -215,7 +223,7 @@ def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib
     result.pop("runtime_identity_sha256", None)
     result.pop("runtime_identity_record_sha256", None)
     if isinstance(scorer, Mapping):
-        result[SCORER] = {**dict(scorer), "path": str(scorer_target.resolve()), "sha256": file_sha256(scorer_target)}
+        result[SCORER] = {**dict(scorer), "path": str(scorer_target.resolve()), "sha256": file_sha256(scorer_write_target)}
     else:
         # Zero-action evidence is cryptographically bound to the original
         # settled executor record, manifest, and scorer journal.  A successor
@@ -227,7 +235,16 @@ def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib
     result["carried_completed_from"] = carried
     _atomic_json(target_artifact, result)
     try:
-        validate(result, run_root=target_run)
+        # Validate staging bytes without changing the final artifact's
+        # post-publication locators.  The final-root validation is performed
+        # by the successor's accounting/admission boundary after atomic
+        # publication.
+        staged = json.loads(json.dumps(result, ensure_ascii=False, sort_keys=True))
+        staged[PATH] = str(execution_write_target.resolve())
+        staged[RELATIVE] = str(execution_write_target.resolve().relative_to(write_root))
+        if isinstance(scorer, Mapping):
+            staged[SCORER] = {**dict(staged[SCORER]), "path": str(scorer_write_target.resolve())}
+        validate(staged, run_root=write_root)
     except EvidenceContractError as exc:
         raise RecoveryImportError("rebound scored artifact fails its evidence contract") from exc
     return {
@@ -235,5 +252,5 @@ def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib
         "target_artifact_sha256": file_sha256(target_artifact),
         "trajectory_id": str(result.get("trajectory_id") or ""),
         "execution_evidence_sha256": result[HASH],
-        "scorer_evidence_sha256": file_sha256(scorer_target) if isinstance(scorer, Mapping) else scorer_hash,
+        "scorer_evidence_sha256": file_sha256(scorer_write_target) if isinstance(scorer, Mapping) else scorer_hash,
     }

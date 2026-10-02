@@ -258,7 +258,8 @@ def recover(run: pathlib.Path) -> None:
             identity = item["identity"]
             target = staging / "artifacts" / identity["task_id"] / identity["arm"] / f"trial-{identity['trial_id']}.json"
             record = import_scored_artifact(source_artifact=item["path"], source_run=SOURCE_RUN, target_artifact=target,
-                                            target_run=staging, source_manifest_sha256=source_sha)
+                                            target_run=run, evidence_write_root=staging,
+                                            source_manifest_sha256=source_sha)
             records.append({"trajectory_id": record["trajectory_id"], "position": position,
                             "source_artifact_sha256": record["source_artifact_sha256"], "target_artifact_sha256": record["target_artifact_sha256"],
                             "journal_sha256": record["execution_evidence_sha256"], "scorer_sha256": record["scorer_evidence_sha256"]})
