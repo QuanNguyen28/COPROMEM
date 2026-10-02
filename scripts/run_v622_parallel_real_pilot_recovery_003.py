@@ -25,6 +25,7 @@ PROTOCOL = "v6.2.2-real-pilot-100-recovery-003-v1"
 SOURCE_PROTOCOL = "v6.2.2-real-pilot-100-recovery-002-v1"
 SOURCE_RUN = parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_015_recovery"
 PREFIX_COUNT = 18
+_SOURCE_REASONINGBANK_CONTEXTS: dict[Path, Mapping[str, Any]] = {}
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -87,8 +88,21 @@ def _validate_carried_reasoningbank(context: Mapping[str, Any] | None, run: Path
     source_run, source_artifact, source, target = _source_of(artifact)
     if context is None:
         raise RecoveryImportError("ReasoningBank runtime is absent while verifying carried artifact")
+    # Retrieval identities include the source manifest and runtime identity.
+    # Reconstruct a read-only fixed-bank context for that immutable source;
+    # validating it through the successor context would falsely compare two
+    # different, correctly sealed prompts.
+    source_context = _SOURCE_REASONINGBANK_CONTEXTS.get(source_run)
     source_manifest = _load(source_run / "manifest.json")
-    parallel._verify_one(context, source_run, source_manifest, task, trial, seed, source_artifact)
+    if source_context is None:
+        source_context = parallel._runtime_factory(
+            source_run, source_manifest,
+            runner.AppendOnlyLedger(source_run / "ledger.jsonl", float(source_manifest["budget"]["hard_cap_usd"])),
+            "recovery-verification-no-dispatch",
+            _load(runner.REG),
+        )
+        _SOURCE_REASONINGBANK_CONTEXTS[source_run] = source_context
+    parallel._verify_one(source_context, source_run, source_manifest, task, trial, seed, source_artifact)
     source_retrieval = source_run / "retrievals" / task / f"{arm}-{trial}.json"
     target_retrieval = run / "retrievals" / task / f"{arm}-{trial}.json"
     if (not source_retrieval.is_file() or not target_retrieval.is_file()
