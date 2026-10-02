@@ -328,10 +328,11 @@ def run(run):
         if arm=='official_upstream_reme_dynamic':kwargs.update({'post_score_update':dynamic_checkpoint.callback(path),'post_score_update_strict':True})
         if arm.startswith('copromem'):
          retrieval_state=fixed_state if arm==COPRO_FIXED_ARM else pre_dynamic_state
+         holder={'state_sha256':digest(retrieval_state)}
          def conditioned_memory(instruction, domain, tool_meta, *, state=retrieval_state, holder=holder):
           query=derive_task_query(instruction,domain,tool_meta,registry); validate_task_query(query,instruction=instruction,public_tool_metadata=tool_meta,callable_registry=registry)
           guidance,prov=retrieval_record(state=state,query_operations=query['query_operations'],registry_sha256=registry['registry_sha256'],task_query=query,callable_registry=registry)
-          holder.update({'guidance':guidance,'provenance':prov,'query':query,'state_sha256':digest(state)})
+          holder.update({'guidance':guidance,'provenance':prov,'query':query})
           return guidance
          kwargs['memory_for_instruction']=conditioned_memory
         if EXTRA_ARM_KWARGS is not None:kwargs.update(EXTRA_ARM_KWARGS(extra_context,run,m,arm,task,trial,seed,path))
@@ -344,7 +345,9 @@ def run(run):
         if not path.is_file(): raise RuntimeError('executor returned without a durable scored artifact')
         result=json.loads(path.read_text(encoding='utf-8'))
        if arm.startswith('copromem'):
-        if not holder:raise RuntimeError('task-conditioned retrieval callback was not invoked')
+        required_holder_fields=('state_sha256','guidance','provenance','query')
+        missing_holder_fields=[field for field in required_holder_fields if field not in holder]
+        if missing_holder_fields:raise RuntimeError('task-conditioned retrieval callback was not invoked or did not complete: '+','.join(missing_holder_fields))
         retrieval_payload={'pre_state_sha256':holder['state_sha256'],'guidance':holder['guidance'],'provenance':holder['provenance'],'task_query':holder['query'],
                           'copromem_callback_guidance_sha256':digest(holder['guidance']),'copromem_callback_guidance_nonempty':bool(holder['guidance']),
                           'prompt_injection_sha256':result.get('prompt_memory_injection_sha256',digest(holder['guidance'])),
