@@ -121,6 +121,14 @@ def test_reme_service_preserves_src_import_root_for_split_environment(tmp_path, 
         service._log.close()
 
 
+def test_reme_service_cold_start_deadline_is_source_bound():
+    from copromem.experiments.reme_copromem.runner import REME_SERVICE_HEALTH_TIMEOUT_SECONDS
+
+    # The deadline must accommodate a cold import from the mounted upstream
+    # environment, while remaining a fixed part of the executable source.
+    assert REME_SERVICE_HEALTH_TIMEOUT_SECONDS == 300.0
+
+
 def test_same_run_directory_refuses_a_duplicate_runner_lock(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "RUN", tmp_path)
     monkeypatch.setattr(config, "MANIFEST_SHA", tmp_path / "manifest.sha256")

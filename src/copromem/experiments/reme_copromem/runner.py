@@ -35,6 +35,12 @@ from .runtime_identity_binding import RuntimeIdentityBindingError, verify as ver
 
 ROOT = pathlib.Path(os.environ.get("COPROMEM_ROOT", pathlib.Path(__file__).resolve().parents[4]))
 REME_PYTHON = os.environ.get("COPROMEM_REME_PYTHON", "/mnt/e/Project/AAMAS/reme-upstream-fixed-dynamic/bin/python")
+# The pinned upstream environment imports AgentScope/DashScope from the mounted
+# runtime volume.  A cold import can legitimately exceed two minutes, while a
+# child that exits is still rejected immediately by ``wait_healthy``.  Keep
+# this deadline executable-source-bound rather than accepting an unrecorded
+# launcher environment override.
+REME_SERVICE_HEALTH_TIMEOUT_SECONDS = 300.0
 
 
 def append(path: pathlib.Path, value: dict[str, Any]) -> None:
@@ -94,7 +100,7 @@ class ReMeService:
         # slashes itself.  Preserve both contracts at this one boundary.
         return f"http://127.0.0.1:{self.port}/"
 
-    def wait_healthy(self, timeout: float = 120.0) -> None:
+    def wait_healthy(self, timeout: float = REME_SERVICE_HEALTH_TIMEOUT_SECONDS) -> None:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if self.proc.poll() is not None:
