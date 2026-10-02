@@ -20,6 +20,7 @@ from .runtime_identity import RuntimeIdentityError, _distribution_version, conte
 
 IDENTITY_VERSION = "runtime-content-identity-v3"
 POLICY_RELATIVE_PATH = "research/reme_copromem_fixed_dynamic_review/runtime-content-identity-v3-policy.json"
+_CLEAN_REME_TREE_CACHE: dict[tuple[str, str], str] = {}
 
 
 def canonical_bytes(value: Any) -> bytes:
@@ -432,20 +433,32 @@ def evaluation_v3_inputs(*, root: Path, manifest: Mapping[str, Any]) -> dict[str
         raise RuntimeIdentityError("v3 external protocol source is unavailable")
     reme_commit = _git(reme, ["rev-parse", "HEAD"]).decode("utf-8").strip()
     reme_status = _git(reme, ["status", "--porcelain=v1", "--untracked-files=no"]).decode("utf-8")
-    reme_tree = tree_hash(reme)
+    # A clean upstream checkout is fully identified by its Git commit.  Cache
+    # the (potentially large) source-tree digest for this Python process after
+    # verifying that status is clean; every later identity checkpoint still
+    # re-reads commit/status and therefore fails closed on a source change.
+    # Dirty ReMe sources are never cached and are hashed on every check.
+    cache_key = (str(reme.resolve()), reme_commit)
+    if reme_status.strip():
+        reme_tree = tree_hash(reme)
+    else:
+        if cache_key not in _CLEAN_REME_TREE_CACHE:
+            _CLEAN_REME_TREE_CACHE[cache_key] = tree_hash(reme)
+        reme_tree = _CLEAN_REME_TREE_CACHE[cache_key]
     content = {
         "appworld_package_identity": package / "__init__.py", "appworld_official_evaluator": evaluator,
         "appworld_python_executable": appworld_python, "reme_python_executable": reme_python,
         "upstream_appworld_agent": agent,
     }
-    trees = {"appworld_protocol_package": package, "upstream_reme_tree": reme}
+    trees = {"appworld_protocol_package": package}
     external = {
         "python_implementation": __import__("platform").python_implementation(), "python_version": __import__("platform").python_version(),
         "appworld_distribution_version": _distribution_version(appworld_python, "appworld"),
         "reme_commit": reme_commit, "reme_dirty": bool(reme_status.strip()),
         "reme_dirty_content_sha256": reme_tree if reme_status.strip() else "clean",
         "content": {name: content_hash(path) for name, path in sorted(content.items())},
-        "trees": {name: tree_hash(path) for name, path in sorted(trees.items())},
+        "trees": {**{name: tree_hash(path) for name, path in sorted(trees.items())},
+                  "upstream_reme_tree": reme_tree},
     }
     scientific = {
         "copromem_initial_bank_sha256": banks.get("copromem_sha256"), "reme_initial_bank_sha256": banks.get("reme_shared_sha256"),
