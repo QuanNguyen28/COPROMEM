@@ -300,10 +300,10 @@ def run(run):
                      if TASK_MAJOR_ARM_FIRST else
                      [(arm,trial,seed) for trial,seed in enumerate(m['evaluation']['seeds'],1) for arm in ARMS])
     for arm,trial,seed in ordered_units:
-       path=run/'artifacts'/task/arm/f'trial-{trial}.json';
-       holder={}
-       retrieval_path=run/'retrievals'/task/f'{arm}-{trial}.json'
-       if path.exists():
+      path=run/'artifacts'/task/arm/f'trial-{trial}.json';
+      holder={}
+      retrieval_path=run/'retrievals'/task/f'{arm}-{trial}.json'
+      if path.exists():
         result=json.loads(path.read_text(encoding='utf-8'))
         if EXTRA_EXISTING_VALIDATOR is not None:EXTRA_EXISTING_VALIDATOR(extra_context,run,m,arm,task,trial,seed,path,result)
         if arm=='official_upstream_reme_dynamic':
@@ -321,7 +321,7 @@ def run(run):
            validate_retrieval_binding(artifact_path=path,retrieval_path=retrieval_path,
             binding_path=retrieval_path.with_suffix('.binding.json'),runtime_identity_record_path=run/'runtime-identity.json',
             state=(fixed_state if arm==COPRO_FIXED_ARM else pre_dynamic_state),registry=registry,reproduce=reproduce_retrieval)
-       else:
+      else:
         _runtime_checkpoint(run,m,f'dispatch-{task_position:04d}-{trial:02d}-{arm}')
         kwargs={};
         if arm.startswith('official_upstream_reme'):kwargs['memory_base_url']=svc['reme-fixed' if arm.endswith('fixed') else 'reme-dynamic'].base_url
@@ -345,7 +345,7 @@ def run(run):
         # first execution and restart.
         if not path.is_file(): raise RuntimeError('executor returned without a durable scored artifact')
         result=json.loads(path.read_text(encoding='utf-8'))
-       if arm.startswith('copromem'):
+      if arm.startswith('copromem'):
         required_holder_fields=('state_sha256','guidance','provenance','query')
         missing_holder_fields=[field for field in required_holder_fields if field not in (copromem_holder or {})]
         if missing_holder_fields:raise RuntimeError('task-conditioned retrieval callback was not invoked or did not complete: '+','.join(missing_holder_fields))
@@ -368,10 +368,10 @@ def run(run):
                         'prompt_memory_injection_sha256':result.get('prompt_memory_injection_sha256',digest(copromem_holder['guidance']))})
          write_json(path,result)
         if arm==COPRO_FIXED_ARM and digest(fixed_state)!=m['banks']['copromem_sha256']:raise RuntimeError('CoProMem Fixed state mutated')
-       if arm==COPRO_DYNAMIC_ARM:copro.append(result)
-       # The durable public status is refreshed immediately after every
-       # artifact, never deferred to the end of a five-arm trial batch.
-       summary(run,m)
+      if arm==COPRO_DYNAMIC_ARM:copro.append(result)
+      # The durable public status is refreshed immediately after every
+      # artifact, never deferred to the end of a five-arm trial batch.
+      summary(run,m)
     if len(copro)!=len(m['evaluation']['seeds']):raise RuntimeError('CoProMem Dynamic batch is incomplete after restart reconciliation')
     retrieval_hashes=[]
     for trial in range(1,len(m['evaluation']['seeds'])+1):
