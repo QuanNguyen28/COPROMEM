@@ -41,7 +41,11 @@ ALLOCATION_NAME = "allocation-audit-v622.json"
 
 
 def _external(path: str) -> Path:
-    return Path("/mnt/e" + path[2:].replace("\\", "/")) if os.name == "posix" else Path(path)
+    if os.name == "posix" and len(path) >= 3 and path[1:3] == ":\\":
+        return Path("/mnt/" + path[0].lower() + path[2:].replace("\\", "/"))
+    if os.name == "nt" and path.startswith("/mnt/") and len(path) > 6:
+        return Path(path[5].upper() + ":" + path[6:])
+    return Path(path)
 
 
 REVIEW = _external(r"E:\Project\AAMAS\COPROMEM-review")
@@ -81,7 +85,7 @@ def _rb_manifest_record(run: Path) -> Mapping[str, Any]:
     record = audit.get("reasoningbank_bank")
     if not isinstance(record, Mapping):
         raise RuntimeError("parallel pilot lacks frozen ReasoningBank bank identity")
-    if Path(str(record.get("path") or "")) != RB_BANK or not RB_BANK.is_file():
+    if _external(str(record.get("path") or "")) != RB_BANK or not RB_BANK.is_file():
         raise RuntimeError("ReasoningBank bank locator differs from frozen pilot identity")
     if base.file_sha(RB_BANK) != record.get("file_sha256"):
         raise RuntimeError("ReasoningBank bank bytes differ from frozen pilot identity")

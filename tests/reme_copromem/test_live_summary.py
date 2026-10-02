@@ -78,6 +78,24 @@ def test_exact_role_mapping_and_cost_reconciliation(tmp_path):
     assert summary["total_ledger_exposure"] == pytest.approx(HISTORICAL + summary["settled_evaluation_cost"])
 
 
+def test_reasoningbank_role_uses_the_new_registered_arm_name(tmp_path):
+    ledger = _ledger(tmp_path / "ledger.jsonl")
+    _reserve_settle(ledger, "rb-embed", "reasoningbank_embedding", .02)
+    arms = {"no_memory", "reasoningbank"}
+    summary = build_live_summary(ledger_path=ledger, artifact_root=tmp_path / "artifacts",
+        expected_tasks=TASKS, expected_seeds=SEEDS, historical_expected_usd=HISTORICAL,
+        registered_arms=arms, state="running")
+    assert summary["arms"]["reasoningbank"]["EmbeddingCalls"] == 1
+
+
+def test_reasoningbank_aliases_cannot_be_registered_together(tmp_path):
+    ledger = _ledger(tmp_path / "ledger.jsonl")
+    _reserve_settle(ledger, "rb-embed", "reasoningbank_embedding", .02)
+    with pytest.raises(LedgerReconciliationError, match="conflicting arm identities"):
+        reconcile_ledger(ledger, historical_expected_usd=HISTORICAL,
+                         registered_arms={"reasoningbank", "reasoningbank_dynamic"})
+
+
 @pytest.mark.parametrize("role", ["unknown:call", "reme_lifecycle:reme-dynamic-verifier", "reme_embedding:reme-dynamic-verifier", "copromem_decomposition:worker"])
 def test_unknown_verifier_and_decomposition_roles_fail_closed(tmp_path, role):
     ledger = _ledger(tmp_path / "ledger.jsonl"); _reserve_settle(ledger, "bad", role)

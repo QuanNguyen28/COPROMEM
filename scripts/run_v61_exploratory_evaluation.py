@@ -38,6 +38,7 @@ PROTOCOL='v6_1_exploratory_diagnostic_evaluation_007_clean_restart'
 EVALUATION_SPLIT='dev'
 HARD_CAP_USD=100
 CALL_LIMITS={'executor':1800,'reme_lifecycle':256,'reme_embedding':1024,'copromem_decomposition':0}
+EVALUATION_SEEDS=[11001,11002]
 LIFECYCLE_INPUT_CEILING=131072
 COPRO_FIXED_ARM='copromem_v6_1_fixed'
 COPRO_DYNAMIC_ARM='copromem_v6_1_dynamic'
@@ -62,6 +63,49 @@ def guard(value,run,stage):
  free=c_free_gib(); p=value['storage_policy']
  if free<3: raise RuntimeError('C-drive mandatory stop threshold breached')
  if free<4: ev(run,'storage_warning',stage=stage,c_free_gib=free)
+
+def _pause_request(run, manifest, *, completed_task_count):
+ """Return a validated task-boundary pause request, if this boundary is due.
+
+ A pause is deliberately admitted only *after* every arm and Dynamic update
+ for a task has durably completed.  This makes a later invocation of the same
+ runner a normal prefix restart rather than a mid-trajectory recovery.
+ """
+ path=run/'pause-request.json'
+ if not path.is_file(): return None
+ try: value=json.loads(path.read_text(encoding='utf-8'))
+ except (OSError,json.JSONDecodeError) as exc: raise RuntimeError('pause request is malformed') from exc
+ if not isinstance(value,dict) or value.get('version')!='task-boundary-pause-v1':
+  raise RuntimeError('pause request version is invalid')
+ if value.get('manifest_sha256')!=file_sha(run/'manifest.json'):
+  raise RuntimeError('pause request is not bound to this frozen manifest')
+ target=value.get('after_completed_tasks')
+ if isinstance(target,bool) or not isinstance(target,int): raise RuntimeError('pause request target is invalid')
+ allowed=manifest.get('evaluation',{}).get('pause_milestones',[])
+ if target not in allowed: raise RuntimeError('pause request target is not preregistered')
+ if target<completed_task_count: return None
+ return value if target==completed_task_count else None
+
+def _record_pause(run, manifest, *, task_position, task_id, copro_checkpoint, dynamic_checkpoint, fixed_marker):
+ """Atomically record a fully reconciled, resumable task-prefix boundary."""
+ prefix=copro_checkpoint.reconcile(ledger_reconciled=_ledger_reconciled(run/'ledger.jsonl'),
+                                   fixed_current_state=copro_checkpoint.fixed_initial_state)
+ dynamic=dynamic_checkpoint.reconcile()
+ expected_per_task=len(manifest['arms'])*len(manifest['evaluation']['seeds'])
+ observed=sum(1 for path in (run/'artifacts').rglob('trial-*.json') if path.is_file())
+ if observed!=task_position*expected_per_task: raise RuntimeError('pause boundary artifact prefix is incomplete')
+ value={'version':'task-boundary-pause-marker-v1','manifest_sha256':file_sha(run/'manifest.json'),
+        'completed_task_count':task_position,'completed_task_id':task_id,
+        'next_task_id':(manifest['evaluation']['task_ids'][task_position] if task_position<len(manifest['evaluation']['task_ids']) else None),
+        'artifact_count':observed,'ledger_sha256':file_sha(run/'ledger.jsonl'),
+        'live_summary_sha256':file_sha(run/'live-summary.json'),
+        'copromem_completed_task_count':prefix['completed_task_count'],
+        'copromem_dynamic_state_sha256':digest(prefix['dynamic_state']),
+        'reme_dynamic_completed_update_count':dynamic['completed_count'],
+        'reme_fixed_checkpoint_sha256':fixed_marker['checkpoint_sha256']}
+ value['pause_marker_sha256']=digest(value); write_json(run/'pause-markers'/f'after-task-{task_position:04d}.json',value)
+ st(run,'paused',manifest_sha256=value['manifest_sha256'],pause_marker_sha256=value['pause_marker_sha256'],next_task_id=value['next_task_id'])
+ return value
 def identities():
  report=json.loads((CONSTRUCTION/'FINAL_CONSTRUCTION_REPORT.json').read_text()); gate=json.loads((COPRO/'semantic-admission-gate.json').read_text())
  if report['shared_bank_sha256']!='6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0' or gate['state_sha256']!='add35eca3ccaa9780183a144328157db2c64b932e5b69a7e3d5b87fd4efc9448':raise RuntimeError('completed bank identity mismatch')
@@ -155,7 +199,7 @@ def prepare(run):
  limits=dict(CALL_LIMITS); budget=v5_budget_bound(call_limits=limits,historical_usd=HISTORICAL_EXPOSURE,lifecycle_input_ceiling=LIFECYCLE_INPUT_CEILING)
  if budget['all_in_usd']>HARD_CAP_USD:raise RuntimeError(f'budget exceeds USD {HARD_CAP_USD:g}')
  commit=source_commit();runtime=build_evaluation_runtime_identity(root=ROOT,source_commit=commit);write_json(run/'runtime-identity.json',runtime)
- m={'protocol':PROTOCOL,'exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'predecessor_evaluation_004_excluded':True,'predecessor_evaluation_005_excluded':True,'git_commit':commit,'runtime_identity_sha256':runtime['runtime_identity_sha256'],'runtime_identity_file_sha256':file_sha(run/'runtime-identity.json'),'arms':ARMS,'evaluation':{'split':EVALUATION_SPLIT,'task_ids':FROZEN_TASK_IDS,'seeds':[11001,11002],'stochastic_trial_ids':[11001,11002],'provider_seed':None,'trial_semantics':'ordered_stochastic_labels_not_provider_seeds','expected_trajectories':len(FROZEN_TASK_IDS)*len([11001,11002])*len(ARMS)},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':HARD_CAP_USD,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE,'evaluation_004_unresolved_retained_usd':0.0060078,'evaluation_005_unresolved_retained_usd':0.005946},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
+ m={'protocol':PROTOCOL,'exploratory_diagnostic_only':True,'predecessor_evaluation_002_excluded':True,'predecessor_evaluation_004_excluded':True,'predecessor_evaluation_005_excluded':True,'git_commit':commit,'runtime_identity_sha256':runtime['runtime_identity_sha256'],'runtime_identity_file_sha256':file_sha(run/'runtime-identity.json'),'arms':ARMS,'evaluation':{'split':EVALUATION_SPLIT,'task_ids':FROZEN_TASK_IDS,'seeds':list(EVALUATION_SEEDS),'stochastic_trial_ids':list(EVALUATION_SEEDS),'provider_seed':None,'trial_semantics':'ordered_stochastic_labels_not_provider_seeds','expected_trajectories':len(FROZEN_TASK_IDS)*len(EVALUATION_SEEDS)*len(ARMS)},'banks':{'reme_shared_sha256':report['shared_bank_sha256'],'copromem_sha256':gate['state_sha256']},'storage_policy':{'launch_floor_gib':5,'warning_gib':4,'mandatory_stop_gib':3},'execution':{'model':'deepseek/deepseek-v4.1-flash','provider_only':'deepseek','temperature':.7,'top_p':1.0,'max_actions':30,'completion_token_ceiling':2048,'context_token_ceiling':32768},'budget':{**budget,'hard_cap_usd':HARD_CAP_USD,'call_limits':limits,'historical_settled_exposure':HISTORICAL_EXPOSURE,'evaluation_004_unresolved_retained_usd':0.0060078,'evaluation_005_unresolved_retained_usd':0.005946},'scientific_protocol_unchanged':True,'clean_restart_from_original_initial_banks':True}
  write_json(run/'template.json',m)
 def freeze(run):
  apply_runtime_locators(ROOT)
@@ -245,6 +289,7 @@ def run(run):
    fixed_marker=fixed_checkpoint.checkpoint(label='initial')
    dynamic_checkpoint=_dynamic_checkpoint(run,m,svc['reme-dynamic'],svc['reme-dynamic-verifier'])
    dynamic_checkpoint.restore_latest()
+   paused=False
    for task_position,task in enumerate(m['evaluation']['task_ids'],1):
     if task_position <= int(prefix['completed_task_count']): continue
     _runtime_checkpoint(run,m,f'task-{task_position:04d}-before-open')
@@ -331,6 +376,12 @@ def run(run):
     if digest(fixed_state)!=m['banks']['copromem_sha256'] or fixed_state is dynamic_state:raise RuntimeError('CoProMem Fixed/Dynamic state isolation violated')
     fixed_marker=fixed_checkpoint.checkpoint(label=f'task-{task_position:04d}',predecessor_checkpoint_sha256=fixed_marker['checkpoint_sha256'])
     summary(run,m)
+    if _pause_request(run,m,completed_task_count=task_position) is not None:
+     _record_pause(run,m,task_position=task_position,task_id=task,copro_checkpoint=copro_checkpoint,
+                   dynamic_checkpoint=dynamic_checkpoint,fixed_marker=fixed_marker)
+     paused=True
+     break
+   if paused: return
   _terminalize(run,m,copro_checkpoint,dynamic_checkpoint,fixed_checkpoint,owned_services)
  except BaseException as exc:
   st(run,'failed',failure_class=type(exc).__name__,failure_message=str(exc)[:240])

@@ -67,18 +67,22 @@ def _role_owner(role: str, *, allow_copromem_decomposition: bool,
         return lifecycle[role], "lifecycle"
     if role in embedding:
         return embedding[role], "embedding"
-    # The controlled ReasoningBank-AppWorld port has one online Dynamic bank
-    # in its engineering profile.  Judge/extractor calls are lifecycle calls;
-    # query/document embeddings use the shared Azure embedding transport.  A
-    # future profile that registers a Fixed ReasoningBank arm must introduce a
-    # separately owned role rather than silently attributing it here.
-    reasoningbank = {"reasoningbank_judge": ("reasoningbank_dynamic", "lifecycle"),
-                     "reasoningbank_extraction": ("reasoningbank_dynamic", "lifecycle"),
-                     "reasoningbank_embedding": ("reasoningbank_dynamic", "embedding")}
+    # Legacy engineering artifacts used ``reasoningbank_dynamic`` as an
+    # internal compatibility ID.  New controlled pilots use the method name
+    # ``reasoningbank`` because this frozen-bank comparison does not perform
+    # online updates.  Resolve the owner from the registered protocol arms so
+    # the ledger never silently attributes a call to an unregistered alias.
+    configured = [arm for arm in ("reasoningbank", "reasoningbank_dynamic") if arm in registered_arms]
+    if len(configured) > 1:
+        raise LedgerReconciliationError("ReasoningBank protocol registers conflicting arm identities")
+    reasoningbank_arm = configured[0] if configured else None
+    reasoningbank = {"reasoningbank_judge": (reasoningbank_arm, "lifecycle"),
+                     "reasoningbank_extraction": (reasoningbank_arm, "lifecycle"),
+                     "reasoningbank_embedding": (reasoningbank_arm, "embedding")}
     if role in reasoningbank:
         arm, kind = reasoningbank[role]
-        if arm not in registered_arms:
-            raise LedgerReconciliationError("ReasoningBank call exists without its registered Dynamic arm")
+        if arm is None:
+            raise LedgerReconciliationError("ReasoningBank call exists without its registered arm")
         return arm, kind
     if role in {"reme_lifecycle:reme-dynamic-verifier", "reme_embedding:reme-dynamic-verifier"}:
         raise LedgerReconciliationError("ReMe Dynamic verifier provider activity is prohibited")
