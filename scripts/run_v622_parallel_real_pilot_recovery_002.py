@@ -14,6 +14,7 @@ import os
 import pathlib
 import shutil
 import sys
+import time
 from decimal import Decimal
 from typing import Any, Mapping
 
@@ -279,10 +280,35 @@ def preflight(run: pathlib.Path) -> None:
 
 
 def run(run: pathlib.Path) -> None:
-    _source, _sha, _prefix, exposure, dynamic_ids = _source_prefix()
-    _configure(run, historical_exposure=exposure); _install_source_marker_validation(dynamic_ids)
-    preflight(run)
-    base.run(run)
+    """Run with a terminal record even for failures before ``base.run``'s try.
+
+    The maintained runner owns its service/executor failure handling, but a
+    recovery can also fail while rebuilding its prefix immediately before that
+    boundary.  Persist a value-free terminal record in either case so a
+    detached launcher cannot leave a misleading ``running`` status.
+    """
+    try:
+        _source, _sha, _prefix, exposure, dynamic_ids = _source_prefix()
+        _configure(run, historical_exposure=exposure); _install_source_marker_validation(dynamic_ids)
+        preflight(run)
+        base.run(run)
+    except BaseException as exc:
+        failure = {
+            "version": PROTOCOL,
+            "event": "recovery_runner_failed",
+            "failure_class": type(exc).__name__,
+            "time_ns": time.time_ns(),
+        }
+        write_json(run / "recovery-runner-failure.json", failure)
+        try:
+            manifest_sha = file_sha(run / "manifest.json") if (run / "manifest.json").is_file() else None
+            base.st(run, "failed", manifest_sha256=manifest_sha,
+                    failure_class=failure["failure_class"])
+        except Exception:
+            # The durable failure record above is still authoritative if the
+            # status writer itself is unavailable.
+            pass
+        raise
 
 
 def main() -> None:
