@@ -60,10 +60,24 @@ def _source_sha256(path: Path) -> str:
 
 
 def _repo_relative(root: Path, path: Path) -> str:
+    """Return a checked repository-relative name without resolving every file.
+
+    ``Path.resolve`` performs a filesystem round trip.  On WSL /mnt that made
+    clean runtime verification issue one expensive 9P operation per tracked
+    file.  Candidates are constructed from the already-resolved repository
+    root, so lexical containment is sufficient for normal files; retain a
+    physical containment check only for the exceptional symlink case.
+    """
     try:
-        return path.resolve().relative_to(root.resolve()).as_posix()
+        relative = path.relative_to(root)
     except ValueError as exc:
         raise RuntimeIdentityError("runtime identity input escapes the source checkout") from exc
+    if path.is_symlink():
+        try:
+            path.resolve().relative_to(root)
+        except ValueError as exc:
+            raise RuntimeIdentityError("runtime identity symlink escapes the source checkout") from exc
+    return relative.as_posix()
 
 
 def load_policy(root: Path, policy_path: Path | None = None) -> dict[str, Any]:
@@ -110,12 +124,12 @@ def executable_paths(root: Path, policy: Mapping[str, Any]) -> list[Path]:
         if relative.suffix not in suffixes or _is_ignored(relative, policy):
             continue
         if any(relative.is_relative_to(source_root) for source_root in source_roots):
-            paths.add((root / relative).resolve())
+            paths.add(root / relative)
     for raw in [*policy["entry_points"], *policy["runtime_configuration_files"]]:
         candidate = (root / raw).resolve()
         if not candidate.is_file():
             raise RuntimeIdentityError("declared runtime entry point or schema is absent")
-        paths.add(candidate)
+        paths.add(root / raw)
     # The policy intentionally covers *tracked* source.  A newly created
     # runtime-shaped file is audited below as untracked dirt rather than being
     # silently promoted into the executable inventory.
