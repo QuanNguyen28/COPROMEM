@@ -250,11 +250,77 @@ def build_identity(*, root: Path, executable_commit: str, runtime_configuration:
             "runtime_identity_sha256": aggregate["sha256"]}
 
 
+def _fast_clean_identity_matches(record: Mapping[str, Any], *, root: Path,
+                                 runtime_configuration: Mapping[str, Any],
+                                 external_dependencies: Mapping[str, Any],
+                                 scientific_inputs: Mapping[str, Any],
+                                 policy_path: Path | None = None) -> bool:
+    """Validate a clean pinned checkout without rehashing its full source tree.
+
+    Full inventory hashing remains mandatory while freezing a runtime identity
+    and whenever a relevant source change is present.  Once the record pins a
+    clean commit, however, Git's exact commit plus an allowlisted diff and
+    untracked-file check prove that the recorded executable inventory is still
+    the committed inventory.  Re-reading and SHA-256 hashing every source
+    byte at every dispatch adds no custody information and makes WSL /mnt
+    checkouts impractically slow.
+    """
+    if record.get("version") != IDENTITY_VERSION:
+        return False
+    try:
+        executable_commit = str(record["executable_commit"])
+        components = record["components"]
+        if not isinstance(components, Mapping):
+            return False
+        source = components["executable_source"]
+        if not isinstance(source, Mapping) or not isinstance(source.get("body"), Mapping):
+            return False
+        source_body = source["body"]
+        policy = load_policy(root, policy_path)
+        policy_file = policy_path or (root / POLICY_RELATIVE_PATH)
+        if source_body.get("policy_sha256") != _source_sha256(policy_file):
+            return False
+        actual_commit = _git(root, ["rev-parse", "HEAD"]).decode("utf-8").strip()
+        if actual_commit != executable_commit:
+            return False
+        current_dirty = dirty_state(root, policy, executable_commit)
+        if current_dirty["runtime_relevant_dirty"]:
+            return False
+        if current_dirty != source_body.get("dirty_state"):
+            return False
+        expected_components = {
+            "runtime_configuration": component("runtime_configuration", runtime_configuration),
+            "external_dependencies": component("external_dependencies", external_dependencies),
+            "scientific_inputs": component("scientific_inputs", scientific_inputs),
+        }
+        if any(components.get(name) != expected for name, expected in expected_components.items()):
+            return False
+        aggregate_body = {
+            "version": IDENTITY_VERSION,
+            "executable_commit": executable_commit,
+            "executable_source_sha256": source.get("sha256"),
+            "runtime_configuration_sha256": expected_components["runtime_configuration"]["sha256"],
+            "external_dependencies_sha256": expected_components["external_dependencies"]["sha256"],
+            "scientific_inputs_sha256": expected_components["scientific_inputs"]["sha256"],
+        }
+        aggregate = component("aggregate_identity", aggregate_body)
+        return (components.get("aggregate_identity") == aggregate
+                and record.get("runtime_identity_sha256") == aggregate["sha256"])
+    except (KeyError, TypeError, RuntimeIdentityError):
+        return False
+
+
 def verify_identity(record: Mapping[str, Any], *, root: Path, runtime_configuration: Mapping[str, Any],
                     external_dependencies: Mapping[str, Any], scientific_inputs: Mapping[str, Any],
                     policy_path: Path | None = None) -> dict[str, Any]:
     if record.get("version") != IDENTITY_VERSION:
         raise RuntimeIdentityError("a v2 identity cannot satisfy a v3 manifest")
+    if _fast_clean_identity_matches(record, root=root, runtime_configuration=runtime_configuration,
+                                    external_dependencies=external_dependencies, scientific_inputs=scientific_inputs,
+                                    policy_path=policy_path):
+        # Return a plain mapping, matching the full builder's ownership
+        # semantics, without recomputing the already commit-bound inventory.
+        return dict(record)
     observed = build_identity(root=root, executable_commit=str(record.get("executable_commit", "")),
                               runtime_configuration=runtime_configuration,
                               external_dependencies=external_dependencies,
