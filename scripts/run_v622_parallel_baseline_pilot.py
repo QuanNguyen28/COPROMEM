@@ -176,6 +176,7 @@ def prepare(run: Path) -> None:
     _configure(run); base.EXTRA_RUNTIME_FACTORY = _capturing_factory
     v622.prepare(run)
     template_path = run / "template.json"; template = json.loads(template_path.read_text(encoding="utf-8"))
+    allocation = json.loads((run / ALLOCATION_NAME).read_text(encoding="utf-8"))
     rb = _rb_manifest_record(run)
     template["protocol"] = PROTOCOL; template["arms"] = list(ARMS)
     template["execution"]["provider_only"] = CHAT_PROVIDER
@@ -186,10 +187,7 @@ def prepare(run: Path) -> None:
     template["method"]["provider_amendment"] = (
         "all chat arms pin DeepInfra with fallback disabled after the direct DeepSeek endpoint became unavailable"
     )
-    template["method"]["successor_amendment"] = (
-        "clean exposed replay after pilot-002 failed post-score because its retrieval sidecar read a noncanonical "
-        "runtime semantic identity field; pilot-002 evidence is immutable and no artifact is imported"
-    )
+    template["method"]["successor_amendment"] = str(allocation.get("reuse_reason") or "")
     template["method_policy"]["reasoningbank"] = dict(rb)
     # Register the six fixed-bank query embeddings. The conservative base bound
     # is retained and augmented rather than recomputed with a weaker formula.
