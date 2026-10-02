@@ -16,7 +16,7 @@ from scripts import run_v61_exploratory_evaluation as base
 from scripts import run_v622_parallel_baseline_pilot as parallel
 from scripts import run_v622_semantic_spine_engineering as v622
 from copromem.experiments.reme_copromem.runner import write_json
-from copromem.experiments.reme_copromem.runtime_identity_v3 import build_evaluation_identity_v3
+from copromem.experiments.reme_copromem.runtime_identity_v3 import IDENTITY_VERSION as RUNTIME_IDENTITY_V3, build_evaluation_identity_v3
 from copromem.experiments.reme_copromem.task_conditioned_retrieval_v622 import (
     POLICY_VERSION, derive_task_query, frozen_policy, reproduce_retrieval, retrieve, validate_task_query,
 )
@@ -136,6 +136,7 @@ def prepare(run: Path) -> None:
                "runtime_identity_record_sha256": base.file_sha(run / "runtime-identity.json")})
     template["runtime_identity_inputs"] = inputs; template["runtime_identity_sha256"] = runtime["runtime_identity_sha256"]
     template["runtime_identity_file_sha256"] = base.file_sha(run / "runtime-identity.json")
+    template["runtime_identity_version"] = RUNTIME_IDENTITY_V3
     write_json(path, template)
 
 
