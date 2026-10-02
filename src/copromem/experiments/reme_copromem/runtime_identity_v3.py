@@ -91,14 +91,26 @@ def executable_paths(root: Path, policy: Mapping[str, Any]) -> list[Path]:
     """Return the exact sorted allowlist, never source-tree enumeration order."""
     root = root.resolve()
     suffixes = set(policy["source_suffixes"])
+    # Ask Git for the tracked inventory rather than recursively walking the
+    # checkout.  The latter descends through every ignored artifact/cache
+    # directory before `_is_ignored` can reject it, which is especially costly
+    # for a Windows worktree viewed through WSL /mnt.  A v3 executable
+    # inventory is explicitly a tracked-source policy, so Git's inventory is
+    # also the more precise authority.
+    tracked = set(_git(root, ["ls-files", "-z"]).decode("utf-8").split("\0"))
     paths: set[Path] = set()
-    for raw_root in policy["source_roots"]:
-        directory = root / raw_root
-        if not directory.is_dir():
+    source_roots = [Path(raw_root) for raw_root in policy["source_roots"]]
+    for source_root in source_roots:
+        if not (root / source_root).is_dir():
             raise RuntimeIdentityError("declared runtime source root is absent")
-        for candidate in directory.rglob("*"):
-            if candidate.is_file() and candidate.suffix in suffixes and not _is_ignored(candidate.relative_to(root), policy):
-                paths.add(candidate.resolve())
+    for relative_text in tracked:
+        if not relative_text:
+            continue
+        relative = Path(relative_text)
+        if relative.suffix not in suffixes or _is_ignored(relative, policy):
+            continue
+        if any(relative.is_relative_to(source_root) for source_root in source_roots):
+            paths.add((root / relative).resolve())
     for raw in [*policy["entry_points"], *policy["runtime_configuration_files"]]:
         candidate = (root / raw).resolve()
         if not candidate.is_file():
@@ -107,14 +119,14 @@ def executable_paths(root: Path, policy: Mapping[str, Any]) -> list[Path]:
     # The policy intentionally covers *tracked* source.  A newly created
     # runtime-shaped file is audited below as untracked dirt rather than being
     # silently promoted into the executable inventory.
-    tracked = set(_git(root, ["ls-files", "-z"]).decode("utf-8").split("\0"))
     return sorted((path for path in paths if _repo_relative(root, path) in tracked),
                   key=lambda item: _repo_relative(root, item))
 
 
-def executable_inventory(root: Path, policy: Mapping[str, Any]) -> list[dict[str, Any]]:
+def executable_inventory(root: Path, policy: Mapping[str, Any], *, paths: Iterable[Path] | None = None) -> list[dict[str, Any]]:
+    selected = list(paths) if paths is not None else executable_paths(root, policy)
     return [{"path": _repo_relative(root, path), "sha256": _source_sha256(path), "size": len(_source_bytes(path))}
-            for path in executable_paths(root, policy)]
+            for path in selected]
 
 
 def _git(root: Path, args: Iterable[str]) -> bytes:
@@ -144,11 +156,12 @@ def _git_blob(root: Path, commit: str, relative: str) -> bytes:
         raise RuntimeIdentityError("declared executable commit lacks an allowlisted file") from exc
 
 
-def dirty_state(root: Path, policy: Mapping[str, Any], executable_commit: str) -> dict[str, Any]:
+def dirty_state(root: Path, policy: Mapping[str, Any], executable_commit: str,
+                *, executable: Iterable[Path] | None = None) -> dict[str, Any]:
     """Compare exactly allowlisted tracked content and relevant untracked files."""
     root = root.resolve()
     changed: list[dict[str, Any]] = []
-    executable = executable_paths(root, policy)
+    selected = list(executable) if executable is not None else executable_paths(root, policy)
     # One ``git diff --name-only`` establishes the clean fast path.  The
     # former implementation spawned ``git show`` once per allowlisted file,
     # which is needlessly expensive for a clean Windows worktree accessed
@@ -156,12 +169,12 @@ def dirty_state(root: Path, policy: Mapping[str, Any], executable_commit: str) -
     # dispatch-capable checkpoint, so that I/O pattern could delay a real run
     # by minutes without improving custody.  Only files Git reports changed
     # need their committed blob materialized for the detailed hash record.
-    relatives = [_repo_relative(root, path) for path in executable]
+    relatives = [_repo_relative(root, path) for path in selected]
     changed_names = set(_git(root, ["diff", "--name-only", "--no-ext-diff", executable_commit,
                                     "--", *relatives]).decode("utf-8").splitlines())
     if not changed_names.issubset(set(relatives)):
         raise RuntimeIdentityError("runtime diff reports a path outside the executable allowlist")
-    for path in executable:
+    for path in selected:
         relative = _repo_relative(root, path)
         if relative not in changed_names:
             continue
@@ -170,20 +183,21 @@ def dirty_state(root: Path, policy: Mapping[str, Any], executable_commit: str) -
         if actual != expected:
             changed.append({"path": relative, "expected_sha256": hashlib.sha256(expected).hexdigest(),
                             "observed_sha256": hashlib.sha256(actual).hexdigest(), "size": len(actual)})
-    tracked = set(_git(root, ["ls-files", "-z"]).decode("utf-8").split("\0"))
+    untracked_names = set(_git(root, ["ls-files", "--others", "--exclude-standard", "-z"]).decode("utf-8").split("\0"))
     suffixes = set(policy["untracked_runtime_suffixes"])
     untracked: list[dict[str, Any]] = []
-    for raw_root in policy["untracked_runtime_roots"]:
-        directory = root / raw_root
-        if not directory.is_dir():
+    untracked_roots = [Path(raw_root) for raw_root in policy["untracked_runtime_roots"]]
+    for relative_text in untracked_names:
+        if not relative_text:
             continue
-        for path in directory.rglob("*"):
-            if not path.is_file() or path.suffix not in suffixes:
-                continue
-            relative = _repo_relative(root, path)
-            if _is_ignored(Path(relative), policy) or relative in tracked:
-                continue
-            untracked.append({"path": relative, "sha256": _source_sha256(path), "size": len(_source_bytes(path))})
+        relative_path = Path(relative_text)
+        if (relative_path.suffix not in suffixes or _is_ignored(relative_path, policy)
+                or not any(relative_path.is_relative_to(candidate) for candidate in untracked_roots)):
+            continue
+        path = root / relative_path
+        if not path.is_file():
+            raise RuntimeIdentityError("Git reports an unreadable untracked runtime file")
+        untracked.append({"path": relative_text, "sha256": _source_sha256(path), "size": len(_source_bytes(path))})
     changed.sort(key=lambda item: item["path"]); untracked.sort(key=lambda item: item["path"])
     payload = {"tracked_changed": changed, "untracked_runtime": untracked}
     return {"runtime_relevant_dirty": bool(changed or untracked), **payload,
@@ -213,11 +227,13 @@ def build_identity(*, root: Path, executable_commit: str, runtime_configuration:
     actual_commit = _git(root, ["rev-parse", "HEAD"]).decode("utf-8").strip()
     if actual_commit != executable_commit:
         raise RuntimeIdentityError("declared executable commit differs from runtime checkout")
-    inventory = executable_inventory(root, policy)
+    executable_paths_for_identity = executable_paths(root, policy)
+    inventory = executable_inventory(root, policy, paths=executable_paths_for_identity)
     executable = component("executable_source", {"policy_sha256": _source_sha256(policy_path or root / POLICY_RELATIVE_PATH),
                                                     "inventory": inventory,
                                                     "inventory_sha256": canonical_hash(inventory),
-                                                    "dirty_state": dirty_state(root, policy, executable_commit)})
+                                                    "dirty_state": dirty_state(root, policy, executable_commit,
+                                                                               executable=executable_paths_for_identity)})
     configuration = component("runtime_configuration", runtime_configuration)
     dependencies = component("external_dependencies", external_dependencies)
     inputs = component("scientific_inputs", scientific_inputs)
