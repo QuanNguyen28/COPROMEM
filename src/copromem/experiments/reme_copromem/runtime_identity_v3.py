@@ -148,8 +148,23 @@ def dirty_state(root: Path, policy: Mapping[str, Any], executable_commit: str) -
     """Compare exactly allowlisted tracked content and relevant untracked files."""
     root = root.resolve()
     changed: list[dict[str, Any]] = []
-    for path in executable_paths(root, policy):
+    executable = executable_paths(root, policy)
+    # One ``git diff --name-only`` establishes the clean fast path.  The
+    # former implementation spawned ``git show`` once per allowlisted file,
+    # which is needlessly expensive for a clean Windows worktree accessed
+    # through WSL's /mnt mount.  Runtime identity runs at every
+    # dispatch-capable checkpoint, so that I/O pattern could delay a real run
+    # by minutes without improving custody.  Only files Git reports changed
+    # need their committed blob materialized for the detailed hash record.
+    relatives = [_repo_relative(root, path) for path in executable]
+    changed_names = set(_git(root, ["diff", "--name-only", "--no-ext-diff", executable_commit,
+                                    "--", *relatives]).decode("utf-8").splitlines())
+    if not changed_names.issubset(set(relatives)):
+        raise RuntimeIdentityError("runtime diff reports a path outside the executable allowlist")
+    for path in executable:
         relative = _repo_relative(root, path)
+        if relative not in changed_names:
+            continue
         actual = _source_bytes(path)
         expected = _git_blob(root, executable_commit, relative).replace(b"\r\n", b"\n")
         if actual != expected:
