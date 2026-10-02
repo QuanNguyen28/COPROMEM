@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -162,6 +163,24 @@ def _git(root: Path, args: Iterable[str]) -> bytes:
     env = {key: value for key, value in os.environ.items() if key not in {"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"}}
     try:
         pointer = root / ".git"
+        # Git-for-Windows accesses an E:/ worktree natively, whereas WSL Git
+        # traverses it through the 9P /mnt bridge.  For a Windows-mounted
+        # checkout, prefer the installed native executable when available.
+        # It receives the same explicit worktree/GIT_DIR arguments and all
+        # output is still verified by this identity boundary; POSIX and
+        # non-Windows-mounted checkouts retain the ordinary Git path.
+        native_git = shutil.which("git.exe") if os.name == "posix" and root.as_posix().startswith("/mnt/") else None
+        root_parts = root.parts
+        windows_root = (f"{root_parts[2].upper()}:/{'/'.join(root_parts[3:])}"
+                        if native_git and len(root_parts) >= 3 else None)
+        if native_git and windows_root:
+            if pointer.is_file():
+                raw = pointer.read_text(encoding="utf-8").strip()
+                if raw.lower().startswith("gitdir: ") and len(raw) > 11 and raw[8].isalpha() and raw[9:11] == ":/":
+                    env["GIT_DIR"] = raw[8:]
+                    env["GIT_WORK_TREE"] = windows_root
+                    return subprocess.check_output([native_git, *args], env=env)
+            return subprocess.check_output([native_git, "-C", windows_root, *args], env=env)
         # Git-for-Windows follows the linked-worktree pointer directly.  WSL
         # Git needs the Windows pointer translated, but only for this exact
         # checkout; never inherit an unrelated caller's GIT_DIR.
