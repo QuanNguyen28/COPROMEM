@@ -1,0 +1,582 @@
+{
+  "components": {
+    "aggregate_identity": {
+      "body": {
+        "executable_commit": "97f7738769d18d5d1d630132b4761c4359309f0a",
+        "executable_source_sha256": "6c6520dc23e129d36a47e4248a7ac5685e490b794bb4ff97a787b0cc7702187d",
+        "external_dependencies_sha256": "974dc0255c2108208951695bcef986be462fd2842eb51165a44cb9dce6915b0b",
+        "runtime_configuration_sha256": "e8dc4a7317f15aa1f679b037ce39f2237aa53b95ae2736540844544ddab948d7",
+        "scientific_inputs_sha256": "68bbd01b1ce400ed4f1f4a9e9f1adea3b54ce59bc724a760d07fb984652b62a1",
+        "version": "runtime-content-identity-v3"
+      },
+      "name": "aggregate_identity",
+      "sha256": "cc523aa0669514ffba047fd4e578a2be7dc303de6248486b8d85dece50b2d855"
+    },
+    "executable_source": {
+      "body": {
+        "dirty_state": {
+          "dirty_content_sha256": "0b42594a87cd11b889a6c6e43f07ce1155eee712cd6f98af772d3c134a62948e",
+          "runtime_relevant_dirty": false,
+          "tracked_changed": [],
+          "untracked_runtime": []
+        },
+        "inventory": [
+          {
+            "path": "pyproject.toml",
+            "sha256": "ffd0ecb7cfe392a2b0f2ee5ec96d8223759aceacfbe33b7186ab57c2fddc9b91",
+            "size": 1467
+          },
+          {
+            "path": "research/reme_copromem_fixed_dynamic_review/appworld_public_tool_schema_registry_v5_3.json",
+            "sha256": "a30ec5f000dba95278d038641d4b4a60b23edf4d8fae9e2ede87c77cd740deeb",
+            "size": 1406721
+          },
+          {
+            "path": "scripts/run_v61_exploratory_evaluation.py",
+            "sha256": "bc6144bfe79fc6a88c1b859e7586a24672a7ccebc9b7c471cdbe6c32aa5298fc",
+            "size": 36828
+          },
+          {
+            "path": "scripts/run_v621_task_conditioned_retrieval_engineering.py",
+            "sha256": "65c3dec8559fd770f55523b5bc6e4457f8b06334d24f90e895c9458c9b96ac83",
+            "size": 6687
+          },
+          {
+            "path": "scripts/run_v622_parallel_baseline_pilot.py",
+            "sha256": "d17f719e8017fca5eb7e9b7e2da5fe105aec1f9a236a9923fb094be6445e63e5",
+            "size": 13378
+          },
+          {
+            "path": "scripts/run_v622_parallel_real_pilot.py",
+            "sha256": "7e77e44da1cc284b71e4a14519e56eb8c98a9271797eb9eed2985fc889af0acd",
+            "size": 10199
+          },
+          {
+            "path": "scripts/run_v6_shared_acquisition.py",
+            "sha256": "a07f00dd916c63dcee4e4db0f0e468ab497b88f00458ba9b2de3a27f024de3fe",
+            "size": 25310
+          },
+          {
+            "path": "src/copromem/__init__.py",
+            "sha256": "0d7d541583edb1a1fee12c25828360e7b33bbd09273ebc7f5750a8b746a3bfc3",
+            "size": 484
+          },
+          {
+            "path": "src/copromem/appworld_acquisition_gate.py",
+            "sha256": "16f2808993cd78351f3fbc375f1417475e71d379573391fe5cc6c016059edbb7",
+            "size": 153
+          },
+          {
+            "path": "src/copromem/appworld_comparison_adapter.py",
+            "sha256": "5bec4210b2480dd273099b3db10f98bf49569be3ba63547f42c37f43f39a0693",
+            "size": 145
+          },
+          {
+            "path": "src/copromem/bank.py",
+            "sha256": "419c7f6356ab6517d200db719e4cdd1dab181005a43ead6133ec3dcae4abd6de",
+            "size": 13831
+          },
+          {
+            "path": "src/copromem/benchmarks/__init__.py",
+            "sha256": "009f0fb2e4b006b54209d19d4aac3cdc8f916d3bb2701fcbf92fbc15e9306441",
+            "size": 50
+          },
+          {
+            "path": "src/copromem/benchmarks/appworld/__init__.py",
+            "sha256": "c98b9abd19c80d93af0257fd6b476ed713449e366d35dc9dc4432d823a65a869",
+            "size": 186
+          },
+          {
+            "path": "src/copromem/benchmarks/appworld/acquisition.py",
+            "sha256": "508b076664282c65b834fddf3a3aa01b991380b408bc7d09db824b76eed163ea",
+            "size": 5409
+          },
+          {
+            "path": "src/copromem/benchmarks/appworld/adapter.py",
+            "sha256": "290bd322f9c4dced66a0d4967b568f1d73fda7bc80e11605744b1058521f4942",
+            "size": 21785
+          },
+          {
+            "path": "src/copromem/benchmarks/appworld/execution_evidence.py",
+            "sha256": "8724d48c4851e0d4c4a70f9ea10a9f9df9d31fc78aae43ef8fae5e9349a018c0",
+            "size": 22217
+          },
+          {
+            "path": "src/copromem/benchmarks/appworld/worker.py",
+            "sha256": "2c3c7c0bafbade456ebd7ffccd7df7948e45e2eace8a02c5fdcb5a1ac1009cdb",
+            "size": 6977
+          },
+          {
+            "path": "src/copromem/benchmarks/webarena/__init__.py",
+            "sha256": "fc0d81dd36584f65bb4b922ca4c90d091f49bd472816bf4f4803b0ee79810080",
+            "size": 60
+          },
+          {
+            "path": "src/copromem/benchmarks/webarena/benchmark.py",
+            "sha256": "b90b8264cc793139ad6606bb44f94eabadc7f0637247a49374b42381f2dacfb9",
+            "size": 60625
+          },
+          {
+            "path": "src/copromem/benchmarks/webarena/evaluator.py",
+            "sha256": "0e4556f2b78a0eb6062153b18d0b303846670e2d6c9a1fb510153942b005a123",
+            "size": 6742
+          },
+          {
+            "path": "src/copromem/benchmarks/webarena/loader.py",
+            "sha256": "14c373354d57fb2d100ccd276abb281e58c8fbfdf2523971f51c7b1338abb4c2",
+            "size": 8317
+          },
+          {
+            "path": "src/copromem/checkpoints.py",
+            "sha256": "038881155fa8001b470f8175b23115e99f0ff993292c0f58049ebcea99a03070",
+            "size": 10235
+          },
+          {
+            "path": "src/copromem/contracts.py",
+            "sha256": "7daf2c75271ed071f8479a392249974607c23ee5bf6c6784365d01670f3eb6ac",
+            "size": 6908
+          },
+          {
+            "path": "src/copromem/contrastive_graph_v6.py",
+            "sha256": "33a34e2f0513f9e3c0098fb4f9e38579bf6c412be77ff62dd195edee9c73d3ff",
+            "size": 10718
+          },
+          {
+            "path": "src/copromem/copromem_memory_module.py",
+            "sha256": "fe5b52898a4279a62f36419fdf68229039bb7b3c3fb3e9e97d78f2ea4ab38bc7",
+            "size": 46589
+          },
+          {
+            "path": "src/copromem/credit_assignment.py",
+            "sha256": "379a2f291e0016d39023735d8b585e95e21e8c250ccd17a69f4fcfcbf67d9f18",
+            "size": 7002
+          },
+          {
+            "path": "src/copromem/decomposition.py",
+            "sha256": "cca29b42c836d966f26b437ab2ce0116850936dfe3384931305d5c89f448aa6d",
+            "size": 44415
+          },
+          {
+            "path": "src/copromem/experiments/__init__.py",
+            "sha256": "d889057247f5e5bee3bebacfeba7de9846eb3996b0813f494300b569d1d9a160",
+            "size": 41
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/__init__.py",
+            "sha256": "8ba1956ad133539f60f38dfbbfb7af846516d93ceaa7e540dca943cde2369d89",
+            "size": 55
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/config.py",
+            "sha256": "036976d365b2587919ef772515ffd9a0d0b6d0a8d1bb0a7957d36b1c8da5c468",
+            "size": 35104
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/contrastive_v6_dispatcher.py",
+            "sha256": "d084f9467ab4bd5b5d47e8e648a64b1c04f0ce31f2eda73a82235ab899875eaf",
+            "size": 14242
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/contrastive_v6_integration_fixture.py",
+            "sha256": "288e02f439be1211a23b1d5a65c0474b218ed8b44d39c5c3a6d8fd7c73814ac1",
+            "size": 22562
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/contrastive_v6_runner.py",
+            "sha256": "bd10229a423d1e2bbc87c12afc23731442b0d434db5c788e332c559c1b2229ce",
+            "size": 13025
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/copromem_dynamic_checkpoint.py",
+            "sha256": "bb9842ebd09495f44f70573ad03ae71b3a068c82149330e28fa8f40017913bf5",
+            "size": 17201
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/descriptor_screening_v621.py",
+            "sha256": "096a113d1b74bcdbdc7044fc85a24cd458910871b1b7a490b64bc173c75c83d7",
+            "size": 3237
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/evidence_contract.py",
+            "sha256": "1fe812f7fa21ed8073dfadf33f3a004910eb69a5d26c548ab6850feeb2ae2b13",
+            "size": 19682
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/freeze_v5.py",
+            "sha256": "7788151c0bf041252f0b48475e35348cb58bb59b1b3a4eda0dbe86e1a1b10e03",
+            "size": 5088
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/gate.py",
+            "sha256": "0d3a4bed25a959da962d79c46bd15ada7839d80b2e22df1554822d5406b1ef21",
+            "size": 2061
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/live_summary.py",
+            "sha256": "aa5900ce463cbd0d1656aa374d02041c3e52dcd75a14569bba9ace1cc4289367",
+            "size": 18052
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/medium_allocation.py",
+            "sha256": "55d06537f61fe0709edebe41e4efaee3dbc446ef3a09f867d16a45e76b5a7dac",
+            "size": 3740
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/medium_reporting.py",
+            "sha256": "1b717c3ab11ba1d1a3cfdd1a2f14635aa6845b3087d56252d29efbcf10e61c5d",
+            "size": 5060
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/prepare_v5.py",
+            "sha256": "23abc68e6451ae3805c5c5e94f2173bfc8b932d6526b3e40592ef9bce714c4ee",
+            "size": 5098
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/prompt_memory.py",
+            "sha256": "7c6d2264ab58e62fa7787f952ac4922d5788929acfecc2ecd6fc65cabde8dbaf",
+            "size": 1190
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/public_path_registry.py",
+            "sha256": "22c88a72716a137159a5126b04b52ef38395a51277eb5683b06fb6f0debf536b",
+            "size": 15614
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/public_tool_schema_registry.py",
+            "sha256": "aca81f4e968bfab8c670a31102b67112163312cf6b6ac4655d1c25af5128552f",
+            "size": 15909
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/recovery_import.py",
+            "sha256": "45f44dd1dc49c05147c2b6f7326b547b6fb3180cdf6d3538ba80d1806c613727",
+            "size": 10134
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/reporting.py",
+            "sha256": "745a46e6c5e3f3506468b0266d00dd0aa8986140a803499a097bd8f5f55dc119",
+            "size": 9508
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/retrieval_binding_v622.py",
+            "sha256": "84ce1e318cbfc4ee7b3fea0019865665184b60468b3c2eb95eb386faf771c81c",
+            "size": 6452
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/runner.py",
+            "sha256": "83c59e3fe18816691e374ad6fefa911e4c39c903c80d46ad5f9d42f3fa7f9694",
+            "size": 35471
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/runtime_identity.py",
+            "sha256": "f402733b5f0d6928cc211bbce26d22f534f76e46f5f7fdb2fd56ed555459b82a",
+            "size": 13760
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/runtime_identity_binding.py",
+            "sha256": "b3c3b69766256b374fd6fab686bacc8cc6fa9c9453203cd18195d5d1fd3b83e8",
+            "size": 3133
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/runtime_identity_v3.py",
+            "sha256": "00e7af3f6b51a519be86a176a18ac048c2bc8930fd3e999617bd9fc891ae7520",
+            "size": 18258
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/strict_json.py",
+            "sha256": "af02873225536d0ab636fd60d1959f05e3264cdfdaded03a170fd19152a5a70e",
+            "size": 2480
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/task_boundary.py",
+            "sha256": "05306116f9a11a8b91b3f76b463bc31bb9458fd14031a5b2c548ec1b9cac653e",
+            "size": 35351
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/task_boundary_v6.py",
+            "sha256": "99d77794f2ae18933315547452db8f77b6df89428b230ccee385b7cd2117db05",
+            "size": 24832
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/task_conditioned_retrieval_v621.py",
+            "sha256": "4dba54953c4659f3f06c51b5beea1f7bffa81af2acd96feaa5fe0de2be897bbd",
+            "size": 21995
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/task_conditioned_retrieval_v622.py",
+            "sha256": "726071bc7bd3cb6e692f3af87a1587e49815fda1386a4af3a4ffb2f206684301",
+            "size": 21881
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/task_query.py",
+            "sha256": "2257899d798d67b00a55be0f2ae06a2736d4e1792758b57cd40a64c6d22b79b6",
+            "size": 4334
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/terminal_reconciliation.py",
+            "sha256": "d2575ddde45ff0b5748b1a2d0a04e22534fa424bdaa459254e6daae73cecfbf4",
+            "size": 3574
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/v61_custody.py",
+            "sha256": "e4cec9f0f68d51349027b1bc9dee1644521ef5aab976fd6fc0e26190761e7fc1",
+            "size": 7443
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/v62_recovery_custody.py",
+            "sha256": "21b0fb918fad20d2e285d0d96338bc047c221eb599f7612e90ebcbe444e09484",
+            "size": 8499
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/v62_recovery_prefix.py",
+            "sha256": "da97faacccf139c8c51d6847cb9e87070616505754dc1aec40e9313b66280428",
+            "size": 12848
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/v62_recovery_start.py",
+            "sha256": "7a51f4cd5f485ead5e5edb0dc39569f862016fa2368f1df6fa0e2c924308ae32",
+            "size": 3598
+          },
+          {
+            "path": "src/copromem/experiments/reme_copromem/v62_recovery_state.py",
+            "sha256": "91f5bd6da73bf7c272582bd22f448873cc038cc5841be8bba77c2e8a882672ab",
+            "size": 23185
+          },
+          {
+            "path": "src/copromem/integrations/__init__.py",
+            "sha256": "a15fee5b57ea5529f93bafc27a9bee07141fa25e4de2d287e1af5c69e6e23a5e",
+            "size": 43
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/__init__.py",
+            "sha256": "1b7a819d03d1b51aab677f4f8872aeb3cc78ef58a2ebf8657b6d5a282c74f3fd",
+            "size": 303
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/adapter.py",
+            "sha256": "dc2b3aaebd9c7b57ef89530e1643c5b2eaef1b292de9d14dc13a03eb1ccdff07",
+            "size": 6442
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/appworld.py",
+            "sha256": "d5fbd51a995aa564258c6a8135e69134789d89ed58fd8fe8dfe38e2fd77e2e6e",
+            "size": 13041
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/appworld_protocol.py",
+            "sha256": "a2ca6d9cd784e10201b53b4fcfb6ca381e16438fcb65d076a214ce4b62f4faa4",
+            "size": 1906
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/checkpoints.py",
+            "sha256": "601e5a29dadc87d6c1eb3deb40dd5b750121b73f436d81c30d5966d6cbd09224",
+            "size": 23582
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/dynamic_runtime.py",
+            "sha256": "5671118e56968fcbe9c0503f04ab6fd4d3e6c2772bf5fb1ecde62d9fd6bc7b03",
+            "size": 29271
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/lifecycle.py",
+            "sha256": "4467a6d7c3cab0e6b18d4d60f9dd89c21d0e8e4d4fce91de37429f26d421d0eb",
+            "size": 3167
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/providers.py",
+            "sha256": "23249835a7f8ef4583f96f0160722b345d2fe18645f268b5ca1e35fc408d9794",
+            "size": 4114
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/recovery.py",
+            "sha256": "354aed2a8d691d906423b14259f49697cab7fe9e0c0486f6d9def7cb06cc90fd",
+            "size": 13708
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/recovery_admission.py",
+            "sha256": "8fd625af560b47dc5ce8d8fa64e94d6693543e475dd20d7ebd3770e5e21325fa",
+            "size": 10198
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/retrieval_provenance.py",
+            "sha256": "62753d8f21fd65b181e96549cd371e8629433f0a05e0cc955ee833b9a248d5db",
+            "size": 25536
+          },
+          {
+            "path": "src/copromem/integrations/reasoning_bank/shared_embedding.py",
+            "sha256": "a89d1c11453d7184a751c058de89c8e4437f9af278650eef62f831cb2086969d",
+            "size": 1902
+          },
+          {
+            "path": "src/copromem/integrations/reme/__init__.py",
+            "sha256": "021ee847cb520ebcc4f2bb2a6d7ca177dc65f448160f458af3d93f50dff7b240",
+            "size": 139
+          },
+          {
+            "path": "src/copromem/integrations/reme/bank.py",
+            "sha256": "ea8239bd2ad3545e54e390480f6df01c602b03fe0c97d46795fdd43d5991f4d2",
+            "size": 21392
+          },
+          {
+            "path": "src/copromem/integrations/reme/corrected_service.py",
+            "sha256": "9e8cfc2d9f85b9cc5d625aa484f3e98ad06472446610b9ec1e3dafc2e15f1ef4",
+            "size": 5150
+          },
+          {
+            "path": "src/copromem/integrations/reme/dynamic_checkpoint.py",
+            "sha256": "347292117cb36b45b5a8974867a599a7cc13a64d851bd34c76949c9e4f0e5fbe",
+            "size": 21272
+          },
+          {
+            "path": "src/copromem/integrations/reme/fixed_checkpoint.py",
+            "sha256": "36295422def9b379899a0cba2e089f259d41a6497a1a645d89786a851d4bd0eb",
+            "size": 3847
+          },
+          {
+            "path": "src/copromem/integrations/reme/lifecycle.py",
+            "sha256": "f279f08d811f090a05dcf98da2d3024155be989be7ccf418de94176f97d2b695",
+            "size": 2508
+          },
+          {
+            "path": "src/copromem/integrations/reme/service.py",
+            "sha256": "30fd4aa3584fc99672c1baffede56d1f448ce707d98ef21fa791a6d3ca868863",
+            "size": 3437
+          },
+          {
+            "path": "src/copromem/integrations/reme/transport.py",
+            "sha256": "1cc3991246bcb0c8ba9b7cacddd5ba42afd4567fb12e6d78a9e582b82d933d65",
+            "size": 31625
+          },
+          {
+            "path": "src/copromem/integrations/reme/upstream_executor.py",
+            "sha256": "8c8e193c130483acf0c3f9459d715214967d589c58e92429dc6200f6c2290962",
+            "size": 9583
+          },
+          {
+            "path": "src/copromem/learning.py",
+            "sha256": "3209b38784648d787f07689710fdc25f47bd465dcd5047b7148ca7263ebc5924",
+            "size": 16874
+          },
+          {
+            "path": "src/copromem/online.py",
+            "sha256": "4245e1ce9c8376ad0a42e900ac7a8965ce2a514f11aac9584a9be3b969417ffa",
+            "size": 2337
+          },
+          {
+            "path": "src/copromem/pattern_separation.py",
+            "sha256": "29e758735845c2afa52e2e51c2068ed6e072b014f7995cc30bc5eb5d9c846644",
+            "size": 9356
+          },
+          {
+            "path": "src/copromem/providers.py",
+            "sha256": "ac705252ddf37b86890517bf737ec7ca61d2586194ac9620c2f69a3d3ab30815",
+            "size": 12027
+          },
+          {
+            "path": "src/copromem/reme_paper_lifecycle.py",
+            "sha256": "2896d86f7a314f4486401f73ee57e7c8f064d6e50805e2bfba181f01df1be57f",
+            "size": 3224
+          },
+          {
+            "path": "src/copromem/schema.py",
+            "sha256": "997ee866d51cdf550e3b7dc70aaa1e00ea58259667d7e45476285bce935fc43b",
+            "size": 6116
+          },
+          {
+            "path": "src/copromem/semantic_graph_v61.py",
+            "sha256": "5afd430b42fc735132dca9506f2f16ef0e99e2a6f80311efc4c81e01d05621f2",
+            "size": 7279
+          },
+          {
+            "path": "src/copromem/semantic_spine_v622.py",
+            "sha256": "ee914bb8a8b92693af512d2e65886e2bfa3f64e3c22dfa1bcdee48e91c80c6b0",
+            "size": 11164
+          },
+          {
+            "path": "src/copromem/types.py",
+            "sha256": "8c79ac0b38bc276b6ca4c89b4b43d7b103262ad84f374db95f232d19b686a605",
+            "size": 8359
+          },
+          {
+            "path": "src/copromem/workflow.py",
+            "sha256": "820c1250bf65a6727553c6751fc94c7d0544db8cf146c192a22ff217849e812b",
+            "size": 13433
+          }
+        ],
+        "inventory_sha256": "af10f432ea4681442251311d2068dc4358b85538b222622a4895429fe7e77533",
+        "policy_sha256": "320a06886b0fda987eab58549e7a37a04a19fb062ba4bdc7dd1669a3b390d6e3"
+      },
+      "name": "executable_source",
+      "sha256": "6c6520dc23e129d36a47e4248a7ac5685e490b794bb4ff97a787b0cc7702187d"
+    },
+    "external_dependencies": {
+      "body": {
+        "appworld_distribution_version": "0.1.3.post1",
+        "content": {
+          "appworld_official_evaluator": "4e773fb91cdad3ad10deeacde2d0b1f717454be599e6758419e8e1bb88b75cba",
+          "appworld_package_identity": "cf69e62b1dc3f6274332ae5bcebc6331a4de92319a95ab7f4d2356e428bd62ba",
+          "appworld_python_executable": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+          "reme_python_executable": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+          "upstream_appworld_agent": "e6f2353e8c2d0780037762a983b18f67288c273e23b0a0144c4321e9349cde1c"
+        },
+        "python_implementation": "CPython",
+        "python_version": "3.12.3",
+        "reme_commit": "2f37a159b72a04ac1885a7db7f1a663a833e7791",
+        "reme_dirty": true,
+        "reme_dirty_content_sha256": "a718284ce61076e13644c7b9ae4c639a2b07e8974f9d8575d8aecdeb87ee7d98",
+        "trees": {
+          "appworld_protocol_package": "ba1ef74547c910b9017fa1d1fe42d658277458c033e51c79c1f3013479f0062d",
+          "upstream_reme_tree": "a718284ce61076e13644c7b9ae4c639a2b07e8974f9d8575d8aecdeb87ee7d98"
+        }
+      },
+      "name": "external_dependencies",
+      "sha256": "974dc0255c2108208951695bcef986be462fd2842eb51165a44cb9dce6915b0b"
+    },
+    "runtime_configuration": {
+      "body": {
+        "arms": [
+          "no_memory",
+          "official_upstream_reme_fixed",
+          "official_upstream_reme_dynamic",
+          "reasoningbank",
+          "copromem_v6_2_2_fixed",
+          "copromem_v6_2_2_dynamic"
+        ],
+        "callable_registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423",
+        "ledger_policy": "append-only-hard-cap",
+        "limits": {
+          "completion_token_ceiling": 2048,
+          "context_token_ceiling": 32768,
+          "max_actions": 30
+        },
+        "model": "deepseek/deepseek-v4.1-flash",
+        "prompt_tool_interface": "v6.2.1-maintained",
+        "provider_route": "deepinfra",
+        "retrieval_policy_sha256": "b522f26b8ec7904f32f4f1a6ab0e501135b3f7125d8ba3894082733a14ea2d5b",
+        "scorer_contract": "official-appworld",
+        "storage_policy": {
+          "launch_floor_gib": 5,
+          "mandatory_stop_gib": 3,
+          "warning_gib": 4
+        },
+        "temperature": 0.7
+      },
+      "name": "runtime_configuration",
+      "sha256": "e8dc4a7317f15aa1f679b037ce39f2237aa53b95ae2736540844544ddab948d7"
+    },
+    "scientific_inputs": {
+      "body": {
+        "allocation_sha256": "4d77dd49b0f6e0fbfbc5331607237285b59606cd05b3a90846a088fafd8d73db",
+        "callable_registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423",
+        "copromem_initial_bank_sha256": "5d98798f203150dea4011cc6134ac96469cbd1389141757bf2792e6d02db96ce",
+        "method_policy_sha256": "b522f26b8ec7904f32f4f1a6ab0e501135b3f7125d8ba3894082733a14ea2d5b",
+        "reme_initial_bank_sha256": "6c3bc799ec0beb034fd2b81ee0d5cbf6e89a14f3a5a39ebf70d34853686b00a0",
+        "task_trial_identity_sha256": "a7f22b0016935ea221b3b12331845462cd7e4649c77f41ed68eaf72473e41c4a"
+      },
+      "name": "scientific_inputs",
+      "sha256": "68bbd01b1ce400ed4f1f4a9e9f1adea3b54ce59bc724a760d07fb984652b62a1"
+    }
+  },
+  "executable_commit": "97f7738769d18d5d1d630132b4761c4359309f0a",
+  "runtime_identity_sha256": "cc523aa0669514ffba047fd4e578a2be7dc303de6248486b8d85dece50b2d855",
+  "version": "runtime-content-identity-v3"
+}

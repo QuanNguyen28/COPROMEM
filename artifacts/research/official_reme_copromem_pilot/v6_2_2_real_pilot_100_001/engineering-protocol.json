@@ -1,0 +1,31 @@
+{
+  "version": "v6.2.2-real-pilot-100-v1",
+  "status": "pre-freeze",
+  "executable_source_commit": "97f7738769d18d5d1d630132b4761c4359309f0a",
+  "publication_commit": null,
+  "split": "test_normal",
+  "task_count": 100,
+  "trial_seeds": [11001, 11002, 11003],
+  "arms": [
+    "no_memory",
+    "official_upstream_reme_fixed",
+    "official_upstream_reme_dynamic",
+    "reasoningbank",
+    "copromem_v6_2_2_fixed",
+    "copromem_v6_2_2_dynamic"
+  ],
+  "expected_trajectories": 1800,
+  "selection_rule": "public-only family-round-robin allocation after hard/ambiguous custody exclusions",
+  "payload_access_before_freeze": false,
+  "pause_policy": {
+    "version": "task-boundary-pause-v1",
+    "allowed_after_completed_tasks": [10, 20, 30, 40, 50, 60, 70, 80, 90],
+    "prohibited": ["mid-trajectory pause", "mid-task pause", "replay of a settled trajectory"]
+  },
+  "budget": {
+    "hard_cap_usd": 1500.0,
+    "maximum_action_count": 30,
+    "provider": "deepinfra",
+    "model": "deepseek/deepseek-v4.1-flash"
+  }
+}

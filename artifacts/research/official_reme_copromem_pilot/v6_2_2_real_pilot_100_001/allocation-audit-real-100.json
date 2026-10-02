@@ -1,0 +1,656 @@
+{
+  "ambiguous_exclusion_count": 0,
+  "ambiguous_exclusion_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "candidate_family_groups": [
+    {
+      "family_id": "042a9fc",
+      "task_ids": [
+        "042a9fc_2",
+        "042a9fc_3"
+      ]
+    },
+    {
+      "family_id": "09b0ee6",
+      "task_ids": [
+        "09b0ee6_2",
+        "09b0ee6_3"
+      ]
+    },
+    {
+      "family_id": "0a9d82a",
+      "task_ids": [
+        "0a9d82a_2",
+        "0a9d82a_3"
+      ]
+    },
+    {
+      "family_id": "0d01c76",
+      "task_ids": [
+        "0d01c76_2",
+        "0d01c76_3"
+      ]
+    },
+    {
+      "family_id": "0de03ea",
+      "task_ids": [
+        "0de03ea_2",
+        "0de03ea_3"
+      ]
+    },
+    {
+      "family_id": "1150ed6",
+      "task_ids": [
+        "1150ed6_2",
+        "1150ed6_3"
+      ]
+    },
+    {
+      "family_id": "13547f5",
+      "task_ids": [
+        "13547f5_2",
+        "13547f5_3"
+      ]
+    },
+    {
+      "family_id": "166f4ff",
+      "task_ids": [
+        "166f4ff_2",
+        "166f4ff_3"
+      ]
+    },
+    {
+      "family_id": "21abae1",
+      "task_ids": [
+        "21abae1_2",
+        "21abae1_3"
+      ]
+    },
+    {
+      "family_id": "270f1ff",
+      "task_ids": [
+        "270f1ff_2",
+        "270f1ff_3"
+      ]
+    },
+    {
+      "family_id": "29a7b7e",
+      "task_ids": [
+        "29a7b7e_2",
+        "29a7b7e_3"
+      ]
+    },
+    {
+      "family_id": "2c544f9",
+      "task_ids": [
+        "2c544f9_2",
+        "2c544f9_3"
+      ]
+    },
+    {
+      "family_id": "2d9f728",
+      "task_ids": [
+        "2d9f728_2",
+        "2d9f728_3"
+      ]
+    },
+    {
+      "family_id": "31dc501",
+      "task_ids": [
+        "31dc501_2",
+        "31dc501_3"
+      ]
+    },
+    {
+      "family_id": "325d6ec",
+      "task_ids": [
+        "325d6ec_2",
+        "325d6ec_3"
+      ]
+    },
+    {
+      "family_id": "32616b5",
+      "task_ids": [
+        "32616b5_2",
+        "32616b5_3"
+      ]
+    },
+    {
+      "family_id": "3b8fb7a",
+      "task_ids": [
+        "3b8fb7a_2",
+        "3b8fb7a_3"
+      ]
+    },
+    {
+      "family_id": "3d9a636",
+      "task_ids": [
+        "3d9a636_2",
+        "3d9a636_3"
+      ]
+    },
+    {
+      "family_id": "425a494",
+      "task_ids": [
+        "425a494_2",
+        "425a494_3"
+      ]
+    },
+    {
+      "family_id": "522e5e5",
+      "task_ids": [
+        "522e5e5_2",
+        "522e5e5_3"
+      ]
+    },
+    {
+      "family_id": "552869a",
+      "task_ids": [
+        "552869a_2",
+        "552869a_3"
+      ]
+    },
+    {
+      "family_id": "59fae45",
+      "task_ids": [
+        "59fae45_2",
+        "59fae45_3"
+      ]
+    },
+    {
+      "family_id": "5a83b05",
+      "task_ids": [
+        "5a83b05_2",
+        "5a83b05_3"
+      ]
+    },
+    {
+      "family_id": "634f342",
+      "task_ids": [
+        "634f342_2",
+        "634f342_3"
+      ]
+    },
+    {
+      "family_id": "652485c",
+      "task_ids": [
+        "652485c_2",
+        "652485c_3"
+      ]
+    },
+    {
+      "family_id": "6b6ca61",
+      "task_ids": [
+        "6b6ca61_2",
+        "6b6ca61_3"
+      ]
+    },
+    {
+      "family_id": "6f4b9a5",
+      "task_ids": [
+        "6f4b9a5_2",
+        "6f4b9a5_3"
+      ]
+    },
+    {
+      "family_id": "7847649",
+      "task_ids": [
+        "7847649_2",
+        "7847649_3"
+      ]
+    },
+    {
+      "family_id": "83a7951",
+      "task_ids": [
+        "83a7951_1",
+        "83a7951_2",
+        "83a7951_3"
+      ]
+    },
+    {
+      "family_id": "8749218",
+      "task_ids": [
+        "8749218_1",
+        "8749218_2",
+        "8749218_3"
+      ]
+    },
+    {
+      "family_id": "8ce6779",
+      "task_ids": [
+        "8ce6779_1",
+        "8ce6779_2",
+        "8ce6779_3"
+      ]
+    },
+    {
+      "family_id": "9016950",
+      "task_ids": [
+        "9016950_1",
+        "9016950_2",
+        "9016950_3"
+      ]
+    },
+    {
+      "family_id": "90adc3f",
+      "task_ids": [
+        "90adc3f_1",
+        "90adc3f_2",
+        "90adc3f_3"
+      ]
+    },
+    {
+      "family_id": "986aa4e",
+      "task_ids": [
+        "986aa4e_1",
+        "986aa4e_2",
+        "986aa4e_3"
+      ]
+    },
+    {
+      "family_id": "9dabbc9",
+      "task_ids": [
+        "9dabbc9_1",
+        "9dabbc9_2",
+        "9dabbc9_3"
+      ]
+    },
+    {
+      "family_id": "9ef798c",
+      "task_ids": [
+        "9ef798c_1",
+        "9ef798c_2",
+        "9ef798c_3"
+      ]
+    },
+    {
+      "family_id": "a30375d",
+      "task_ids": [
+        "a30375d_1",
+        "a30375d_2",
+        "a30375d_3"
+      ]
+    },
+    {
+      "family_id": "afc4005",
+      "task_ids": [
+        "afc4005_1",
+        "afc4005_2",
+        "afc4005_3"
+      ]
+    },
+    {
+      "family_id": "b6d1104",
+      "task_ids": [
+        "b6d1104_1",
+        "b6d1104_2",
+        "b6d1104_3"
+      ]
+    },
+    {
+      "family_id": "b9c5c9a",
+      "task_ids": [
+        "b9c5c9a_1",
+        "b9c5c9a_2",
+        "b9c5c9a_3"
+      ]
+    },
+    {
+      "family_id": "bde252e",
+      "task_ids": [
+        "bde252e_1",
+        "bde252e_2",
+        "bde252e_3"
+      ]
+    },
+    {
+      "family_id": "c77c005",
+      "task_ids": [
+        "c77c005_1",
+        "c77c005_2",
+        "c77c005_3"
+      ]
+    },
+    {
+      "family_id": "ccf4b82",
+      "task_ids": [
+        "ccf4b82_1",
+        "ccf4b82_2",
+        "ccf4b82_3"
+      ]
+    },
+    {
+      "family_id": "cef9191",
+      "task_ids": [
+        "cef9191_1",
+        "cef9191_2",
+        "cef9191_3"
+      ]
+    },
+    {
+      "family_id": "d18139b",
+      "task_ids": [
+        "d18139b_1",
+        "d18139b_2",
+        "d18139b_3"
+      ]
+    },
+    {
+      "family_id": "d194965",
+      "task_ids": [
+        "d194965_1",
+        "d194965_2",
+        "d194965_3"
+      ]
+    },
+    {
+      "family_id": "d6ac34d",
+      "task_ids": [
+        "d6ac34d_1",
+        "d6ac34d_2",
+        "d6ac34d_3"
+      ]
+    },
+    {
+      "family_id": "dac78d9",
+      "task_ids": [
+        "dac78d9_1",
+        "dac78d9_2",
+        "dac78d9_3"
+      ]
+    },
+    {
+      "family_id": "f323bae",
+      "task_ids": [
+        "f323bae_1",
+        "f323bae_2",
+        "f323bae_3"
+      ]
+    },
+    {
+      "family_id": "f3f60f0",
+      "task_ids": [
+        "f3f60f0_1",
+        "f3f60f0_2",
+        "f3f60f0_3"
+      ]
+    },
+    {
+      "family_id": "f861c32",
+      "task_ids": [
+        "f861c32_1",
+        "f861c32_2",
+        "f861c32_3"
+      ]
+    },
+    {
+      "family_id": "fd1f8fa",
+      "task_ids": [
+        "fd1f8fa_1",
+        "fd1f8fa_2",
+        "fd1f8fa_3"
+      ]
+    },
+    {
+      "family_id": "ff58e36",
+      "task_ids": [
+        "ff58e36_1",
+        "ff58e36_2",
+        "ff58e36_3"
+      ]
+    },
+    {
+      "family_id": "ffe6d5e",
+      "task_ids": [
+        "ffe6d5e_1",
+        "ffe6d5e_2",
+        "ffe6d5e_3"
+      ]
+    }
+  ],
+  "candidate_list_sha256": "cb97bcbe518ebdca20dac98822f7ce0d2f381bfb1bcb523c2ebd59b79787834d",
+  "copromem_bank": {
+    "admission_gate_file_sha256": "8e1575dc48429fba4cf096e99c861c519a9f00bcf94e7836428722e77896c1ce",
+    "fixed_bank_file_sha256": "fc238d2214be25f35f631d738faf784d10709ec69a9e74dfa33c170b2651c4b4",
+    "path": "/mnt/e/Project/AAMAS/COPROMEM-review/artifacts/zero-cost-validation/v622-attested-semantic-spine-bank-003-clean-runtime",
+    "recovery_report_file_sha256": "0a428e6259278c768dbb225b997ac308f0e6ec95efc65d288de0615d63c0498d",
+    "semantic_state_sha256": "5d98798f203150dea4011cc6134ac96469cbd1389141757bf2792e6d02db96ce"
+  },
+  "custody_trace_sha256": "cd17b5c1d9d0b1a45af6fcf856e6f14f504a52fa5a6b9caf557929ed47915329",
+  "eligible_family_count": 54,
+  "hard_exclusion_count": 34,
+  "hard_exclusion_sha256": "1c8393c3bb01d996c9d676276f2dfc333a1b6a2028b33a807959e4c2a67623e0",
+  "historical_reservation_count": 224,
+  "historical_settled_exposure_usd": 3.783872589,
+  "historical_settlement_count": 223,
+  "historical_source_ledger": "E:\\Project\\AAMAS\\COPROMEM-review\\artifacts\\research\\official_reme_copromem_pilot\\v6_2_2_parallel_baseline_pilot_005_protocol_label_fix\\ledger.jsonl",
+  "historical_source_ledger_sha256": "9e93f62ef7c7c13c0917e0745d186558864007fa8beca571f428606478fca471",
+  "historical_unresolved_reserved_exposure_usd": 0.004607399999999999,
+  "inventory_count": 168,
+  "inventory_sha256": "33f1018e3a57154784b2859a20e3c8d801fdb1634c6aec6a7fce6180e5e63ee9",
+  "ordering_rule": "family_id ascending; then task_id ascending; round-robin by family occurrence",
+  "payloads_opened": false,
+  "public_inventory_file_sha256": "e64d9e620a6cc9d2433e78b7df84ea530a596b1ec014ab58bab32abba243ad73",
+  "reasoningbank_bank": {
+    "file_sha256": "b89841173c17c1eb5dcf538b1aca1a1aac3f445cf480948a712b93020ced54d0",
+    "path": "/mnt/e/Project/AAMAS/reasoningbank-appworld-artifacts/reasoningbank_appworld_engineering_016_recovery/reasoningbank-dynamic-checkpoints/snapshots/0006.json",
+    "semantic_state_sha256": "0cb7acba2882b8865ca15c13ec546937607fa837a75f60519aa05b5421c71ce8",
+    "source_run": "reasoningbank_appworld_engineering_016_recovery",
+    "source_terminal_status": "ENGINEERING-VALIDATED"
+  },
+  "registry_sha256": "09325ae59f351b4b18ae5127a456890c844515b872277ba4c133ffbd9c5c4423",
+  "remaining_eligible_count": 34,
+  "requested_count": 100,
+  "selected_count": 100,
+  "selected_family_ids": [
+    "042a9fc",
+    "09b0ee6",
+    "0a9d82a",
+    "0d01c76",
+    "0de03ea",
+    "1150ed6",
+    "13547f5",
+    "166f4ff",
+    "21abae1",
+    "270f1ff",
+    "29a7b7e",
+    "2c544f9",
+    "2d9f728",
+    "31dc501",
+    "325d6ec",
+    "32616b5",
+    "3b8fb7a",
+    "3d9a636",
+    "425a494",
+    "522e5e5",
+    "552869a",
+    "59fae45",
+    "5a83b05",
+    "634f342",
+    "652485c",
+    "6b6ca61",
+    "6f4b9a5",
+    "7847649",
+    "83a7951",
+    "8749218",
+    "8ce6779",
+    "9016950",
+    "90adc3f",
+    "986aa4e",
+    "9dabbc9",
+    "9ef798c",
+    "a30375d",
+    "afc4005",
+    "b6d1104",
+    "b9c5c9a",
+    "bde252e",
+    "c77c005",
+    "ccf4b82",
+    "cef9191",
+    "d18139b",
+    "d194965",
+    "d6ac34d",
+    "dac78d9",
+    "f323bae",
+    "f3f60f0",
+    "f861c32",
+    "fd1f8fa",
+    "ff58e36",
+    "ffe6d5e",
+    "042a9fc",
+    "09b0ee6",
+    "0a9d82a",
+    "0d01c76",
+    "0de03ea",
+    "1150ed6",
+    "13547f5",
+    "166f4ff",
+    "21abae1",
+    "270f1ff",
+    "29a7b7e",
+    "2c544f9",
+    "2d9f728",
+    "31dc501",
+    "325d6ec",
+    "32616b5",
+    "3b8fb7a",
+    "3d9a636",
+    "425a494",
+    "522e5e5",
+    "552869a",
+    "59fae45",
+    "5a83b05",
+    "634f342",
+    "652485c",
+    "6b6ca61",
+    "6f4b9a5",
+    "7847649",
+    "83a7951",
+    "8749218",
+    "8ce6779",
+    "9016950",
+    "90adc3f",
+    "986aa4e",
+    "9dabbc9",
+    "9ef798c",
+    "a30375d",
+    "afc4005",
+    "b6d1104",
+    "b9c5c9a",
+    "bde252e",
+    "c77c005",
+    "ccf4b82",
+    "cef9191",
+    "d18139b",
+    "d194965"
+  ],
+  "selected_family_ids_sha256": "d087e3e0de76ec6f3f4e810b55c21c962f99c34585daa03ae1b61f8e2b1c5848",
+  "selected_task_ids": [
+    "042a9fc_2",
+    "09b0ee6_2",
+    "0a9d82a_2",
+    "0d01c76_2",
+    "0de03ea_2",
+    "1150ed6_2",
+    "13547f5_2",
+    "166f4ff_2",
+    "21abae1_2",
+    "270f1ff_2",
+    "29a7b7e_2",
+    "2c544f9_2",
+    "2d9f728_2",
+    "31dc501_2",
+    "325d6ec_2",
+    "32616b5_2",
+    "3b8fb7a_2",
+    "3d9a636_2",
+    "425a494_2",
+    "522e5e5_2",
+    "552869a_2",
+    "59fae45_2",
+    "5a83b05_2",
+    "634f342_2",
+    "652485c_2",
+    "6b6ca61_2",
+    "6f4b9a5_2",
+    "7847649_2",
+    "83a7951_1",
+    "8749218_1",
+    "8ce6779_1",
+    "9016950_1",
+    "90adc3f_1",
+    "986aa4e_1",
+    "9dabbc9_1",
+    "9ef798c_1",
+    "a30375d_1",
+    "afc4005_1",
+    "b6d1104_1",
+    "b9c5c9a_1",
+    "bde252e_1",
+    "c77c005_1",
+    "ccf4b82_1",
+    "cef9191_1",
+    "d18139b_1",
+    "d194965_1",
+    "d6ac34d_1",
+    "dac78d9_1",
+    "f323bae_1",
+    "f3f60f0_1",
+    "f861c32_1",
+    "fd1f8fa_1",
+    "ff58e36_1",
+    "ffe6d5e_1",
+    "042a9fc_3",
+    "09b0ee6_3",
+    "0a9d82a_3",
+    "0d01c76_3",
+    "0de03ea_3",
+    "1150ed6_3",
+    "13547f5_3",
+    "166f4ff_3",
+    "21abae1_3",
+    "270f1ff_3",
+    "29a7b7e_3",
+    "2c544f9_3",
+    "2d9f728_3",
+    "31dc501_3",
+    "325d6ec_3",
+    "32616b5_3",
+    "3b8fb7a_3",
+    "3d9a636_3",
+    "425a494_3",
+    "522e5e5_3",
+    "552869a_3",
+    "59fae45_3",
+    "5a83b05_3",
+    "634f342_3",
+    "652485c_3",
+    "6b6ca61_3",
+    "6f4b9a5_3",
+    "7847649_3",
+    "83a7951_2",
+    "8749218_2",
+    "8ce6779_2",
+    "9016950_2",
+    "90adc3f_2",
+    "986aa4e_2",
+    "9dabbc9_2",
+    "9ef798c_2",
+    "a30375d_2",
+    "afc4005_2",
+    "b6d1104_2",
+    "b9c5c9a_2",
+    "bde252e_2",
+    "c77c005_2",
+    "ccf4b82_2",
+    "cef9191_2",
+    "d18139b_2",
+    "d194965_2"
+  ],
+  "selected_task_ids_sha256": "8b2bbce202fc2c0be27cd127abbf69c89b2fc722eb4b840aaf023905b48e941a",
+  "selection_commits_all_selected_ids_to_exposure": true,
+  "selection_source": "public_pre_execution_metadata_only",
+  "split": "test_normal",
+  "sufficient": true,
+  "task_count": 100,
+  "version": "v6.2.2-real-pilot-public-allocation-v1"
+}
