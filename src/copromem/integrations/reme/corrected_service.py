@@ -28,6 +28,14 @@ SOURCE = pathlib.Path(os.environ.get("COPROMEM_REME_SOURCE", "/home/xiqhq/coprom
 
 
 def load_env() -> dict[str, str]:
+    # The detached launcher sources the protected credential file in the exact
+    # process that execs the evaluation runner.  ReMe services are direct
+    # children of that process, so accepting this inherited value preserves
+    # the protected-file boundary without requiring a secret-bearing .env
+    # copy inside each clean, detached runtime checkout.
+    inherited = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if inherited:
+        return {"OPENROUTER_API_KEY": inherited}
     values: dict[str, str] = {}
     env_path = ROOT / ".env"
     if not env_path.is_file():
