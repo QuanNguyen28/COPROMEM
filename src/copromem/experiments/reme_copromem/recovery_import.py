@@ -200,7 +200,20 @@ def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib
         "source_manifest_sha256": source_manifest_sha256,
         "source_artifact_sha256": file_sha256(source_artifact),
         "source_trajectory_id": source.get("trajectory_id"),
+        # Imported evidence belongs to the predecessor runtime.  A successor
+        # must retain that identity as custody metadata, rather than falsely
+        # claiming that an already-scored trajectory executed in its own
+        # runtime.
+        "source_run_path": str(source_run),
+        "source_artifact_path": str(source_artifact.resolve()),
+        "source_runtime_identity_sha256": source.get("runtime_identity_sha256"),
+        "source_runtime_identity_record_sha256": source.get("runtime_identity_record_sha256"),
     }
+    # The derived artifact is a custody reference, not a new execution.  Its
+    # ordinary evidence paths are rebound below, while runtime identity is
+    # revalidated through the immutable source artifact recorded above.
+    result.pop("runtime_identity_sha256", None)
+    result.pop("runtime_identity_record_sha256", None)
     if isinstance(scorer, Mapping):
         result[SCORER] = {**dict(scorer), "path": str(scorer_target.resolve()), "sha256": file_sha256(scorer_target)}
     else:
@@ -208,7 +221,9 @@ def import_scored_artifact(*, source_artifact: pathlib.Path, source_run: pathlib
         # settled executor record, manifest, and scorer journal.  A successor
         # cannot replace those source identities with a made-up local ledger
         # row; the evidence contract follows the explicit immutable source.
-        carried.update({"source_run_path": str(source_run), "source_artifact_path": str(source_artifact.resolve())})
+        # The generic carried-source bindings above also cover zero-action
+        # evidence, whose settlement remains exclusively in the source run.
+        pass
     result["carried_completed_from"] = carried
     _atomic_json(target_artifact, result)
     try:

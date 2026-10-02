@@ -282,6 +282,38 @@ def _validate_scorer_binding(row: Mapping[str, Any]) -> None:
         raise EvidenceContractError("ordinary scorer binding history mismatch")
 
 
+def _validate_carried_source(row: Mapping[str, Any]) -> None:
+    """Verify that a recovered artifact still points to exact source evidence.
+
+    Recovery imports may rehome journals so the successor can read them, but
+    they cannot relabel a completed trajectory as having run under the
+    successor's runtime.  Re-open and validate the immutable source artifact
+    at every admission/read boundary instead.
+    """
+    carried = row.get("carried_completed_from")
+    if not isinstance(carried, Mapping):
+        return
+    source_run = pathlib.Path(str(carried.get("source_run_path") or ""))
+    source_artifact = pathlib.Path(str(carried.get("source_artifact_path") or ""))
+    source_hash = carried.get("source_artifact_sha256")
+    if (not source_run.is_absolute() or not source_artifact.is_absolute() or
+            not source_artifact.is_file() or not isinstance(source_hash, str) or
+            hashlib.sha256(source_artifact.read_bytes()).hexdigest() != source_hash):
+        raise EvidenceContractError("carried artifact source identity is invalid")
+    source = load_artifact(source_artifact)
+    if (source.get("trajectory_id") != row.get("trajectory_id") or
+            source.get("history_sha256") != row.get("history_sha256") or
+            carried.get("source_trajectory_id") != row.get("trajectory_id") or
+            carried.get("source_runtime_identity_sha256") != source.get("runtime_identity_sha256") or
+            carried.get("source_runtime_identity_record_sha256") != source.get("runtime_identity_record_sha256")):
+        raise EvidenceContractError("carried artifact differs from immutable source")
+    # A carried source must itself be a native, evidence-bound artifact; this
+    # prevents a chain of substituted recovery artifacts.
+    if isinstance(source.get("carried_completed_from"), Mapping):
+        raise EvidenceContractError("carried artifact source must be native")
+    validate(source, run_root=source_run)
+
+
 def validate(row: Mapping[str, Any], *, run_root: pathlib.Path,
              expected_registry_sha256: str | None = None) -> pathlib.Path:
     """Validate and return the canonical journal path without modifying state."""
@@ -289,6 +321,7 @@ def validate(row: Mapping[str, Any], *, run_root: pathlib.Path,
         raise EvidenceContractError("scored artifact execution-evidence contract version mismatch")
     if any(field not in row for field in FIELDS):
         raise EvidenceContractError("scored artifact has missing execution-evidence binding fields")
+    _validate_carried_source(row)
     has_semantic = "runtime_identity_sha256" in row
     has_record = "runtime_identity_record_sha256" in row
     if has_semantic != has_record:
