@@ -32,7 +32,10 @@ from scripts import run_v622_parallel_real_pilot as real
 
 
 PROTOCOL = "v6.2.2-real-pilot-100-recovery-002-v1"
-SOURCE_RUN = real.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_001"
+# The clean detached runtime may live outside the review worktree; predecessor
+# artifacts are deliberately addressed through the same explicit E-backed
+# review root used by the real-pilot entry point.
+SOURCE_RUN = real.parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_001"
 PREFIX_COUNT = 9
 PREFIX_NAME = "recovery-prefix.json"
 IMPORT_MARKER = "recovery_import_complete.json"
