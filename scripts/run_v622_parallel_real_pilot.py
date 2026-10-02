@@ -32,7 +32,12 @@ SEEDS = [11001, 11002, 11003]
 TASK_COUNT = 100
 # The bound is the current 36-trajectory protocol scaled to 1,800 trajectories
 # and is intentionally not based on observed cheap pilot calls.
+# The frozen ReasoningBank arm is retrieval-only: one query embedding per
+# registered trajectory and no extractor/judge/update call is admissible.
+# Keep that provider boundary explicit in the main ledger limits rather than
+# merely accounting for its cost in the manifest template.
 CALL_LIMITS = {"executor": 54_000, "reme_lifecycle": 6_400, "reme_embedding": 25_600,
+               "reasoningbank_embedding": TASK_COUNT * len(SEEDS),
                "copromem_decomposition": 0}
 HARD_CAP_USD = 1_500.0
 
@@ -50,8 +55,26 @@ def _load_allocation(run: Path) -> Mapping[str, Any]:
     return value
 
 
+def _validate_reasoningbank_call_limit_contract(limits: Mapping[str, Any]) -> None:
+    """Reject a runnable ReasoningBank arm without its sole provider bucket.
+
+    A frozen-bank retrieval has exactly one allowed provider operation per
+    trajectory: its query embedding.  Extraction and judging are deliberately
+    unavailable in ``parallel._runtime_factory`` and must never be enabled by
+    adding permissive buckets here.
+    """
+    expected = TASK_COUNT * len(SEEDS)
+    value = limits.get("reasoningbank_embedding")
+    if isinstance(value, bool) or not isinstance(value, int) or value != expected:
+        raise RuntimeError("ReasoningBank embedding call limit differs from the registered schedule")
+    forbidden = {"reasoningbank_judge", "reasoningbank_extraction"}.intersection(limits)
+    if forbidden:
+        raise RuntimeError("frozen ReasoningBank arm must not register judge or extraction provider calls")
+
+
 def _configure(run: Path) -> Mapping[str, Any]:
     allocation = _load_allocation(run)
+    _validate_reasoningbank_call_limit_contract(CALL_LIMITS)
     registry = json.loads((v622.ROOT / "research/reme_copromem_fixed_dynamic_review/appworld_public_tool_schema_registry_v5_3.json").read_text(encoding="utf-8"))
     if allocation.get("registry_sha256") != registry.get("registry_sha256"):
         raise RuntimeError("real-pilot allocation registry identity differs from the frozen callable registry")
