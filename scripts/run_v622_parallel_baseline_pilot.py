@@ -32,8 +32,8 @@ from copromem.integrations.reme.transport import verify_locked_chat_route_availa
 from copromem.integrations.reme.transport import PROVIDER as CHAT_PROVIDER
 
 
-PROTOCOL = "v6_2_2_parallel_baseline_pilot_002_deepinfra"
-RUN_NAME = "v6_2_2_parallel_baseline_pilot_002_deepinfra"
+PROTOCOL = "v6_2_2_parallel_baseline_pilot_003_identity_binding_fix"
+RUN_NAME = "v6_2_2_parallel_baseline_pilot_003_identity_binding_fix"
 REASONINGBANK_ARM = "reasoningbank_dynamic"  # persisted compatibility ID; report label is ReasoningBank
 ARMS = ["no_memory", "official_upstream_reme_fixed", "official_upstream_reme_dynamic",
         REASONINGBANK_ARM, "copromem_v6_2_2_fixed", "copromem_v6_2_2_dynamic"]
@@ -185,6 +185,10 @@ def prepare(run: Path) -> None:
     template["method"]["comparison_design"] = "shared executor/scorer/model/task/seed; exposed integration diagnostic"
     template["method"]["provider_amendment"] = (
         "all chat arms pin DeepInfra with fallback disabled after the direct DeepSeek endpoint became unavailable"
+    )
+    template["method"]["successor_amendment"] = (
+        "clean exposed replay after pilot-002 failed post-score because its retrieval sidecar read a noncanonical "
+        "runtime semantic identity field; pilot-002 evidence is immutable and no artifact is imported"
     )
     template["method_policy"]["reasoningbank"] = dict(rb)
     # Register the six fixed-bank query embeddings. The conservative base bound

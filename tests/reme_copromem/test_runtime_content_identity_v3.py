@@ -10,7 +10,7 @@ import pytest
 
 from copromem.experiments.reme_copromem.runtime_identity import RuntimeIdentityError
 from copromem.experiments.reme_copromem.runtime_identity_v3 import (
-    IDENTITY_VERSION, build_identity, verify_identity, verify_manifest_identity,
+    IDENTITY_VERSION, build_identity, load_policy, verify_identity, verify_manifest_identity,
 )
 
 
@@ -151,3 +151,9 @@ def test_maintained_runner_enforces_v3_at_start_restart_pre_task_and_terminal(tm
     (root / "src/copromem/runtime/engine.py").write_text("tampered", encoding="utf-8")
     with pytest.raises(RuntimeError, match="v3 manifest runtime identity"):
         runner._runtime_identity(run, manifest)
+
+
+def test_production_identity_policy_pins_parallel_pilot_entrypoint():
+    root = Path(__file__).resolve().parents[2]
+    policy = load_policy(root)
+    assert "scripts/run_v622_parallel_baseline_pilot.py" in policy["entry_points"]
