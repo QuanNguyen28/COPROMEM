@@ -26,6 +26,7 @@ SOURCE_PROTOCOL = "v6.2.2-real-pilot-100-recovery-002-v1"
 SOURCE_RUN = parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_015_recovery"
 PREFIX_COUNT = 18
 _SOURCE_REASONINGBANK_CONTEXTS: dict[Path, Mapping[str, Any]] = {}
+LEGACY_UNSEALED_REASONINGBANK_PROTOCOL = "v6.2.2-real-pilot-100-recovery-002-v1"
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -102,8 +103,28 @@ def _validate_carried_reasoningbank(context: Mapping[str, Any] | None, run: Path
             _load(runner.REG),
         )
         _SOURCE_REASONINGBANK_CONTEXTS[source_run] = source_context
-    parallel._verify_one(source_context, source_run, source_manifest, task, trial, seed, source_artifact)
     source_retrieval = source_run / "retrievals" / task / f"{arm}-{trial}.json"
+    verified = parallel.verify(
+        path=source_retrieval,
+        store=parallel.ContentAddressedStore(source_run / "reasoningbank-retrieval-objects"),
+        expected_bank_sha256=str(source_context["initial_sha256"]),
+        require_prompt_binding=False,
+    )
+    if verified["identity"] != parallel._identity(source_run, source_manifest, task, trial, seed):
+        raise RecoveryImportError("carried ReasoningBank retrieval identity differs from source schedule")
+    binding = verified.get("prompt_binding")
+    modern_seal_matches = (isinstance(binding, Mapping)
+                           and source.get("initial_prompt_messages_sha256")
+                           == binding.get("initial_prompt_messages_sha256"))
+    if not modern_seal_matches:
+        # The three predecessor records predate persisted prompt bindings.
+        # They are admissible only as explicitly legacy, source-bound custody:
+        # never reconstructed as a successor prompt seal and never accepted for
+        # any future protocol version.
+        if source_manifest.get("protocol") != LEGACY_UNSEALED_REASONINGBANK_PROTOCOL:
+            raise RecoveryImportError("unsealed ReasoningBank retrieval is outside the legacy custody protocol")
+        if not isinstance(source.get("initial_prompt_messages_sha256"), str):
+            raise RecoveryImportError("legacy ReasoningBank artifact lacks its recorded prompt digest")
     target_retrieval = run / "retrievals" / task / f"{arm}-{trial}.json"
     if (not source_retrieval.is_file() or not target_retrieval.is_file()
             or target_retrieval.read_bytes() != source_retrieval.read_bytes()):
