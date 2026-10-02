@@ -51,6 +51,7 @@ EXTRA_RUNTIME_FACTORY=None
 EXTRA_ARM_KWARGS=None
 EXTRA_EXISTING_VALIDATOR=None
 EXTRA_TERMINAL_CHECK=None
+EXTRA_CARRIED_COPRO_VALIDATOR=None
 def ev(run,n,**x): append(run/'progress.jsonl',{'event':n,'time_ns':time.time_ns(),**x})
 def st(run,s,**x): write_json(run/'runner-status.json',{'state':s,'pid':os.getpid(),'updated_ns':time.time_ns(),**x})
 def key():
@@ -312,9 +313,14 @@ def run(run):
          if not retrieval_path.is_file():raise RuntimeError('completed CoProMem artifact lacks retrieval record')
          holder.update(json.loads(retrieval_path.read_text(encoding='utf-8')))
          if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.2'):
-          validate_retrieval_binding(artifact_path=path,retrieval_path=retrieval_path,
-           binding_path=retrieval_path.with_suffix('.binding.json'),runtime_identity_record_path=run/'runtime-identity.json',
-           state=(fixed_state if arm==COPRO_FIXED_ARM else pre_dynamic_state),registry=registry,reproduce=reproduce_retrieval)
+          if isinstance(result.get('carried_completed_from'),dict):
+           if EXTRA_CARRIED_COPRO_VALIDATOR is None:raise RuntimeError('imported CoProMem artifact has no custody validator')
+           EXTRA_CARRIED_COPRO_VALIDATOR(run,m,path,retrieval_path,
+            state=(fixed_state if arm==COPRO_FIXED_ARM else pre_dynamic_state),registry=registry,reproduce=reproduce_retrieval)
+          else:
+           validate_retrieval_binding(artifact_path=path,retrieval_path=retrieval_path,
+            binding_path=retrieval_path.with_suffix('.binding.json'),runtime_identity_record_path=run/'runtime-identity.json',
+            state=(fixed_state if arm==COPRO_FIXED_ARM else pre_dynamic_state),registry=registry,reproduce=reproduce_retrieval)
        else:
         _runtime_checkpoint(run,m,f'dispatch-{task_position:04d}-{trial:02d}-{arm}')
         kwargs={};
@@ -347,7 +353,8 @@ def run(run):
         if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.2'):
          # The scored artifact is immutable. Retrieval/query/prompt custody is
          # an atomic sidecar bound to its exact bytes and reproduced on restart.
-         create_retrieval_binding(artifact_path=path,retrieval_path=retrieval_path,
+         if not isinstance(result.get('carried_completed_from'),dict):
+          create_retrieval_binding(artifact_path=path,retrieval_path=retrieval_path,
            binding_path=retrieval_path.with_suffix('.binding.json'),runtime_identity_record_path=run/'runtime-identity.json')
         else:
          # Historical protocols retain their frozen artifact shape.

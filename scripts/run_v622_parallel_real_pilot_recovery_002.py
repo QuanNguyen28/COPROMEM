@@ -33,6 +33,7 @@ from scripts import run_v622_parallel_real_pilot as real
 
 
 PROTOCOL = "v6.2.2-real-pilot-100-recovery-002-v1"
+SOURCE_PROTOCOL = real.PROTOCOL
 # The clean detached runtime may live outside the review worktree; predecessor
 # artifacts are deliberately addressed through the same explicit E-backed
 # review root used by the real-pilot entry point.
@@ -79,8 +80,8 @@ def _source_manifest() -> tuple[dict[str, Any], str]:
         raise RecoveryImportError("source manifest hash mismatch")
     if value.get("evaluation", {}).get("expected_trajectories") != 1800:
         raise RecoveryImportError("source denominator is not 1,800")
-    if value.get("protocol") != real.PROTOCOL:
-        raise RecoveryImportError("source protocol is not the real pilot 001 protocol")
+    if value.get("protocol") != SOURCE_PROTOCOL:
+        raise RecoveryImportError("source protocol differs from the declared recovery predecessor")
     return value, file_sha256(path)
 
 
@@ -97,6 +98,96 @@ def _expected_prefix(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
     return out[:PREFIX_COUNT]
 
 
+def _next_registered_identity(manifest: Mapping[str, Any], imported_ids: list[str]) -> dict[str, Any]:
+    """Return the sole schedule key immediately after an imported prefix."""
+    tasks = list(manifest["evaluation"]["task_ids"])
+    seeds = list(manifest["evaluation"]["seeds"])
+    arms = list(manifest["arms"])
+    ordered: list[dict[str, Any]] = []
+    for task in tasks:
+        for arm in arms:
+            for trial, seed in enumerate(seeds, 1):
+                ordered.append({"task_id": str(task), "arm": str(arm), "trial_id": trial, "seed": int(seed)})
+    if len(imported_ids) >= len(ordered):
+        raise RecoveryImportError("recovery prefix leaves no pending registered work")
+    expected_ids = [f"evaluation:{item['arm']}:{item['task_id']}:trial={item['trial_id']}:seed={item['seed']}" for item in ordered]
+    if expected_ids[:len(imported_ids)] != list(imported_ids):
+        raise RecoveryImportError("recovery import is not a continuous registered schedule prefix")
+    return ordered[len(imported_ids)]
+
+
+def _expected_dynamic_checkpoint_count(expected: list[Mapping[str, Any]]) -> int:
+    count = sum(1 for item in expected if item.get("arm") == "official_upstream_reme_dynamic")
+    if count < 1:
+        raise RecoveryImportError("recovery prefix does not contain a ReMe Dynamic checkpoint")
+    return count
+
+
+def _validate_dynamic_chain(manifest: Mapping[str, Any]) -> list[pathlib.Path]:
+    expected = _expected_dynamic_checkpoint_count(_expected_prefix(manifest))
+    root = SOURCE_RUN / "reme-dynamic-checkpoints"
+    for index in range(1, expected + 1):
+        intent = root / "intents" / f"update-{index:04d}.json"
+        marker = root / "markers" / f"update-{index:04d}.json"
+        snapshot = root / "snapshots" / f"update-{index:04d}.jsonl"
+        if not all(path.is_file() for path in (intent, marker, snapshot, intent.with_suffix(".sha256.json"))):
+            raise RecoveryImportError("source ReMe Dynamic prefix is incomplete")
+    files = sorted(path for path in root.rglob("*") if path.is_file())
+    if not files:
+        raise RecoveryImportError("source ReMe Dynamic checkpoint inventory is empty")
+    return files
+
+
+def _marker_settlement_ids(chain: list[pathlib.Path]) -> set[str]:
+    marker_paths = [path for path in chain if path.parent.name == "markers" and path.name.startswith("update-")]
+    values: set[str] = set()
+    for path in marker_paths:
+        marker = _load(path)
+        ids = marker.get("newly_settled_lifecycle_or_embedding_ids")
+        if not isinstance(ids, list) or not ids or any(not isinstance(item, str) or not item for item in ids):
+            raise RecoveryImportError("source ReMe Dynamic marker lacks settlement bindings")
+        values.update(ids)
+    return values
+
+
+def _dynamic_settlement_ids(chain: list[pathlib.Path]) -> set[str]:
+    """Resolve carried ReMe markers back to the ledger that owns their calls.
+
+    A recovery may carry a valid ReMe prefix whose settlements live in its own
+    predecessor (rather than in the immediate successor's historical-carry
+    ledger).  Follow only explicit immutable recovery amendments and reject a
+    cycle, missing record, or ledger that does not contain every marker ID.
+    """
+    wanted = _marker_settlement_ids(chain)
+    root = SOURCE_RUN.resolve(); visited: set[pathlib.Path] = set()
+    while True:
+        if root in visited:
+            raise RecoveryImportError("recovery predecessor chain contains a cycle")
+        visited.add(root)
+        settled = {str(row.get("id")) for row in _ledger_rows(root) if row.get("event") == "settle"}
+        if wanted.issubset(settled):
+            return wanted
+        amendment = root / "recovery-amendment.json"
+        if not amendment.is_file():
+            raise RecoveryImportError("ReMe Dynamic marker settlements are absent from every custody ledger")
+        prior = pathlib.Path(str(_load(amendment).get("source_run") or ""))
+        if not prior.is_absolute() or not prior.is_dir():
+            raise RecoveryImportError("recovery amendment has no absolute predecessor run")
+        root = prior.resolve()
+
+
+def _sidecar_files() -> list[pathlib.Path]:
+    """Return the immutable retrieval sidecars required by imported artifacts."""
+    result: list[pathlib.Path] = []
+    for relative in ("retrievals", "reasoningbank-retrieval-objects"):
+        root = SOURCE_RUN / relative
+        if root.exists():
+            if not root.is_dir():
+                raise RecoveryImportError("recovery retrieval sidecar root is not a directory")
+            result.extend(sorted(path for path in root.rglob("*") if path.is_file()))
+    return result
+
+
 def _source_prefix() -> tuple[dict[str, Any], str, list[dict[str, Any]], Decimal, set[str]]:
     manifest, manifest_sha = _source_manifest()
     expected = _expected_prefix(manifest)
@@ -108,8 +199,15 @@ def _source_prefix() -> tuple[dict[str, Any], str, list[dict[str, Any]], Decimal
             raise RecoveryImportError("source artifact does not match the frozen prefix identity")
         if not isinstance(row.get("trajectory_id"), str) or not row["trajectory_id"]:
             raise RecoveryImportError("source artifact has no trajectory identity")
-        if not isinstance(row.get("execution_evidence_path"), str) or not isinstance(row.get("official_scorer_evidence"), Mapping):
-            raise RecoveryImportError("source artifact lacks ordinary evidence bindings")
+        scorer = row.get("official_scorer_evidence")
+        zero = row.get("zero_action_evidence")
+        canonical_zero = (int(row.get("actions", -1)) == 0 and isinstance(zero, Mapping)
+                          and zero.get("version") == "canonical-zero-action-evidence-v1"
+                          and isinstance(zero.get("scorer_evidence_sha256"), str)
+                          and bool(zero.get("scorer_evidence_sha256")))
+        if (not isinstance(row.get("execution_evidence_path"), str)
+                or not isinstance(scorer, Mapping) and not canonical_zero):
+            raise RecoveryImportError("source artifact lacks canonical scorer/evidence bindings")
         observed.append({"identity": item, "path": path, "sha256": file_sha256(path), "trajectory_id": row["trajectory_id"]})
     extra = sorted((SOURCE_RUN / "artifacts").glob("**/trial-*.json"))
     if len(extra) != PREFIX_COUNT or len({item["trajectory_id"] for item in observed}) != PREFIX_COUNT:
@@ -120,27 +218,8 @@ def _source_prefix() -> tuple[dict[str, Any], str, list[dict[str, Any]], Decimal
     if not reserve or reserve != settle:
         raise RecoveryImportError("source ledger has unresolved or unmatched calls")
     exposure = sum((Decimal(str(row.get("usd", 0))) for row in rows if row.get("event") == "settle"), Decimal("0"))
-    dynamic_ids = {str(row["id"]) for row in rows if row.get("event") == "settle" and str(row.get("role", "")).startswith(("reme_lifecycle:reme-dynamic", "reme_embedding:reme-dynamic"))}
-    if not dynamic_ids:
-        raise RecoveryImportError("source ReMe Dynamic settlements are absent")
-    return manifest, manifest_sha, observed, exposure, dynamic_ids
-
-
-def _validate_dynamic_chain() -> list[pathlib.Path]:
-    root = SOURCE_RUN / "reme-dynamic-checkpoints"
-    required = []
-    for index in range(1, 4):
-        intent = root / "intents" / f"update-{index:04d}.json"
-        marker = root / "markers" / f"update-{index:04d}.json"
-        snapshot = root / "snapshots" / f"update-{index:04d}.jsonl"
-        if not all(path.is_file() for path in (intent, marker, snapshot, intent.with_suffix(".sha256.json"))):
-            raise RecoveryImportError("source ReMe Dynamic prefix is incomplete")
-    # Copy every checkpoint file; unknown directories/files are rejection-prone
-    # and therefore part of the immutable source inventory rather than ignored.
-    files = sorted(path for path in root.rglob("*") if path.is_file())
-    if not files:
-        raise RecoveryImportError("source ReMe Dynamic checkpoint inventory is empty")
-    return files
+    chain = _validate_dynamic_chain(manifest)
+    return manifest, manifest_sha, observed, exposure, _dynamic_settlement_ids(chain)
 
 
 def _configure(run: pathlib.Path, *, historical_exposure: Decimal | None = None) -> None:
@@ -161,7 +240,7 @@ def _copy_preallocation(run: pathlib.Path) -> None:
 
 def prepare(run: pathlib.Path) -> None:
     source, source_sha, prefix, exposure, _ids = _source_prefix()
-    _validate_dynamic_chain()
+    _validate_dynamic_chain(source)
     run.mkdir(parents=True, exist_ok=True)
     _copy_preallocation(run)
     # ``real.prepare`` deliberately calls its own configurator.  At this
@@ -233,7 +312,7 @@ def _install_source_marker_validation(source_ids: set[str]) -> None:
 
 def recover(run: pathlib.Path) -> None:
     source, source_sha, prefix, exposure, dynamic_ids = _source_prefix()
-    chain = _validate_dynamic_chain()
+    chain = _validate_dynamic_chain(source)
     _configure(run, historical_exposure=exposure)
     manifest = base.load(run)
     if file_sha256(run / "manifest.json") != (run / "manifest.sha256").read_text(encoding="utf-8").strip():
@@ -247,10 +326,12 @@ def recover(run: pathlib.Path) -> None:
          "trajectory_id": item["trajectory_id"]}
         for item in prefix
     ]
+    sidecars = _sidecar_files()
     spec = {"version": PROTOCOL, "source_run": str(SOURCE_RUN.resolve()), "source_manifest_sha256": source_sha,
             "source_ledger_sha256": file_sha256(SOURCE_RUN / "ledger.jsonl"), "successor_manifest_sha256": file_sha256(run / "manifest.json"),
             "expected_trajectory_ids": expected_ids, "source_prefix_artifact_sha256": canonical_sha256(prefix_inventory),
-            "source_dynamic_checkpoint_inventory_sha256": canonical_sha256([{"path": str(path.relative_to(SOURCE_RUN)), "sha256": file_sha256(path)} for path in chain])}
+            "source_dynamic_checkpoint_inventory_sha256": canonical_sha256([{"path": str(path.relative_to(SOURCE_RUN)), "sha256": file_sha256(path)} for path in chain]),
+            "source_retrieval_sidecar_inventory_sha256": canonical_sha256([{"path": str(path.relative_to(SOURCE_RUN)), "sha256": file_sha256(path)} for path in sidecars])}
     def materialize(staging: pathlib.Path):
         write_json(staging / "recovery-import-spec.json", spec)
         records = []
@@ -265,10 +346,16 @@ def recover(run: pathlib.Path) -> None:
                             "journal_sha256": record["execution_evidence_sha256"], "scorer_sha256": record["scorer_evidence_sha256"]})
         for path in chain:
             copy_evidence_file(path, staging / "reme-dynamic-checkpoints" / path.relative_to(SOURCE_RUN / "reme-dynamic-checkpoints"))
+        # Copied retrieval/provenance objects are read-only custody sidecars.
+        # They remain bound to the predecessor artifact/runtime and are never
+        # rewritten as successor-native evidence.
+        for path in sidecars:
+            copy_evidence_file(path, staging / path.relative_to(SOURCE_RUN))
         prefix_record = {"version": PROTOCOL, "source_manifest_sha256": source_sha,
                          "source_ledger_sha256": spec["source_ledger_sha256"], "source_total_settled_exposure": str(exposure),
-                         "imported_trajectory_ids": expected_ids, "dynamic_checkpoint_count": 3,
-                         "next": {"task_id": manifest["evaluation"]["task_ids"][0], "arm": real.REASONINGBANK_ARM, "trial_id": 1, "seed": manifest["evaluation"]["seeds"][0]}}
+                         "imported_trajectory_ids": expected_ids,
+                         "dynamic_checkpoint_count": _expected_dynamic_checkpoint_count(_expected_prefix(source)),
+                         "next": _next_registered_identity(manifest, expected_ids)}
         prefix_record["record_sha256"] = canonical_sha256(prefix_record)
         write_json(staging / PREFIX_NAME, prefix_record)
         return records
