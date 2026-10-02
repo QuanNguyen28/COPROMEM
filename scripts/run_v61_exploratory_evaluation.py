@@ -326,10 +326,11 @@ def run(run):
         kwargs={};
         if arm.startswith('official_upstream_reme'):kwargs['memory_base_url']=svc['reme-fixed' if arm.endswith('fixed') else 'reme-dynamic'].base_url
         if arm=='official_upstream_reme_dynamic':kwargs.update({'post_score_update':dynamic_checkpoint.callback(path),'post_score_update_strict':True})
+        copromem_holder=None
         if arm.startswith('copromem'):
          retrieval_state=fixed_state if arm==COPRO_FIXED_ARM else pre_dynamic_state
-         holder={'state_sha256':digest(retrieval_state)}
-         def conditioned_memory(instruction, domain, tool_meta, *, state=retrieval_state, holder=holder):
+         copromem_holder={'state_sha256':digest(retrieval_state)}
+         def conditioned_memory(instruction, domain, tool_meta, *, state=retrieval_state, holder=copromem_holder):
           query=derive_task_query(instruction,domain,tool_meta,registry); validate_task_query(query,instruction=instruction,public_tool_metadata=tool_meta,callable_registry=registry)
           guidance,prov=retrieval_record(state=state,query_operations=query['query_operations'],registry_sha256=registry['registry_sha256'],task_query=query,callable_registry=registry)
           holder.update({'guidance':guidance,'provenance':prov,'query':query})
@@ -346,11 +347,11 @@ def run(run):
         result=json.loads(path.read_text(encoding='utf-8'))
        if arm.startswith('copromem'):
         required_holder_fields=('state_sha256','guidance','provenance','query')
-        missing_holder_fields=[field for field in required_holder_fields if field not in holder]
+        missing_holder_fields=[field for field in required_holder_fields if field not in (copromem_holder or {})]
         if missing_holder_fields:raise RuntimeError('task-conditioned retrieval callback was not invoked or did not complete: '+','.join(missing_holder_fields))
-        retrieval_payload={'pre_state_sha256':holder['state_sha256'],'guidance':holder['guidance'],'provenance':holder['provenance'],'task_query':holder['query'],
-                          'copromem_callback_guidance_sha256':digest(holder['guidance']),'copromem_callback_guidance_nonempty':bool(holder['guidance']),
-                          'prompt_injection_sha256':result.get('prompt_memory_injection_sha256',digest(holder['guidance'])),
+        retrieval_payload={'pre_state_sha256':copromem_holder['state_sha256'],'guidance':copromem_holder['guidance'],'provenance':copromem_holder['provenance'],'task_query':copromem_holder['query'],
+                          'copromem_callback_guidance_sha256':digest(copromem_holder['guidance']),'copromem_callback_guidance_nonempty':bool(copromem_holder['guidance']),
+                          'prompt_injection_sha256':result.get('prompt_memory_injection_sha256',digest(copromem_holder['guidance'])),
                           'initial_prompt_messages_sha256':result.get('initial_prompt_messages_sha256')}
         if not retrieval_path.exists():write_json(retrieval_path,retrieval_payload)
         if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.2'):
@@ -362,9 +363,9 @@ def run(run):
         else:
          # Historical protocols retain their frozen artifact shape.
          result.update({'copromem_retrieval_record_sha256':digest(retrieval_payload),
-                        'copromem_callback_guidance_sha256':digest(holder['guidance']),
-                        'copromem_callback_guidance_nonempty':bool(holder['guidance']),
-                        'prompt_memory_injection_sha256':result.get('prompt_memory_injection_sha256',digest(holder['guidance']))})
+                        'copromem_callback_guidance_sha256':digest(copromem_holder['guidance']),
+                        'copromem_callback_guidance_nonempty':bool(copromem_holder['guidance']),
+                        'prompt_memory_injection_sha256':result.get('prompt_memory_injection_sha256',digest(copromem_holder['guidance']))})
          write_json(path,result)
         if arm==COPRO_FIXED_ARM and digest(fixed_state)!=m['banks']['copromem_sha256']:raise RuntimeError('CoProMem Fixed state mutated')
        if arm==COPRO_DYNAMIC_ARM:copro.append(result)
