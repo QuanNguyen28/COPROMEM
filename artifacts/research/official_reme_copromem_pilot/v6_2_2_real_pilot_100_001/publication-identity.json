@@ -1,0 +1,8 @@
+{
+  "version": "v6.2.2-real-pilot-publication-identity-v1",
+  "executable_source_commit": "97f7738769d18d5d1d630132b4761c4359309f0a",
+  "allocation_publication_commit": "54cde949a2dbd32ed7b1ba5eea2c88ae99b06c6b",
+  "manifest_sha256": "4b8a8253c1f12ca817568f0a7f909cd3713a116a180e279eda6f9fa047720997",
+  "payloads_opened_before_publication": false,
+  "provider_dispatch_before_publication": false
+}
