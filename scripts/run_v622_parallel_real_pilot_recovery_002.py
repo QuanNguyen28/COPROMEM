@@ -123,6 +123,36 @@ def _expected_dynamic_checkpoint_count(expected: list[Mapping[str, Any]]) -> int
     return count
 
 
+def _native_import_source(*, immediate_path: pathlib.Path, immediate: Mapping[str, Any],
+                          immediate_manifest_sha256: str) -> tuple[pathlib.Path, pathlib.Path, str]:
+    """Resolve one explicit carried-artifact reference to its native source.
+
+    A recovery must never launder a derived artifact into a fresh native
+    source.  The immediate predecessor remains hash-bound in the prefix
+    inventory, while its explicit ``carried_completed_from`` pointer supplies
+    the original bytes used by the evidence importer.  Nested carrying is
+    rejected rather than followed silently.
+    """
+    carried = immediate.get("carried_completed_from")
+    if not isinstance(carried, Mapping):
+        return immediate_path, SOURCE_RUN.resolve(), immediate_manifest_sha256
+    source_run = pathlib.Path(str(carried.get("source_run_path") or ""))
+    source_path = pathlib.Path(str(carried.get("source_artifact_path") or ""))
+    source_manifest_sha = carried.get("source_manifest_sha256")
+    if (not source_run.is_absolute() or not source_path.is_absolute() or not source_path.is_file()
+            or not isinstance(source_manifest_sha, str) or not source_manifest_sha
+            or file_sha256(source_path) != carried.get("source_artifact_sha256")):
+        raise RecoveryImportError("carried source custody is invalid")
+    source = _load(source_path)
+    if isinstance(source.get("carried_completed_from"), Mapping):
+        raise RecoveryImportError("nested carried source requires a separate custody amendment")
+    for field in ("trajectory_id", "task_id", "arm", "trial_id", "seed", "history_sha256",
+                  "after_score", "actions", "termination"):
+        if immediate.get(field) != source.get(field):
+            raise RecoveryImportError("carried source identity differs from immediate predecessor")
+    return source_path, source_run.resolve(), source_manifest_sha
+
+
 def _validate_dynamic_chain(manifest: Mapping[str, Any]) -> list[pathlib.Path]:
     expected = _expected_dynamic_checkpoint_count(_expected_prefix(manifest))
     root = SOURCE_RUN / "reme-dynamic-checkpoints"
@@ -208,7 +238,11 @@ def _source_prefix() -> tuple[dict[str, Any], str, list[dict[str, Any]], Decimal
         if (not isinstance(row.get("execution_evidence_path"), str)
                 or not isinstance(scorer, Mapping) and not canonical_zero):
             raise RecoveryImportError("source artifact lacks canonical scorer/evidence bindings")
-        observed.append({"identity": item, "path": path, "sha256": file_sha256(path), "trajectory_id": row["trajectory_id"]})
+        import_path, import_run, import_manifest_sha = _native_import_source(
+            immediate_path=path, immediate=row, immediate_manifest_sha256=manifest_sha)
+        observed.append({"identity": item, "path": path, "sha256": file_sha256(path),
+                         "trajectory_id": row["trajectory_id"], "import_path": import_path,
+                         "import_run": import_run, "import_manifest_sha256": import_manifest_sha})
     extra = sorted((SOURCE_RUN / "artifacts").glob("**/trial-*.json"))
     if len(extra) != PREFIX_COUNT or len({item["trajectory_id"] for item in observed}) != PREFIX_COUNT:
         raise RecoveryImportError("source scored prefix is incomplete, duplicate, or contains extra artifacts")
@@ -323,7 +357,9 @@ def recover(run: pathlib.Path) -> None:
     # bind only the immutable artifact identities and their byte hashes.
     prefix_inventory = [
         {"identity": item["identity"], "sha256": item["sha256"],
-         "trajectory_id": item["trajectory_id"]}
+         "trajectory_id": item["trajectory_id"],
+         "native_source_artifact_sha256": file_sha256(item["import_path"]),
+         "native_source_manifest_sha256": item["import_manifest_sha256"]}
         for item in prefix
     ]
     sidecars = _sidecar_files()
@@ -338,10 +374,11 @@ def recover(run: pathlib.Path) -> None:
         for position, item in enumerate(prefix, 1):
             identity = item["identity"]
             target = staging / "artifacts" / identity["task_id"] / identity["arm"] / f"trial-{identity['trial_id']}.json"
-            record = import_scored_artifact(source_artifact=item["path"], source_run=SOURCE_RUN, target_artifact=target,
+            record = import_scored_artifact(source_artifact=item["import_path"], source_run=item["import_run"], target_artifact=target,
                                             target_run=run, evidence_write_root=staging,
-                                            source_manifest_sha256=source_sha)
+                                            source_manifest_sha256=item["import_manifest_sha256"])
             records.append({"trajectory_id": record["trajectory_id"], "position": position,
+                            "immediate_source_artifact_sha256": item["sha256"],
                             "source_artifact_sha256": record["source_artifact_sha256"], "target_artifact_sha256": record["target_artifact_sha256"],
                             "journal_sha256": record["execution_evidence_sha256"], "scorer_sha256": record["scorer_evidence_sha256"]})
         for path in chain:
