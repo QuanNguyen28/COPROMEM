@@ -312,6 +312,10 @@ def run(run):
         if arm.startswith('copromem'):
          if not retrieval_path.is_file():raise RuntimeError('completed CoProMem artifact lacks retrieval record')
          holder.update(json.loads(retrieval_path.read_text(encoding='utf-8')))
+         if 'state_sha256' not in holder and 'pre_state_sha256' in holder:
+          holder['state_sha256']=holder['pre_state_sha256']
+         if 'query' not in holder and 'task_query' in holder:
+          holder['query']=holder['task_query']
          if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.2'):
           if isinstance(result.get('carried_completed_from'),dict):
            if EXTRA_CARRIED_COPRO_VALIDATOR is None:raise RuntimeError('imported CoProMem artifact has no custody validator')
