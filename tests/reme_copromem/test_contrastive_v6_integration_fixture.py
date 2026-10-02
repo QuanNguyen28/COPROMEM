@@ -22,9 +22,14 @@ from copromem.experiments.reme_copromem.contrastive_v6_runner import (
     SemanticBatchEvidenceError,
     fresh_state,
     scorer_evidence_sha256,
+    semantic_spine_state_compatibility,
     semantic_state_compatibility,
 )
 from copromem.semantic_graph_v61 import POLICY_VERSION as SEMANTIC_POLICY_VERSION
+from copromem.semantic_spine_v622 import (
+    POLICY_VERSION as SEMANTIC_SPINE_POLICY_VERSION,
+    SCHEMA_CONTRACT_VERSION as SEMANTIC_SPINE_SCHEMA_CONTRACT_VERSION,
+)
 
 
 def _root(name: str) -> Path:
@@ -175,3 +180,25 @@ def test_semantic_lifecycle_accepts_only_the_content_proven_legacy_v61_container
 
     legacy_semantic["contrastive_v6_schemas"]["schema_fixture"]["policy_version"] = "raw-v6"
     assert semantic_state_compatibility(legacy_semantic) is None
+
+
+def test_v622_semantic_spine_lifecycle_accepts_only_attested_v622_bank_content():
+    raw = fresh_state()
+    assert semantic_spine_state_compatibility(raw) is None
+
+    admitted = fresh_state()
+    admitted["contrastive_v6_schemas"] = {
+        "schema_fixture": {
+            "policy_version": SEMANTIC_SPINE_POLICY_VERSION,
+            "schema_contract_version": SEMANTIC_SPINE_SCHEMA_CONTRACT_VERSION,
+            "occurrences": [{"occurrence_id": "apis.demo.write#1"}],
+            "terminal_occurrence_ids": ["apis.demo.write#1"],
+        }
+    }
+    assert semantic_spine_state_compatibility(admitted) == "v622_semantic_spine_content"
+    # The old lifecycle must not accept the newer method merely because both
+    # deliberately retain the same container name.
+    assert semantic_state_compatibility(admitted) is None
+
+    admitted["contrastive_v6_schemas"]["schema_fixture"]["schema_contract_version"] = "raw-v6"
+    assert semantic_spine_state_compatibility(admitted) is None

@@ -8,6 +8,7 @@ from ...contrastive_graph_v6 import build_graph, commit, digest, plan_task_batch
 from ...semantic_graph_v61 import (POLICY_VERSION as SEMANTIC_POLICY_VERSION, build_semantic_graph,
                                    semantic_plan, validate_semantic_plan)
 from ...semantic_spine_v622 import (POLICY_VERSION as SEMANTIC_SPINE_POLICY_VERSION,
+                                    SCHEMA_CONTRACT_VERSION as SEMANTIC_SPINE_SCHEMA_CONTRACT_VERSION,
                                     commit as commit_semantic_spine,
                                     plan as plan_semantic_spine,
                                     validate as validate_semantic_spine)
@@ -69,6 +70,40 @@ def semantic_state_compatibility(state: Mapping[str, Any]) -> str | None:
            and isinstance(schema.get("semantic_provenance_hashes"), list)
            for schema in schemas.values()):
         return "legacy_v61_semantic_content"
+    return None
+
+
+def semantic_spine_state_compatibility(state: Mapping[str, Any]) -> str | None:
+    """Recognize only an admitted v6.2.2 semantic-spine bank.
+
+    v6.2.2 intentionally keeps the legacy ``contrastive_v6_schemas``
+    container so its fixed bank has a stable, content-addressed format.  That
+    does *not* make an arbitrary raw-v6 state eligible for the v6.2.2 update
+    lifecycle.  The distinguishing evidence is that every persisted schema
+    carries the v6.2.2 occurrence/dataflow contract.
+
+    Keep this predicate separate from :func:`semantic_state_compatibility`:
+    accepting a v6.2.2 state in the v6.1 lifecycle would silently mix two
+    methods, while rejecting it here prevents the admitted fixed bank from
+    ever receiving its first Dynamic update.
+    """
+    state_format = state.get("state_format")
+    if state_format not in {STATE_FORMAT, SEMANTIC_STATE_FORMAT}:
+        return None
+    schemas = state.get("contrastive_v6_schemas")
+    if not isinstance(schemas, Mapping) or not schemas:
+        return None
+    if all(
+        isinstance(schema, Mapping)
+        and schema.get("policy_version") == SEMANTIC_SPINE_POLICY_VERSION
+        and schema.get("schema_contract_version") == SEMANTIC_SPINE_SCHEMA_CONTRACT_VERSION
+        and isinstance(schema.get("occurrences"), list)
+        and bool(schema["occurrences"])
+        and isinstance(schema.get("terminal_occurrence_ids"), list)
+        and bool(schema["terminal_occurrence_ids"])
+        for schema in schemas.values()
+    ):
+        return "v622_semantic_spine_content"
     return None
 
 def plan_task_batch_from_artifacts(*, artifacts: list[Mapping[str, Any]], registry: Mapping[str, Any], pre_state: Mapping[str, Any], evidence_paths: list[str | Path]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -147,7 +182,7 @@ def semantic_spine_task_batch_update(*, artifacts: list[Mapping[str, Any]], regi
     """v6.2.2 update whose commit is gated by occurrence-level semantics."""
     if len(artifacts) != len(evidence_paths) or len(artifacts) < 2:
         raise ValueError("complete same-task semantic-spine batch required")
-    compatibility = semantic_state_compatibility(pre_state)
+    compatibility = semantic_spine_state_compatibility(pre_state)
     if compatibility is None:
         raise ValueError("raw v6 state cannot enter a semantic-spine bank")
     semantic_graphs: list[tuple[Any, bool]] = []
