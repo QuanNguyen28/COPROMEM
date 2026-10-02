@@ -32,8 +32,8 @@ from copromem.integrations.reme.transport import verify_locked_chat_route_availa
 from copromem.integrations.reme.transport import PROVIDER as CHAT_PROVIDER
 
 
-PROTOCOL = "v6_2_2_parallel_baseline_pilot_003_identity_binding_fix"
-RUN_NAME = "v6_2_2_parallel_baseline_pilot_003_identity_binding_fix"
+PROTOCOL = "v6_2_2_parallel_baseline_pilot"
+RUN_NAME = "v6_2_2_parallel_baseline_pilot"
 REASONINGBANK_ARM = "reasoningbank_dynamic"  # persisted compatibility ID; report label is ReasoningBank
 ARMS = ["no_memory", "official_upstream_reme_fixed", "official_upstream_reme_dynamic",
         REASONINGBANK_ARM, "copromem_v6_2_2_fixed", "copromem_v6_2_2_dynamic"]
@@ -49,13 +49,24 @@ RB_RUN = _external(r"E:\Project\AAMAS\reasoningbank-appworld-artifacts\reasoning
 RB_BANK = RB_RUN / "reasoningbank-dynamic-checkpoints/snapshots/0006.json"
 
 
+def _declared_protocol(run: Path) -> str:
+    """Bind the manifest label to the versioned frozen protocol record."""
+    try:
+        value = json.loads((run / "engineering-protocol.json").read_text(encoding="utf-8"))["version"]
+    except (OSError, KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("parallel pilot lacks a readable versioned engineering protocol") from exc
+    if not isinstance(value, str) or not value.startswith("v6.2.2-parallel-baseline-pilot-protocol-"):
+        raise RuntimeError("parallel pilot protocol version is invalid")
+    return value
+
+
 def _configure(run: Path) -> None:
     # The shared ReMe construction and acquisition banks are immutable E-backed
     # artifacts, not copied into each source checkout.
     base.SOURCE = REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_shared_acquisition_001"
     base.CONSTRUCTION = REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_1_exploratory_diagnostic_construction_003"
     v622._configure(run)
-    base.PROTOCOL = PROTOCOL
+    base.PROTOCOL = _declared_protocol(run)
     base.ARMS = list(ARMS)
     base.CALL_LIMITS = {"executor": 1080, "reme_lifecycle": 128, "reme_embedding": 512,
                         "copromem_decomposition": 0}
@@ -178,7 +189,7 @@ def prepare(run: Path) -> None:
     template_path = run / "template.json"; template = json.loads(template_path.read_text(encoding="utf-8"))
     allocation = json.loads((run / ALLOCATION_NAME).read_text(encoding="utf-8"))
     rb = _rb_manifest_record(run)
-    template["protocol"] = PROTOCOL; template["arms"] = list(ARMS)
+    template["protocol"] = _declared_protocol(run); template["arms"] = list(ARMS)
     template["execution"]["provider_only"] = CHAT_PROVIDER
     template["evaluation"]["expected_trajectories"] = len(template["evaluation"]["task_ids"]) * len(template["evaluation"]["seeds"]) * len(ARMS)
     template["banks"]["reasoningbank_sha256"] = rb["semantic_state_sha256"]
