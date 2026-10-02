@@ -168,7 +168,24 @@ def prepare(run: pathlib.Path) -> None:
     # point the run must therefore contain only that entry point's three
     # permitted preallocation files.  Recovery records are added immediately
     # afterward and then incorporated into the successor runtime identity.
-    real.prepare(run)
+    # ``real.prepare`` configures the base runner for a normal pilot and, as
+    # part of that configuration, resets ``PREEXISTING_RUN_FILES`` to its
+    # three normal-pilot allocation records.  A recovery has already copied
+    # exactly those records *plus no other run state* at this point.  Restore
+    # the recovery allowlist at the narrow call boundary so ``base.prepare``
+    # cannot mistake its own public preallocation inputs for stale execution
+    # state.  Do not relax the check for any other file.
+    original_prepare = base.prepare
+
+    def recovery_aware_prepare(path: pathlib.Path) -> None:
+        base.PREEXISTING_RUN_FILES = set(PREEXISTING)
+        original_prepare(path)
+
+    base.prepare = recovery_aware_prepare
+    try:
+        real.prepare(run)
+    finally:
+        base.prepare = original_prepare
     amendment = {
         "version": PROTOCOL,
         "source_run": str(SOURCE_RUN.resolve()),
