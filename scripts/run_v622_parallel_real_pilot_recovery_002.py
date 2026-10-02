@@ -43,6 +43,11 @@ PREEXISTING = {
     real.ALLOCATION_NAME, "custody-audit.json", "engineering-protocol.json",
     "recovery-amendment.json",
 }
+# ``run_v61_exploratory_evaluation`` and the ledger reconciler use this
+# canonical identifier.  A recovery must use the same single carry record;
+# writing a recovery-specific alias would make the base runner append a second
+# carry and correctly fail closed.
+HISTORICAL_CARRY_ID = "historical-construction-carry"
 
 
 def _load(path: pathlib.Path) -> dict[str, Any]:
@@ -250,8 +255,8 @@ def recover(run: pathlib.Path) -> None:
         return records
     marker = publish_atomic_import(target_run=run, specification=spec, materialize=materialize)
     ledger = AppendOnlyLedger(run / "ledger.jsonl", base.HARD_CAP_USD, manifest["budget"]["call_limits"])
-    ledger.reserve("historical-recovery-carry", float(exposure), {"role": "historical_carry_forward"})
-    ledger.settle("historical-recovery-carry", float(exposure), {"role": "historical_carry_forward"})
+    ledger.reserve(HISTORICAL_CARRY_ID, float(exposure), {"role": "historical_carry_forward"})
+    ledger.settle(HISTORICAL_CARRY_ID, float(exposure), {"role": "historical_carry_forward"})
     _install_source_marker_validation(dynamic_ids)
     # Reconciliation validates the restored source checkpoint chain without
     # provider activity; it must expose update 4 as the next Dynamic update.
