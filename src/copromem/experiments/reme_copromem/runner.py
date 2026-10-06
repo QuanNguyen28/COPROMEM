@@ -287,7 +287,10 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                        phase: str = "evaluation", artifact_path: pathlib.Path | None = None,
                        post_score_update: Callable[[Any, dict[str, Any]], None] | None = None,
                        post_score_update_strict: bool = False,
-                       execution_evidence: dict[str, Any] | None = None) -> dict[str, Any]:
+                       execution_evidence: dict[str, Any] | None = None,
+                       resume_actions: list[dict[str, str]] | None = None,
+                       resumed_before_score: float | None = None,
+                       resume_provenance: dict[str, Any] | None = None) -> dict[str, Any]:
     """Run one arm/task/trial without changing the source agent's decisions.
 
     ``memory_for_instruction`` is invoked exactly once after the worker exposes
@@ -297,6 +300,11 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
     """
     if phase not in {"acquisition", "evaluation"}:
         raise ValueError("unregistered trajectory phase")
+    resumed_actions = list(resume_actions or [])
+    if resumed_actions and resumed_before_score is None:
+        raise RuntimeError("recovered actions require immutable pre-trajectory score")
+    if resume_provenance is not None and not resumed_actions:
+        raise RuntimeError("recovery provenance without reconstructed actions is invalid")
     runtime_identity_sha256: str | None = None
     runtime_identity_record_sha256: str | None = None
     if execution_evidence is not None and "runtime_identity_sha256" in execution_evidence:
@@ -340,7 +348,10 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
             agent.update_memory_information = lambda *_a, **_k: None
             agent.delete_memory = lambda *_a, **_k: None
         with AppWorldProxy(task_id=task_id, experiment_name=key) as world:
-            before = agent.get_reward(world)
+            # A source trajectory can be recovered only from a custody-bound,
+            # read-only action prefix.  Its pre-score is immutable evidence;
+            # never invoke the scorer merely to reconstruct that prefix.
+            before = float(resumed_before_score) if resumed_before_score is not None else agent.get_reward(world)
             injected = ""
             upstream_retrieval: dict[str, Any] | None = None
             if memory_for_instruction is not None:
@@ -370,7 +381,21 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
             termination = "completed"
             last_tokens: int | None = None
             terminal_executor: dict[str, Any] | None = None
-            for _ in range(max_actions):
+            for index, recovered in enumerate(resumed_actions):
+                code = recovered.get("code")
+                code_sha256 = recovered.get("code_sha256")
+                output_sha256 = recovered.get("output_sha256")
+                if (not isinstance(code, str) or not isinstance(code_sha256, str) or not isinstance(output_sha256, str)
+                        or hashlib.sha256(code.encode("utf-8")).hexdigest() != code_sha256):
+                    raise RuntimeError("recovered action custody is malformed")
+                agent.history[0][0].append({"role": "assistant", "content": code})
+                output = world.execute(code)
+                if hashlib.sha256(output.encode("utf-8")).hexdigest() != output_sha256:
+                    raise RuntimeError(f"recovered action {index} output differs from immutable source evidence")
+                agent.history[0][0].append({"role": "user", "content": "Output:\n```\n" + output + "```\n\n"})
+                if world.task_completed():
+                    raise RuntimeError("immutable recovery prefix unexpectedly completed the task")
+            for _ in range(max_actions - len(resumed_actions)):
                 try:
                     completion = agent.call_llm(agent.history[0][0])
                     last_tokens = getattr(agent.llm_client.chat.completions, "last_accepted_prompt_tokens", last_tokens)
@@ -402,12 +427,15 @@ def execute_trajectory(*, run: pathlib.Path, progress: pathlib.Path, ledger: App
                       "history_sha256": digest(agent.history[0][0]), "injected_memory_sha256": digest(injected),
                       "injected_memory_nonempty": bool(injected),
                        "initial_prompt_messages_sha256": initial_prompt_messages_sha256,
+                       "reconstructed_action_count": len(resumed_actions),
                        **memory_visibility,
                        "execution_evidence_path": str(journal.with_suffix(".execution-evidence.jsonl")) if execution_evidence else None}
             if runtime_identity_sha256 is not None:
                 result["runtime_identity_sha256"] = runtime_identity_sha256
             if runtime_identity_record_sha256 is not None:
                 result["runtime_identity_record_sha256"] = runtime_identity_record_sha256
+            if resume_provenance is not None:
+                result["recovery_resume_provenance"] = dict(resume_provenance)
             if memory_for_instruction is not None:
                 result.update({"copromem_callback_guidance_sha256": digest(injected),
                                "copromem_callback_guidance_nonempty": bool(injected),

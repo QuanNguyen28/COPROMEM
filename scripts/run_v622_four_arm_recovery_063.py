@@ -24,13 +24,15 @@ from scripts import run_v622_parallel_real_pilot as real
 from scripts import run_v622_parallel_baseline_pilot as parallel
 
 
-PROTOCOL = "v6.2.2-four-arm-continuation-recovery-067"
+PROTOCOL = "v6.2.2-four-arm-continuation-recovery-068"
 # Immutable source runs.  The second run contains precisely one scored Dynamic
 # trajectory after it restored the first source's checkpoint prefix.  It must
 # be admitted as custody, never re-executed.
 PRIMARY_SOURCE_RUN = parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_062_four_arm_successor"
 SECONDARY_SOURCE_RUN = parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_064_four_arm_recovery"
 TERTIARY_SOURCE_RUN = parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_066_four_arm_recovery"
+QUATERNARY_SOURCE_RUN = parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_067_four_arm_recovery"
+RECOVERY_KEY = ("270f1ff_3", "official_upstream_reme_fixed", 2, 11002)
 FOUR_ARMS = ["no_memory", "official_upstream_reme_fixed", "official_upstream_reme_dynamic", "reasoningbank"]
 CUSTODY = "four-arm-successor-custody.json"
 
@@ -44,7 +46,10 @@ def _source_artifact(task: str, arm: str, trial: int) -> Path:
     if secondary.is_file():
         return secondary
     tertiary = TERTIARY_SOURCE_RUN / "artifacts" / task / arm / f"trial-{trial}.json"
-    return tertiary if tertiary.is_file() else primary
+    if tertiary.is_file():
+        return tertiary
+    quaternary = QUATERNARY_SOURCE_RUN / "artifacts" / task / arm / f"trial-{trial}.json"
+    return quaternary if quaternary.is_file() else primary
 
 
 def _source_root(path: Path) -> Path:
@@ -62,6 +67,42 @@ def _new_dynamic_order(manifest: Mapping[str, Any]) -> list[DynamicUpdateIdentit
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _resume_prefix() -> dict[str, Any]:
+    """Reconstruct the only unscored source prefix from immutable read evidence."""
+    task, arm, trial, seed = RECOVERY_KEY
+    journal = QUATERNARY_SOURCE_RUN / "journals" / f"evaluation_{arm}_{task}_trial_{trial}_seed_{seed}.jsonl"
+    evidence = journal.with_suffix(".execution-evidence.jsonl")
+    if not journal.is_file() or not evidence.is_file():
+        raise RuntimeError("recovery source journal is absent")
+    rows = [json.loads(line) for line in journal.read_text(encoding="utf-8").splitlines()]
+    pre = [row for row in rows if row.get("event") == "official_score" and row.get("score_phase") == "pre_trajectory"]
+    submitted = [row for row in rows if row.get("event") == "action_submitted"]
+    applied = [row for row in rows if row.get("event") == "action_applied"]
+    if len(pre) != 1 or len(submitted) != 2 or len(applied) != 2:
+        raise RuntimeError("recovery source prefix inventory is ambiguous")
+    if any(row.get("event") == "official_score" and row.get("score_phase") == "post_trajectory" for row in rows):
+        raise RuntimeError("recovery source was terminally scored")
+    evidence_rows = [json.loads(line) for line in evidence.read_text(encoding="utf-8").splitlines()]
+    if len(evidence_rows) != 2 or any(row.get("operation_signature", {}).get("access_mode") != "read" for row in evidence_rows):
+        raise RuntimeError("recovery source action is not a verified read-only action")
+    actions: list[dict[str, str]] = []
+    for index, (submit, done) in enumerate(zip(submitted, applied)):
+        if submit.get("index") != index or done.get("index") != index or done.get("completed") is not False:
+            raise RuntimeError("recovery source action order differs")
+        code = submit.get("code")
+        if not isinstance(code, str) or hashlib.sha256(code.encode("utf-8")).hexdigest() != submit.get("code_sha256"):
+            raise RuntimeError("recovery source action code hash differs")
+        output = done.get("output_sha256")
+        if not isinstance(output, str):
+            raise RuntimeError("recovery source action output hash is absent")
+        actions.append({"code": code, "code_sha256": str(submit["code_sha256"]), "output_sha256": output})
+    before = int(pre[0].get("pass_count", 0)) / max(1, int(pre[0].get("pass_count", 0)) + int(pre[0].get("fail_count", 0)))
+    return {"version": "read-only-action-prefix-recovery-v1", "source_journal": str(journal),
+            "source_journal_sha256": _sha(journal), "source_execution_evidence": str(evidence),
+            "source_execution_evidence_sha256": _sha(evidence), "before_score": before,
+            "actions": actions, "key": {"task_id": task, "arm": arm, "trial_id": trial, "seed": seed}}
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -148,7 +189,24 @@ def _source() -> tuple[dict[str, Any], list[str], Path, str, float]:
     tertiary_new = sum((amount for key, amount in tertiary_settle.items()
                         if not key.startswith("historical-construction-carry")), Decimal("0"))
     tertiary_new += sum((tertiary_reserve[key] for key in tertiary_unresolved), Decimal("0"))
-    return manifest, tasks[completed:], snapshot, semantic_bank_hash(snapshot), float(primary_exposure + secondary_new + tertiary_new)
+    if _sha(QUATERNARY_SOURCE_RUN / "manifest.json") != (QUATERNARY_SOURCE_RUN / "manifest.sha256").read_text().strip():
+        raise RuntimeError("quaternary manifest hash mismatch")
+    quaternary_rows = [json.loads(line) for line in (QUATERNARY_SOURCE_RUN / "ledger.jsonl").read_text().splitlines()]
+    quaternary_reserve = {str(row["id"]): Decimal(str(row["usd"])) for row in quaternary_rows if row.get("event") == "reserve"}
+    quaternary_settle = {str(row["id"]): Decimal(str(row["usd"])) for row in quaternary_rows if row.get("event") == "settle"}
+    quaternary_unresolved = set(quaternary_reserve) - set(quaternary_settle)
+    expected_quaternary_unresolved = {"1791319638408150141-executor:official_upstream_reme_fixed:270f1ff_3:trial=2:seed=11002"}
+    if quaternary_unresolved != expected_quaternary_unresolved:
+        raise RuntimeError("quaternary unresolved reservation set differs")
+    observed_quaternary_artifacts = {(path.parent.name, path.parent.parent.name, int(path.stem.split("-")[1]))
+        for path in (QUATERNARY_SOURCE_RUN / "artifacts").glob("**/trial-*.json")}
+    if observed_quaternary_artifacts != {("official_upstream_reme_fixed", "270f1ff_3", 1)}:
+        raise RuntimeError("quaternary artifact inventory differs")
+    _resume_prefix()
+    quaternary_new = sum((amount for key, amount in quaternary_settle.items()
+                          if not key.startswith("historical-construction-carry")), Decimal("0"))
+    quaternary_new += sum((quaternary_reserve[key] for key in quaternary_unresolved), Decimal("0"))
+    return manifest, tasks[completed:], snapshot, semantic_bank_hash(snapshot), float(primary_exposure + secondary_new + tertiary_new + quaternary_new)
 
 
 def _custody(run: Path) -> dict[str, Any]:
@@ -156,7 +214,7 @@ def _custody(run: Path) -> dict[str, Any]:
     secondary_manifest = _load(SECONDARY_SOURCE_RUN / "manifest.json")
     carried = [(task, arm, trial) for task in source["evaluation"]["task_ids"] for arm in FOUR_ARMS
                for trial in range(1, len(source["evaluation"]["seeds"]) + 1) if _source_artifact(task, arm, trial).is_file()]
-    if len(carried) != 51:
+    if len(carried) != 52:
         raise RuntimeError(f"immutable carried artifact inventory differs: {len(carried)}")
     body = {
         "version": "four-arm-successor-custody-v3",
@@ -172,6 +230,10 @@ def _custody(run: Path) -> dict[str, Any]:
         "tertiary_source_manifest_sha256": _sha(TERTIARY_SOURCE_RUN / "manifest.json"),
         "tertiary_source_runtime_identity_sha256": _load(TERTIARY_SOURCE_RUN / "manifest.json")["runtime_identity_sha256"],
         "tertiary_source_ledger_sha256": _sha(TERTIARY_SOURCE_RUN / "ledger.jsonl"),
+        "quaternary_source_run": str(QUATERNARY_SOURCE_RUN),
+        "quaternary_source_manifest_sha256": _sha(QUATERNARY_SOURCE_RUN / "manifest.json"),
+        "quaternary_source_runtime_identity_sha256": _load(QUATERNARY_SOURCE_RUN / "manifest.json")["runtime_identity_sha256"],
+        "quaternary_source_ledger_sha256": _sha(QUATERNARY_SOURCE_RUN / "ledger.jsonl"),
         "source_completed_task_count": 3,
         "source_completed_trajectory_count": len(carried),
         "source_arms": FOUR_ARMS,
@@ -183,6 +245,8 @@ def _custody(run: Path) -> dict[str, Any]:
         "source_effective_historical_exposure_usd": str(exposure),
         "primary_source_unresolved_reservation_ids": ["1791311356877590259-executor:official_upstream_reme_dynamic:21abae1_3:trial=1:seed=11001"],
         "tertiary_source_unresolved_reservation_ids": ["1791317799883814790-executor:official_upstream_reme_fixed:270f1ff_3:trial=1:seed=11001"],
+        "quaternary_source_unresolved_reservation_ids": ["1791319638408150141-executor:official_upstream_reme_fixed:270f1ff_3:trial=2:seed=11002"],
+        "read_only_recovery_prefix": _resume_prefix(),
         "carried_artifacts": [
             {"task_id": task, "arm": arm, "trial_id": trial,
              "path": str(_source_artifact(task, arm, trial)),
@@ -239,7 +303,7 @@ def prepare(run: Path) -> None:
     template["evaluation"]["allocation_audit_sha256"] = base.file_sha(run / real.ALLOCATION_NAME)
     template["method"] = {"comparison_design": "four-arm continuation after immutable CoProMem pause",
                            "copromem": "not scheduled in this successor", "reasoningbank": "frozen bank",
-                           "source_prefix": "51 immutable source trajectories from three custody runs; one unscored primary reservation is carried as conservative historical exposure"}
+                           "source_prefix": "52 immutable source trajectories from four custody runs; one read-only unscored prefix is reconstructed from immutable hashes"}
     template["successor_custody_sha256"] = custody["record_sha256"]
     template["runtime_identity_version"] = IDENTITY_VERSION
     runtime, inputs = build_evaluation_identity_v3(root=real.v622.ROOT, manifest=template)
@@ -335,6 +399,16 @@ def run(run: Path) -> None:
                         if arm.startswith("official_upstream_reme"): kwargs["memory_base_url"] = svc["reme-fixed" if arm.endswith("fixed") else "reme-dynamic"].base_url
                         if arm == "official_upstream_reme_dynamic": kwargs.update({"post_score_update": dynamic.callback(path), "post_score_update_strict": True})
                         kwargs.update(base.EXTRA_ARM_KWARGS(context, run, manifest, arm, task, trial, seed, path))
+                        if (task, arm, trial, seed) == RECOVERY_KEY:
+                            prefix = dict(custody["read_only_recovery_prefix"])
+                            if prefix.get("key") != {"task_id": task, "arm": arm, "trial_id": trial, "seed": seed}:
+                                raise RuntimeError("recovery prefix key drift")
+                            # Reload immutable bytes immediately before worker start.
+                            if prefix != _resume_prefix():
+                                raise RuntimeError("recovery prefix custody drift")
+                            kwargs.update({"resume_actions": list(prefix["actions"]),
+                                           "resumed_before_score": float(prefix["before_score"]),
+                                           "resume_provenance": prefix})
                         runtime = _load(run / "runtime-identity.json")
                         execute_trajectory(run=run, progress=run / "progress.jsonl", ledger=ledger, api_key=api_key, all_task_ids=manifest["evaluation"]["task_ids"], arm=arm, task_id=task, trial_id=trial, seed=seed, max_actions=30, temperature=.7, phase="evaluation", artifact_path=path, execution_evidence={"registry_path": str(base.REG.resolve()), "registry_sha256": registry["registry_sha256"], "runtime_identity_sha256": runtime["runtime_identity_sha256"], "runtime_identity_record_sha256": base.file_sha(run / "runtime-identity.json")}, **kwargs)
                         if not path.is_file(): raise RuntimeError("executor returned without artifact")
