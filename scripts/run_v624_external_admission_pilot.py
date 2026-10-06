@@ -70,6 +70,7 @@ def _external(path: str) -> Path:
 
 REVIEW = _external(r"E:\Project\AAMAS\COPROMEM-review")
 BANK_ROOT = REVIEW / "artifacts/zero-cost-validation/v622-attested-semantic-spine-bank-003-clean-runtime"
+COVERAGE = REVIEW / "artifacts/zero-cost-validation/v624-public-task-guidance-coverage-001.json"
 
 
 def _sha(value: Any) -> str:
@@ -81,13 +82,28 @@ def _file_sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _selection(task_ids: list[str]) -> list[str]:
+def _guidance_positive(task_ids: list[str]) -> list[str]:
     if len(set(task_ids)) != len(task_ids):
         raise RuntimeError("source task inventory contains duplicates")
+    if not COVERAGE.is_file():
+        raise RuntimeError("v6.2.4 guidance coverage audit is absent")
+    coverage = json.loads(COVERAGE.read_text(encoding="utf-8"))
+    return sorted({str(item.get("task")) for item in coverage.get("guidance_positive", [])
+                   if isinstance(item, Mapping) and str(item.get("task")) in task_ids
+                   and str(item.get("task")) != VALIDATION_TASK_ID})
+
+
+def _selection(task_ids: list[str]) -> list[str]:
     # The held-out admission task is never part of the later diagnostic.
     candidates = [task for task in task_ids if task != VALIDATION_TASK_ID]
-    return sorted(candidates, key=lambda task: hashlib.sha256(
-        f"{PROTOCOL}:public-task-id:{task}".encode("utf-8")).hexdigest())[:TASK_COUNT]
+    positive = _guidance_positive(candidates)
+    # A retrieval diagnostic must include every zero-provider-confirmed
+    # positive task available in its frozen source inventory.  Fill only the
+    # remaining slots with the original public-ID rule, retaining a 12-task
+    # sample without pretending every task should receive this schema.
+    remaining = sorted((task for task in candidates if task not in positive), key=lambda task: hashlib.sha256(
+        f"{PROTOCOL}:public-task-id:{task}".encode("utf-8")).hexdigest())
+    return [*positive, *remaining][:TASK_COUNT]
 
 
 def _bank_audit() -> dict[str, Any]:
@@ -150,7 +166,7 @@ def allocate(run: Path, source_manifest: Path, admission_receipt: Path) -> None:
     if receipt.get("validation_task_id") != VALIDATION_TASK_ID or receipt.get("schema_ids") != [VALIDATION_SCHEMA_ID]:
         raise RuntimeError("external admission receipt is for a different validation boundary")
     audit = {
-        "version": "v6.2.4-dynamic-guidance-public-id-allocation-v2",
+        "version": "v6.2.4-dynamic-guidance-coverage-allocation-v3",
         "phase": "pilot",
         "protocol": PROTOCOL,
         "selection_source": "frozen_source_manifest_public_task_ids_only",
@@ -158,7 +174,9 @@ def allocate(run: Path, source_manifest: Path, admission_receipt: Path) -> None:
         "source_manifest_path": str(source_manifest.resolve()),
         "source_manifest_sha256": _file_sha(source_manifest),
         "source_task_inventory_sha256": _sha(task_ids),
-        "selection_rule": "sha256(protocol:public-task-id:<id>) ascending first 12",
+        "selection_rule": "all frozen zero-provider guidance-positive public task IDs, then sha256(protocol:public-task-id:<id>) ascending fill to 12",
+        "guidance_coverage_file_sha256": _file_sha(COVERAGE),
+        "expected_guidance_positive_task_ids": [task for task in selected if task in set(_guidance_positive(task_ids))],
         "selected_task_ids": selected,
         "split": str(evaluation.get("split") or "test_normal"),
         "trial_seeds": [TRIAL_SEED],
@@ -183,7 +201,7 @@ def _audit(run: Path) -> Mapping[str, Any]:
     phase = audit.get("phase")
     expected_count = 1 if phase == "external_validation" else TASK_COUNT
     expected_version = ("v6.2.4-external-admission-validation-allocation-v1" if phase == "external_validation"
-                        else "v6.2.4-dynamic-guidance-public-id-allocation-v2")
+                        else "v6.2.4-dynamic-guidance-coverage-allocation-v3")
     if (audit.get("version") != expected_version or audit.get("protocol") != PROTOCOL or
             phase not in {"external_validation", "pilot"} or audit.get("arms") != ARMS or
             audit.get("trial_seeds") != [TRIAL_SEED] or not isinstance(selected, list) or
@@ -204,6 +222,11 @@ def _audit(run: Path) -> Mapping[str, Any]:
         verify_admission(receipt, bank_sha256=_sha(state))
         if receipt.get("receipt_sha256") != audit.get("external_admission_receipt_semantic_sha256"):
             raise RuntimeError("pilot external admission semantic identity differs")
+        positives = [task for task in selected if task in set(_guidance_positive(list(selected)))]
+        if (not COVERAGE.is_file() or _file_sha(COVERAGE) != audit.get("guidance_coverage_file_sha256")
+                or audit.get("expected_guidance_positive_task_ids") != positives
+                or not positives):
+            raise RuntimeError("pilot guidance coverage binding is invalid")
     bank = audit.get("copromem_bank")
     if not isinstance(bank, Mapping) or _external(str(bank.get("path") or "")) != BANK_ROOT:
         raise RuntimeError("v6.2.4 Dynamic allocation bank locator differs")
