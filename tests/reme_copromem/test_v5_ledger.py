@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import pathlib
 
 import pytest
 
@@ -50,3 +51,41 @@ def test_usd_100_engineering_cap_rejects_exposure_before_dispatch(tmp_path):
     ledger.reserve("first", 99.99, {"role": "executor:no_memory:a:trial=0:seed=1"})
     with pytest.raises(DispatchFailure, match="USD cap"):
         ledger.reserve("over-cap", 0.02, {"role": "executor:no_memory:a:trial=1:seed=2"})
+
+
+def test_append_retries_transient_drvfs_permission_error_without_duplicate(tmp_path, monkeypatch):
+    ledger_path = tmp_path / "ledger.jsonl"
+    ledger = AppendOnlyLedger(ledger_path, 1.0)
+    original_open = pathlib.Path.open
+    attempts = {"append": 0}
+
+    def flaky_open(path, mode="r", *args, **kwargs):
+        if path == ledger_path and mode == "a" and attempts["append"] == 0:
+            attempts["append"] += 1
+            raise PermissionError(13, "simulated drvfs sharing violation")
+        return original_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(pathlib.Path, "open", flaky_open)
+    ledger.reserve("call-a", 0.20, {"role": "executor:no_memory:a:trial=1:seed=1"})
+    ledger.settle("call-a", 0.10, {"role": "executor:no_memory:a:trial=1:seed=1"})
+    rows = [json.loads(line) for line in ledger_path.read_text().splitlines()]
+    assert attempts["append"] == 1
+    assert [(row["event"], row["id"]) for row in rows] == [("reserve", "call-a"), ("settle", "call-a")]
+
+
+def test_append_retry_recognizes_durable_row_after_post_write_failure(tmp_path, monkeypatch):
+    ledger_path = tmp_path / "ledger.jsonl"
+    ledger = AppendOnlyLedger(ledger_path, 1.0)
+    original_fsync = __import__("os").fsync
+    calls = {"n": 0}
+
+    def post_write_failure(fd):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise PermissionError(13, "simulated fsync ambiguity")
+        return original_fsync(fd)
+
+    monkeypatch.setattr("copromem.integrations.reme.transport.os.fsync", post_write_failure)
+    ledger.reserve("call-a", 0.20, {"role": "executor:no_memory:a:trial=1:seed=1"})
+    rows = [json.loads(line) for line in ledger_path.read_text().splitlines()]
+    assert rows == [{"event": "reserve", "id": "call-a", "usd": 0.20, "role": "executor:no_memory:a:trial=1:seed=1"}]
