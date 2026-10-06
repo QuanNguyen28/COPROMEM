@@ -146,13 +146,16 @@ def _validate_terminal_retrieval_inventory(run,m):
  """Ensure every CoProMem evidence-bearing trajectory retained its query record."""
  for task in m['evaluation']['task_ids']:
   for trial in range(1,len(m['evaluation']['seeds'])+1):
-   for arm in (COPRO_FIXED_ARM,COPRO_DYNAMIC_ARM):
+   # A versioned diagnostic may legitimately register only the Dynamic arm.
+   # Validate precisely the CoProMem arms frozen in its manifest rather than
+   # inventing a missing Fixed trajectory.
+   for arm in (item for item in (COPRO_FIXED_ARM,COPRO_DYNAMIC_ARM) if item in m['arms']):
     path=run/'retrievals'/task/f'{arm}-{trial}.json'
     if not path.is_file():raise RuntimeError(f'missing terminal retrieval record: {task}/{arm}/{trial}')
     record=json.loads(path.read_text(encoding='utf-8'))
     if not isinstance(record.get('task_query'),dict) or not record['task_query'].get('query_sha256'):
      raise RuntimeError(f'invalid terminal retrieval query: {task}/{arm}/{trial}')
-    if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.2'):
+    if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.'):
      artifact=run/'artifacts'/task/arm/f'trial-{trial}.json'; binding=path.with_suffix('.binding.json')
      state_matches=list((run/'copromem-dynamic-checkpoints'/'tasks').glob(f'*-{task}/pre-state.json')) if arm==COPRO_DYNAMIC_ARM else []
      if arm==COPRO_FIXED_ARM: state=json.loads((COPRO/'fixed-bank.json').read_text(encoding='utf-8'))
@@ -357,7 +360,7 @@ def run(run):
                           'prompt_injection_sha256':result.get('prompt_memory_injection_sha256',digest(holder['guidance'])),
                           'initial_prompt_messages_sha256':result.get('initial_prompt_messages_sha256')}
         if not retrieval_path.exists():write_json(retrieval_path,retrieval_payload)
-        if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.2'):
+        if str(m.get('method',{}).get('copromem','')).startswith('copromem-v6.2.'):
          # The scored artifact is immutable. Retrieval/query/prompt custody is
          # an atomic sidecar bound to its exact bytes and reproduced on restart.
          if not isinstance(result.get('carried_completed_from'),dict):

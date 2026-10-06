@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import ntpath
 import os
 import platform
 import re
@@ -19,6 +20,11 @@ class RuntimeIdentityError(RuntimeError):
 
 LOCAL_CONFIG_VERSION = "copromem-runtime-local-v1"
 IDENTITY_SCHEMA_VERSION = "runtime-content-identity-v2"
+
+
+def _absolute_locator(value: str) -> bool:
+    """Accept native absolute paths and Windows drive paths under WSL."""
+    return Path(value).is_absolute() or ntpath.isabs(value)
 
 
 def _canonical(value: Any) -> bytes:
@@ -85,7 +91,7 @@ def _local_runtime_config(root: Path) -> dict[str, str]:
     for key, raw in value.items():
         if key == "version":
             continue
-        if key not in allowed or not isinstance(raw, str) or not Path(raw).is_absolute():
+        if key not in allowed or not isinstance(raw, str) or not _absolute_locator(raw):
             raise RuntimeIdentityError("local runtime configuration contains an invalid locator")
         result[key] = raw
     return result
@@ -102,7 +108,7 @@ def resolve_runtime_locators(root: Path) -> dict[str, str]:
     }
     if not all(values.values()):
         raise RuntimeIdentityError("explicit upstream ReMe, AppWorld, and interpreter locators are required")
-    if any(not Path(value).is_absolute() for value in values.values()):
+    if any(not _absolute_locator(value) for value in values.values()):
         raise RuntimeIdentityError("runtime locators must be absolute")
     return values
 
