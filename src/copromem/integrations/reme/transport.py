@@ -147,7 +147,7 @@ class AppendOnlyLedger:
         self.call_limits = {str(key): int(value) for key, value in (raw_limits or {}).items()}
         if any(value < 0 for value in self.call_limits.values()):
             raise DispatchFailure("registered provider call limits must be nonnegative")
-        path.parent.mkdir(parents=True, exist_ok=True)
+        self._retry_io(lambda: path.parent.mkdir(parents=True, exist_ok=True), "create ledger directory")
 
     @staticmethod
     def _role_bucket(role: Any) -> str | None:
@@ -172,12 +172,65 @@ class AppendOnlyLedger:
             return "reasoningbank_embedding"
         return None
 
+    @staticmethod
+    def _transient_io(exc: OSError) -> bool:
+        # drvfs can briefly deny an append while Windows indexes or scans an
+        # E: artifact.  These failures are transport contention, never a reason
+        # to abandon a provider response that has already been received.
+        return isinstance(exc, PermissionError) or exc.errno in {11, 13, 16, 26, 116}
+
+    def _retry_io(self, operation: Any, label: str) -> Any:
+        deadline = time.monotonic() + float(os.environ.get("COPROMEM_LEDGER_IO_RETRY_SECONDS", "90"))
+        delay = 0.05
+        while True:
+            try:
+                return operation()
+            except OSError as exc:
+                if not self._transient_io(exc) or time.monotonic() >= deadline:
+                    raise DispatchFailure(f"durable ledger {label} failed: {exc}") from exc
+                time.sleep(delay)
+                delay = min(delay * 2.0, 1.0)
+
+    def _read_records(self) -> list[dict[str, Any]]:
+        if not self.path.exists():
+            return []
+        def load() -> list[dict[str, Any]]:
+            return [json.loads(line) for line in self.path.read_text(encoding="utf-8").splitlines() if line]
+        try:
+            return self._retry_io(load, "read")
+        except json.JSONDecodeError as exc:
+            raise DispatchFailure("durable ledger is malformed") from exc
+
+    def _record_present(self, record: dict[str, Any]) -> bool:
+        for observed in self._read_records():
+            if observed == record:
+                return True
+            if observed.get("event") == record.get("event") and observed.get("id") == record.get("id"):
+                raise DispatchFailure("durable ledger contains conflicting duplicate record")
+        return False
+
     def _append(self, record: dict[str, Any]) -> None:
+        # Retrying a completed append must never duplicate an accounting row.
+        # Check the durable bytes after an I/O exception before attempting again.
         line = json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
-        with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(line)
-            handle.flush()
-            os.fsync(handle.fileno())
+        def append_once() -> None:
+            with self.path.open("a", encoding="utf-8") as handle:
+                handle.write(line)
+                handle.flush()
+                os.fsync(handle.fileno())
+        deadline = time.monotonic() + float(os.environ.get("COPROMEM_LEDGER_IO_RETRY_SECONDS", "90"))
+        delay = 0.05
+        while True:
+            try:
+                append_once()
+                return
+            except OSError as exc:
+                if self._transient_io(exc) and self._record_present(record):
+                    return
+                if not self._transient_io(exc) or time.monotonic() >= deadline:
+                    raise DispatchFailure(f"durable ledger append failed: {exc}") from exc
+                time.sleep(delay)
+                delay = min(delay * 2.0, 1.0)
 
     @contextmanager
     def _locked_file(self):
@@ -189,7 +242,8 @@ class AppendOnlyLedger:
         inspection and deterministic tests.
         """
         lock = self.path.with_suffix(".lock")
-        with lock.open("a+") as handle:
+        handle = self._retry_io(lambda: lock.open("a+"), "lock open")
+        try:
             if fcntl is not None:
                 fcntl.flock(handle, fcntl.LOCK_EX)
             try:
@@ -197,13 +251,14 @@ class AppendOnlyLedger:
             finally:
                 if fcntl is not None:
                     fcntl.flock(handle, fcntl.LOCK_UN)
+                handle.close()
+        except BaseException:
+            # Preserve DispatchFailure and provider safety semantics unchanged.
+            raise
 
     def _exposure(self) -> float:
         latest: dict[str, float] = {}
-        if not self.path.exists():
-            return 0.0
-        for line in self.path.read_text(encoding="utf-8").splitlines():
-            item = json.loads(line)
+        for item in self._read_records():
             if item.get("event") == "reserve":
                 latest[item["id"]] = float(item["usd"])
             elif item.get("event") == "settle" and item["id"] in latest:
@@ -214,10 +269,7 @@ class AppendOnlyLedger:
         """Return reservations and settled IDs from durable append-only rows."""
         reserved: dict[str, float] = {}
         settled: set[str] = set()
-        if not self.path.exists():
-            return reserved, settled
-        for line in self.path.read_text(encoding="utf-8").splitlines():
-            item = json.loads(line)
+        for item in self._read_records():
             if item.get("event") == "reserve":
                 reserved[str(item["id"])] = float(item["usd"])
             elif item.get("event") == "settle":
@@ -236,11 +288,9 @@ class AppendOnlyLedger:
                     raise DispatchFailure("unregistered provider call role")
                 if not historical:
                     used = 0
-                    if self.path.exists():
-                        for line in self.path.read_text(encoding="utf-8").splitlines():
-                            row = json.loads(line)
-                            if row.get("event") == "reserve" and self._role_bucket(row.get("role")) == bucket:
-                                used += 1
+                    for row in self._read_records():
+                        if row.get("event") == "reserve" and self._role_bucket(row.get("role")) == bucket:
+                            used += 1
                     if used >= self.call_limits[bucket]:
                         raise DispatchFailure(f"registered {bucket} call limit would be exceeded")
             if upper_usd < 0 or self._exposure() + upper_usd > self.cap_usd:
