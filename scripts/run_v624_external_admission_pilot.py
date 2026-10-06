@@ -332,9 +332,13 @@ def configure(run: Path) -> None:
         raise RuntimeError("v6.2.4 public operation intent registry is absent")
     intents = json.loads(intent_path.read_text(encoding="utf-8")); verify_intents(intents)
     _retrieval_record.receipt_path = run / "external-admission-receipt.json"
-    def derive_with_intents(instruction: str, domain: str, tool_meta: Mapping[str, Any]) -> dict[str, Any]:
-        return derive_task_query(instruction, domain, {**tool_meta, "public_operation_intents": intents},
-                                 json.loads(base.REG.read_text(encoding="utf-8")))
+    def derive_with_intents(instruction: str, domain: str, tool_meta: Mapping[str, Any],
+                            callable_registry: Mapping[str, Any] | None = None) -> dict[str, Any]:
+        # ``base.conditioned_memory`` passes its already frozen registry as a
+        # fourth positional argument.  Retain that exact authority rather than
+        # silently loading a second registry view.
+        registry = callable_registry or json.loads(base.REG.read_text(encoding="utf-8"))
+        return derive_task_query(instruction, domain, {**tool_meta, "public_operation_intents": intents}, registry)
     def validate_with_intents(record: Mapping[str, Any], *, instruction: str,
                               public_tool_metadata: Mapping[str, Any], callable_registry: Mapping[str, Any]) -> None:
         validate_task_query(record, instruction=instruction,
