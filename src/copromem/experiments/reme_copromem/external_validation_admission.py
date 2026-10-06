@@ -19,6 +19,8 @@ def admit(*,bank_sha256:str,schema_ids:Sequence[str],validation_task_id:str,arti
  if artifact.get('injected_memory_visible_in_initial_prompt') is not True:
   raise ValueError('external validation guidance was not prompt-visible')
  evidence=artifact.get('execution_evidence')
- if not isinstance(evidence,Mapping) or evidence.get('registry_sha256')!=expected_registry_sha256:raise ValueError('external validation execution evidence mismatch')
+ registry_sha = (evidence.get('registry_sha256') if isinstance(evidence, Mapping)
+                 else artifact.get('execution_evidence_registry_sha256'))
+ if registry_sha!=expected_registry_sha256:raise ValueError('external validation execution evidence mismatch')
  scorer=scorer_evidence_sha256(artifact)
  return receipt(bank_sha256=bank_sha256,schema_ids=schema_ids,validation_task_id=validation_task_id,artifact_sha256=sha(artifact_path),scorer_evidence_sha256=scorer,journal_sha256=sha(journal_path),passed=True,admission_kind='retrieval_execution_contract_v1')

@@ -11,3 +11,7 @@ def test_admit_verified_external_retrieval_contract_independent_of_task_score(tm
 def test_reject_missing_or_invisible_guidance(tmp_path):
  a,j=write(tmp_path,0.5,injected=False)
  with pytest.raises(ValueError,match='inject verified guidance'):admit(bank_sha256='b',schema_ids=['x'],validation_task_id='held',artifact_path=a,journal_path=j,expected_registry_sha256='r')
+
+def test_accepts_versioned_top_level_execution_evidence_binding(tmp_path):
+ a,j=write(tmp_path); value=json.loads(a.read_text()); value.pop('execution_evidence'); value['execution_evidence_registry_sha256']='r'; a.write_text(json.dumps(value))
+ assert admit(bank_sha256='b',schema_ids=['x'],validation_task_id='held',artifact_path=a,journal_path=j,expected_registry_sha256='r')['passed']
