@@ -188,8 +188,11 @@ def allocate(run: Path, source_manifest: Path, admission_receipt: Path) -> None:
         "cost_scope": "new v6.2.4 diagnostic calls only; bank construction is referenced, not recharged",
     }
     _write_allocation(run, audit)
-    # Bind an immutable copy at a known successor path, never a mutable env path.
-    write_json(run / "external-admission-receipt.json", receipt)
+    # Bind the exact immutable receipt bytes at a known successor path.  The
+    # allocation binds the container-file SHA, so reserializing with the run
+    # writer would silently change that identity even when JSON is semanticly
+    # identical.
+    (run / "external-admission-receipt.json").write_bytes(admission_receipt.read_bytes())
 
 
 def _audit(run: Path) -> Mapping[str, Any]:
