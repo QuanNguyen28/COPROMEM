@@ -270,8 +270,11 @@ def _retrieval_record(*, state: Mapping[str, Any], query_operations: list[str], 
     admission = json.loads(receipt_path.read_text(encoding="utf-8"))
     verify_admission(admission, bank_sha256=_sha(dict(state)))
     guidance, provenance = retrieve(state, task_query, callable_registry, admission)
-    if not guidance:
-        raise RuntimeError("v6.2.4 admitted retrieval produced empty guidance")
+    # An admitted schema must never be forced into an unrelated task.  Empty
+    # retrieval is the fail-closed result for nonmatching task queries; the
+    # frozen coverage-positive task is separately asserted at preflight and
+    # after execution.  Treating all empty retrievals as a runner failure
+    # prevented the remaining diagnostic schedule from running at all.
     return guidance, provenance
 
 
