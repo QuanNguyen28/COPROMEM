@@ -1,5 +1,6 @@
 """v6.2.4 retrieval: public intent + externally admitted schemas only."""
 from __future__ import annotations
+import json
 import re
 from collections.abc import Mapping
 from typing import Any
@@ -11,6 +12,21 @@ POLICY_VERSION='copromem-v6.2.4-external-admission-intent-retrieval'
 _STOP=frozenset({'a','an','the','to','for','of','in','on','with','and','or','from','your','you'})
 _CURRENCY=re.compile(r'[$€£]\s*\d')
 _RECIPIENT=re.compile(r'\bto\s+[A-Z][\w-]*')
+
+
+def _json_native(value: Any) -> dict[str, Any]:
+ """Freeze retrieval evidence in the exact JSON domain used on disk.
+
+ Semantic projections contain tuples internally.  JSON persistence converts
+ those to lists, so returning the in-memory object would make a later strict
+ provenance comparison reject its own byte-identical persisted record.
+ Canonicalise before hashing and returning, never during verification.
+ """
+ frozen = json.loads(json.dumps(value, ensure_ascii=False, sort_keys=True,
+                                separators=(',', ':')))
+ if not isinstance(frozen, dict):
+  raise TypeError('v6.2.4 provenance must be a JSON object')
+ return frozen
 
 def _evidence_tokens(instruction:str)->set[str]:
  t=set(base.v621._tokens(instruction))
@@ -57,7 +73,7 @@ def retrieve(state:Mapping[str,Any],task_query:Mapping[str,Any],callable_registr
   candidates.append(item)
  compatible=[x for x in candidates if x['compatible']]; top=compatible if len(compatible)==1 else []
  selected=top[0] if top else None; guidance=base._guidance(selected) if selected else ''
- prov={'policy_version':POLICY_VERSION,'pre_state_semantic_sha256':bank,'task_query':dict(task_query),'task_query_sha256':task_query['query_sha256'],'registry_sha256':callable_registry['registry_sha256'],'external_admission_receipt_sha256':admission['receipt_sha256'],'candidate_schema_ids':[x['schema_id'] for x in candidates],'candidate_scores':candidates,'selected_schema_id':selected['schema_id'] if selected else None,'selection_decision':'external_admission_unique_winner' if selected else 'external_admission_abstention','guidance':guidance,'guidance_sha256':base.digest(guidance),'guidance_nonempty':bool(guidance)}
+ prov=_json_native({'policy_version':POLICY_VERSION,'pre_state_semantic_sha256':bank,'task_query':dict(task_query),'task_query_sha256':task_query['query_sha256'],'registry_sha256':callable_registry['registry_sha256'],'external_admission_receipt_sha256':admission['receipt_sha256'],'candidate_schema_ids':[x['schema_id'] for x in candidates],'candidate_scores':candidates,'selected_schema_id':selected['schema_id'] if selected else None,'selection_decision':'external_admission_unique_winner' if selected else 'external_admission_abstention','guidance':guidance,'guidance_sha256':base.digest(guidance),'guidance_nonempty':bool(guidance)})
  prov['retrieval_sha256']=base.digest(prov);return guidance,prov
 
 
@@ -80,10 +96,10 @@ def candidate_validation_retrieve(state: Mapping[str, Any], task_query: Mapping[
  if unsafe or any(x not in {'prerequisite_input_not_supported_by_public_query_or_dataflow'} for x in item['rejection_reasons']):
   raise ValueError('candidate validation has an unproven prerequisite or incompatible schema')
  guidance=base._guidance(item)
- provenance={'policy_version':POLICY_VERSION,'retrieval_mode':'isolated_external_candidate_validation',
+ provenance=_json_native({'policy_version':POLICY_VERSION,'retrieval_mode':'isolated_external_candidate_validation',
   'validation_task_id':validation_task_id,'candidate_schema_id':schema_id,'pre_state_semantic_sha256':base.digest(state),
   'task_query':dict(task_query),'task_query_sha256':task_query['query_sha256'],'registry_sha256':callable_registry['registry_sha256'],
-  'candidate_score':item,'guidance':guidance,'guidance_sha256':base.digest(guidance),'guidance_nonempty':bool(guidance)}
+  'candidate_score':item,'guidance':guidance,'guidance_sha256':base.digest(guidance),'guidance_nonempty':bool(guidance)})
  provenance['retrieval_sha256']=base.digest(provenance);return guidance,provenance
 
 def frozen_policy() -> dict[str, Any]:

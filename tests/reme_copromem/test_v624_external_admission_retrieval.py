@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import pytest
 from copromem.experiments.reme_copromem import task_conditioned_retrieval_v624 as v
 from copromem.experiments.reme_copromem.public_operation_intent_registry import digest
@@ -30,6 +31,15 @@ def test_candidate_validation_is_isolated_and_not_admitted_provenance():
  assert guidance and p['retrieval_mode']=='isolated_external_candidate_validation'
  with pytest.raises(ValueError,match='task identity'):
   v.candidate_validation_retrieve(s,q,registry(),schema_id='one',validation_task_id='held',current_task_id='other')
+
+
+def test_candidate_validation_reproduces_its_persisted_json_record_exactly():
+ """Tuple-valued internal projections must never invalidate persisted evidence."""
+ q=v.derive_task_query('Send $427 on Venmo to Anita.','appworld',meta(),registry());s=state()
+ guidance,p=v.candidate_validation_retrieve(s,q,registry(),schema_id='one',validation_task_id='held',current_task_id='held')
+ persisted=json.loads(json.dumps(p,ensure_ascii=False,sort_keys=True,separators=(',',':')))
+ assert persisted == p
+ assert v.reproduce_retrieval(s,q,registry(),persisted) == guidance
 
 def test_restart_reproduces_only_the_same_typed_provenance():
  q=v.derive_task_query('Send $427 on Venmo to Anita.','appworld',meta(),registry());s=state()
