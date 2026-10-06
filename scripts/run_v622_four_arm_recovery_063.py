@@ -180,6 +180,7 @@ def configure(run: Path) -> dict[str, Any]:
 
 
 def prepare(run: Path) -> None:
+    source, remaining, _snapshot, _snapshot_hash, _exposure = _source()
     custody = _custody(run); run.mkdir(parents=True, exist_ok=True)
     import shutil
     shutil.copy2(PRIMARY_SOURCE_RUN / real.ALLOCATION_NAME, run / real.ALLOCATION_NAME)
