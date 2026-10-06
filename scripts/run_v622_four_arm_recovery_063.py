@@ -24,14 +24,28 @@ from scripts import run_v622_parallel_real_pilot as real
 from scripts import run_v622_parallel_baseline_pilot as parallel
 
 
-PROTOCOL = "v6.2.2-four-arm-continuation-recovery-063"
-SOURCE_RUN = parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_062_four_arm_successor"
+PROTOCOL = "v6.2.2-four-arm-continuation-recovery-065"
+# Immutable source runs.  The second run contains precisely one scored Dynamic
+# trajectory after it restored the first source's checkpoint prefix.  It must
+# be admitted as custody, never re-executed.
+PRIMARY_SOURCE_RUN = parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_062_four_arm_successor"
+SECONDARY_SOURCE_RUN = parallel.REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_2_2_real_pilot_100_064_four_arm_recovery"
 FOUR_ARMS = ["no_memory", "official_upstream_reme_fixed", "official_upstream_reme_dynamic", "reasoningbank"]
 CUSTODY = "four-arm-successor-custody.json"
 
 
 def _source_artifact(task: str, arm: str, trial: int) -> Path:
-    return SOURCE_RUN / "artifacts" / task / arm / f"trial-{trial}.json"
+    """Locate immutable carried evidence, preferring the original prefix."""
+    primary = PRIMARY_SOURCE_RUN / "artifacts" / task / arm / f"trial-{trial}.json"
+    if primary.is_file():
+        return primary
+    secondary = SECONDARY_SOURCE_RUN / "artifacts" / task / arm / f"trial-{trial}.json"
+    return secondary if secondary.is_file() else primary
+
+
+def _source_root(path: Path) -> Path:
+    # <run>/artifacts/<task>/<arm>/trial-N.json
+    return path.parents[3]
 
 
 def _new_dynamic_order(manifest: Mapping[str, Any]) -> list[DynamicUpdateIdentity]:
@@ -54,13 +68,13 @@ def _load(path: Path) -> dict[str, Any]:
 
 
 def _source() -> tuple[dict[str, Any], list[str], Path, str, float]:
-    manifest = _load(SOURCE_RUN / "manifest.json")
-    if _sha(SOURCE_RUN / "manifest.json") != (SOURCE_RUN / "manifest.sha256").read_text().strip():
+    manifest = _load(PRIMARY_SOURCE_RUN / "manifest.json")
+    if _sha(PRIMARY_SOURCE_RUN / "manifest.json") != (PRIMARY_SOURCE_RUN / "manifest.sha256").read_text().strip():
         raise RuntimeError("source manifest hash mismatch")
     tasks = list(manifest["evaluation"]["task_ids"]); seeds = list(manifest["evaluation"]["seeds"])
     completed = 0
     for task in tasks:
-        if all((SOURCE_RUN / "artifacts" / task / arm / f"trial-{trial}.json").is_file()
+        if all((PRIMARY_SOURCE_RUN / "artifacts" / task / arm / f"trial-{trial}.json").is_file()
                for arm in FOUR_ARMS for trial in range(1, len(seeds) + 1)):
             completed += 1
         else:
@@ -73,16 +87,19 @@ def _source() -> tuple[dict[str, Any], list[str], Path, str, float]:
     # would make this recovery ambiguous.
     partial = {(task, arm, trial) for task in tasks[completed:] for arm in FOUR_ARMS
                for trial in range(1, len(seeds) + 1)
-               if (SOURCE_RUN / "artifacts" / task / arm / f"trial-{trial}.json").is_file()}
+               if (PRIMARY_SOURCE_RUN / "artifacts" / task / arm / f"trial-{trial}.json").is_file()}
     expected_partial = {(tasks[3], arm, trial) for arm in ("no_memory", "official_upstream_reme_fixed")
                         for trial in range(1, len(seeds) + 1)}
     if partial != expected_partial:
         raise RuntimeError("source post-prefix artifact inventory is ambiguous")
-    snapshot = SOURCE_RUN / "reme-dynamic-checkpoints" / "snapshots" / "update-0009.jsonl"
-    marker = SOURCE_RUN / "reme-dynamic-checkpoints" / "markers" / "update-0009.json"
+    # E064 started from the primary update-0009 snapshot and committed exactly
+    # one additional scored Dynamic update.  Its post-state is the only valid
+    # starting bank for the successor's remaining Dynamic work.
+    snapshot = SECONDARY_SOURCE_RUN / "reme-dynamic-checkpoints" / "snapshots" / "update-0001.jsonl"
+    marker = SECONDARY_SOURCE_RUN / "reme-dynamic-checkpoints" / "markers" / "update-0001.json"
     if not snapshot.is_file() or not marker.is_file() or semantic_bank_hash(snapshot) != _load(marker).get("post_update_semantic_sha256"):
-        raise RuntimeError("source ReMe Dynamic checkpoint 0177 is invalid")
-    ledger = [json.loads(line) for line in (SOURCE_RUN / "ledger.jsonl").read_text().splitlines()]
+        raise RuntimeError("secondary ReMe Dynamic checkpoint update-0001 is invalid")
+    ledger = [json.loads(line) for line in (PRIMARY_SOURCE_RUN / "ledger.jsonl").read_text().splitlines()]
     reserve = {str(row["id"]): Decimal(str(row["usd"])) for row in ledger if row.get("event") == "reserve"}
     settled = {str(row["id"]): Decimal(str(row["usd"])) for row in ledger if row.get("event") == "settle"}
     unresolved = set(reserve) - set(settled)
@@ -91,25 +108,53 @@ def _source() -> tuple[dict[str, Any], list[str], Path, str, float]:
     }
     if unresolved != expected_unresolved:
         raise RuntimeError("source unresolved reservation set differs")
-    exposure = sum(settled.values(), Decimal("0")) + sum((reserve[item] for item in unresolved), Decimal("0"))
-    return manifest, tasks[completed:], snapshot, semantic_bank_hash(snapshot), float(exposure)
+    primary_exposure = sum(settled.values(), Decimal("0")) + sum((reserve[item] for item in unresolved), Decimal("0"))
+    secondary_ledger = [json.loads(line) for line in (SECONDARY_SOURCE_RUN / "ledger.jsonl").read_text().splitlines()]
+    secondary_reserve = {str(row["id"]): Decimal(str(row["usd"])) for row in secondary_ledger if row.get("event") == "reserve"}
+    secondary_settle = {str(row["id"]): Decimal(str(row["usd"])) for row in secondary_ledger if row.get("event") == "settle"}
+    if set(secondary_reserve) - set(secondary_settle):
+        raise RuntimeError("secondary source has unresolved reservations")
+    # The secondary run carries the primary exposure through a synthetic
+    # historical entry. Count only its newly settled provider calls.
+    secondary_new = sum((amount for key, amount in secondary_settle.items()
+                         if not key.startswith("historical-construction-carry")), Decimal("0"))
+    return manifest, tasks[completed:], snapshot, semantic_bank_hash(snapshot), float(primary_exposure + secondary_new)
 
 
 def _custody(run: Path) -> dict[str, Any]:
     source, remaining, snapshot, snapshot_hash, exposure = _source()
-    body = {"version": "four-arm-successor-custody-v1", "source_run": str(SOURCE_RUN),
-            "source_manifest_sha256": _sha(SOURCE_RUN / "manifest.json"),
-            "source_runtime_identity_sha256": source["runtime_identity_sha256"],
-            "source_ledger_sha256": _sha(SOURCE_RUN / "ledger.jsonl"),
-            "source_completed_task_count": 3, "source_completed_trajectory_count": 42,
-            "source_arms": FOUR_ARMS, "next_task_id": remaining[0], "remaining_task_ids": remaining,
-            "reme_dynamic_snapshot": str(snapshot), "reme_dynamic_snapshot_sha256": _sha(snapshot),
-            "reme_dynamic_semantic_sha256": snapshot_hash,
-            "source_effective_historical_exposure_usd": str(exposure),
-            "source_unresolved_reservation_ids": [
-                "1791299343795213926-reme_embedding:reme-fixed",
-                "1791305783400558009-executor:copromem_v6_2_2_fixed:0de03ea_3:trial=3:seed=11003",
-            ]}
+    secondary_manifest = _load(SECONDARY_SOURCE_RUN / "manifest.json")
+    carried = [(task, arm, trial) for task in source["evaluation"]["task_ids"] for arm in FOUR_ARMS
+               for trial in range(1, len(source["evaluation"]["seeds"]) + 1) if _source_artifact(task, arm, trial).is_file()]
+    if len(carried) != 43:
+        raise RuntimeError(f"immutable carried artifact inventory differs: {len(carried)}")
+    body = {
+        "version": "four-arm-successor-custody-v2",
+        "primary_source_run": str(PRIMARY_SOURCE_RUN),
+        "primary_source_manifest_sha256": _sha(PRIMARY_SOURCE_RUN / "manifest.json"),
+        "primary_source_runtime_identity_sha256": source["runtime_identity_sha256"],
+        "primary_source_ledger_sha256": _sha(PRIMARY_SOURCE_RUN / "ledger.jsonl"),
+        "secondary_source_run": str(SECONDARY_SOURCE_RUN),
+        "secondary_source_manifest_sha256": _sha(SECONDARY_SOURCE_RUN / "manifest.json"),
+        "secondary_source_runtime_identity_sha256": secondary_manifest["runtime_identity_sha256"],
+        "secondary_source_ledger_sha256": _sha(SECONDARY_SOURCE_RUN / "ledger.jsonl"),
+        "source_completed_task_count": 3,
+        "source_completed_trajectory_count": len(carried),
+        "source_arms": FOUR_ARMS,
+        "next_task_id": remaining[0],
+        "remaining_task_ids": remaining,
+        "reme_dynamic_snapshot": str(snapshot),
+        "reme_dynamic_snapshot_sha256": _sha(snapshot),
+        "reme_dynamic_semantic_sha256": snapshot_hash,
+        "source_effective_historical_exposure_usd": str(exposure),
+        "primary_source_unresolved_reservation_ids": ["1791311356877590259-executor:official_upstream_reme_dynamic:21abae1_3:trial=1:seed=11001"],
+        "carried_artifacts": [
+            {"task_id": task, "arm": arm, "trial_id": trial,
+             "path": str(_source_artifact(task, arm, trial)),
+             "sha256": _sha(_source_artifact(task, arm, trial))}
+            for task, arm, trial in carried
+        ],
+    }
     body["record_sha256"] = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return body
 
@@ -137,15 +182,16 @@ def configure(run: Path) -> dict[str, Any]:
 def prepare(run: Path) -> None:
     custody = _custody(run); run.mkdir(parents=True, exist_ok=True)
     import shutil
-    shutil.copy2(SOURCE_RUN / real.ALLOCATION_NAME, run / real.ALLOCATION_NAME)
+    shutil.copy2(PRIMARY_SOURCE_RUN / real.ALLOCATION_NAME, run / real.ALLOCATION_NAME)
     write_json(run / CUSTODY, custody)
     configure(run); base.prepare(run)
     template = _load(run / "template.json")
     template["protocol"] = PROTOCOL; template["arms"] = FOUR_ARMS
     # Six scored source artifacts on the interrupted fourth task are custody
     # references, not copied or replayed into this successor.
-    template["evaluation"].update({"expected_trajectories": 450,
-                                   "source_completed_trajectory_count": 42})
+    template["evaluation"].update({"expected_trajectories": len(remaining) * len(source["evaluation"]["seeds"]) * len(FOUR_ARMS),
+                                   "source_completed_trajectory_count": custody["source_completed_trajectory_count"],
+                                   "successor_new_trajectory_count": len(remaining) * len(source["evaluation"]["seeds"]) * len(FOUR_ARMS) - 7})
     template["execution"]["provider_only"] = CHAT_PROVIDER
     rb = parallel._rb_manifest_record(run)
     template["banks"]["reasoningbank_sha256"] = rb["semantic_state_sha256"]
@@ -154,7 +200,7 @@ def prepare(run: Path) -> None:
     template["evaluation"]["allocation_audit_sha256"] = base.file_sha(run / real.ALLOCATION_NAME)
     template["method"] = {"comparison_design": "four-arm continuation after immutable CoProMem pause",
                            "copromem": "not scheduled in this successor", "reasoningbank": "frozen bank",
-                           "source_prefix": "42 immutable source trajectories; one reserved but unscored attempt is carried as conservative historical exposure"}
+                           "source_prefix": "43 immutable source trajectories from two custody runs; one unscored primary reservation is carried as conservative historical exposure"}
     template["successor_custody_sha256"] = custody["record_sha256"]
     template["runtime_identity_version"] = IDENTITY_VERSION
     runtime, inputs = build_evaluation_identity_v3(root=real.v622.ROOT, manifest=template)
@@ -182,6 +228,29 @@ def _checkpoint(run: Path, manifest: Mapping[str, Any], service: Any, verifier: 
         initial_semantic_hash=initial_hash,
         validate_evidence=lambda result: validate_execution_evidence(result, run_root=run, expected_registry_sha256=json.loads(base.REG.read_text())["registry_sha256"]),
         event=lambda row: base.ev(run, row.pop("event"), **row))
+
+
+def _validate_completion(run: Path, manifest: Mapping[str, Any], custody: Mapping[str, Any]) -> None:
+    """Validate the composite immutable prefix plus successor work without copying source evidence."""
+    registry = _load(base.REG)
+    expected = {(task, arm, trial, seed) for task in manifest["evaluation"]["task_ids"] for arm in FOUR_ARMS
+                for trial, seed in enumerate(manifest["evaluation"]["seeds"], 1)}
+    carried = set()
+    for item in custody["carried_artifacts"]:
+        path = Path(str(item["path"]))
+        if not path.is_file() or _sha(path) != item["sha256"]:
+            raise RuntimeError("immutable carried artifact changed")
+        row = _load(path); validate_execution_evidence(row, run_root=_source_root(path), expected_registry_sha256=registry["registry_sha256"])
+        carried.add((str(row["task_id"]), str(row["arm"]), int(row["trial_id"]), int(row["seed"])))
+    owned = set()
+    for path in (run / "artifacts").glob("**/trial-*.json"):
+        row = _load(path); parallel._existing_validator(None, run, manifest, str(row["arm"]), str(row["task_id"]), int(row["trial_id"]), int(row["seed"]), path, row)
+        owned.add((str(row["task_id"]), str(row["arm"]), int(row["trial_id"]), int(row["seed"])))
+    if carried & owned or carried | owned != expected:
+        raise RuntimeError("composite completion inventory is incomplete, duplicated, or reordered")
+    reconciliation = reconcile_ledger(run / "ledger.jsonl", historical_expected_usd=base.HISTORICAL_EXPOSURE, registered_arms=FOUR_ARMS)
+    if reconciliation.unresolved_reservation_ids:
+        raise RuntimeError("successor has unresolved reservations at terminal")
 
 
 def run(run: Path) -> None:
@@ -215,7 +284,7 @@ def run(run: Path) -> None:
                             # Original bytes stay at the original path.  It is
                             # an already scored prefix member and must never be
                             # re-executed merely because its successor differs.
-                            validate_execution_evidence(_load(source_path), run_root=SOURCE_RUN,
+                            validate_execution_evidence(_load(source_path), run_root=_source_root(source_path),
                                                         expected_registry_sha256=registry["registry_sha256"])
                             continue
                         if path.is_file():
@@ -231,7 +300,8 @@ def run(run: Path) -> None:
                         if not path.is_file(): raise RuntimeError("executor returned without artifact")
                         base.summary(run, manifest)
                 fixed_marker = fixed.checkpoint(label=f"task-{position:04d}", predecessor_checkpoint_sha256=fixed_marker["checkpoint_sha256"]); base.summary(run, manifest)
-            base._runtime_checkpoint(run, manifest, "terminal"); base.summary(run, manifest, state="completed", final=True)
+            base._runtime_checkpoint(run, manifest, "terminal"); base.summary(run, manifest, state="completed", final=False)
+            _validate_completion(run, manifest, custody)
             if dynamic.reconcile()["completed_count"] != len(base._dynamic_order(manifest)): raise RuntimeError("Dynamic checkpoint prefix incomplete at terminal")
             parallel._terminal_check(run, manifest)
             terminal = {"version": "four-arm-terminal-v1", "manifest_sha256": base.file_sha(run / "manifest.json"), "custody_sha256": custody["record_sha256"], "artifact_inventory_sha256": base._inventory_hash(run / "artifacts"), "ledger_sha256": base.file_sha(run / "ledger.jsonl"), "reme_dynamic_checkpoint_chain_sha256": base._inventory_hash(run / "reme-dynamic-checkpoints")}
