@@ -13,6 +13,7 @@ from typing import Any, Mapping
 
 from copromem.experiments.reme_copromem.runner import AppendOnlyLedger, execute_trajectory, official_post, services, write_json
 from copromem.experiments.reme_copromem.runtime_identity_v3 import IDENTITY_VERSION, build_evaluation_identity_v3
+from copromem.experiments.reme_copromem.runtime_identity import apply_runtime_locators
 from copromem.experiments.reme_copromem.live_summary import reconcile_ledger
 from copromem.experiments.reme_copromem.evidence_contract import validate as validate_execution_evidence
 from copromem.integrations.reme.dynamic_checkpoint import DynamicUpdateIdentity, ReMeDynamicCheckpointManager
@@ -159,6 +160,8 @@ def configure(run: Path) -> dict[str, Any]:
 
 
 def prepare(run: Path) -> None:
+    # Freeze the same explicitly resolved runtime content that freeze/run verify.
+    apply_runtime_locators(real.v622.ROOT)
     source, remaining, _snapshot, _state_hash, _exposure, _carried = _source()
     custody = _custody(); run.mkdir(parents=True, exist_ok=True)
     shutil.copy2(SOURCE_RUN / real.ALLOCATION_NAME, run / real.ALLOCATION_NAME)
