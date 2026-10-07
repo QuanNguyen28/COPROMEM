@@ -1,4 +1,5 @@
 import json
+import http.client
 
 import pytest
 
@@ -130,6 +131,23 @@ def test_non_json_response_records_only_sanitized_transport_evidence(monkeypatch
     assert progress["request_id"] == "safe-id"
     assert progress["response_length"] == len(b"not-json-and-never-persisted")
     assert "not-json" not in json.dumps(progress)
+
+
+def test_incomplete_read_settles_unknown_transport_outcome_conservatively(monkeypatch, tmp_path):
+    monkeypatch.setattr(transport, "count_chat_tokens", lambda *_: 10)
+    monkeypatch.setattr(transport.urllib.request, "urlopen",
+                        lambda *_args, **_kwargs: (_ for _ in ()).throw(http.client.IncompleteRead(b"", 1)))
+    client, _ = _client(tmp_path)
+    with pytest.raises(transport.DispatchFailure, match="locked OpenRouter request failed"):
+        client.create(model=transport.MODEL, messages=[{"role": "user", "content": "x"}])
+    ledger = [json.loads(line) for line in (tmp_path / "ledger.jsonl").read_text().splitlines()]
+    assert [row["event"] for row in ledger] == ["reserve", "settle"]
+    assert ledger[-1]["outcome"] == "transport_outcome_unknown_conservative_bound"
+    assert ledger[-1]["charge_status"] == "unknown_conservative_bound"
+    assert ledger[-1]["usd"] == ledger[0]["usd"]
+    progress = json.loads((tmp_path / "progress.jsonl").read_text().splitlines()[-1])
+    assert progress["event"] == "call_failed"
+    assert progress["charge_status"] == "unknown_conservative_bound"
 
 
 def test_public_route_preflight_accepts_only_healthy_exact_provider(monkeypatch):
