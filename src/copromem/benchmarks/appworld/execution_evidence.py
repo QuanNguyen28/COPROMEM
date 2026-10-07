@@ -336,14 +336,15 @@ def journal_records(path: str | Path, *, require_e_backed: bool = True) -> list[
 
 
 def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha256: str, *,
-                                runtime_context_fields: frozenset[str] = frozenset()) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+                                runtime_context_fields: frozenset[str] = frozenset(),
+                                discard_schema_invalid_reads: bool = False) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Separate callable evidence from immutable telemetry without renumbering.
 
     Lifecycle-independent audit rows carry no callable signature and are kept in
     the audit partition. Malformed or contradictory callable rows are rejected
     fail-closed rather than silently filtered.
     """
-    eligible: list[dict[str, Any]]=[]; audit_only=[]; callable_errors=[]; rejected=[]; legacy_reclassified=[]
+    eligible: list[dict[str, Any]]=[]; audit_only=[]; callable_errors=[]; rejected=[]; legacy_reclassified=[]; discarded_invalid_reads=[]
     for position,row in enumerate(records):
         signature=row.get("operation_signature")
         if not isinstance(signature, Mapping):
@@ -367,6 +368,19 @@ def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha25
             legacy_context_only = (row.get("schema_error") == "unknown_undeclared_field" and bool(unknown)
                                    and (unknown <= set(runtime_context_fields) or pagination_only) and not missing)
             if not legacy_context_only:
+                # A native agent can make an unsuccessful or server-ignored
+                # read call using a field outside the frozen callable schema.
+                # It is never evidence: preserve a hash-bound audit entry and
+                # omit it from the graph.  This narrow option is for isolated
+                # acquisition only.  Writes and ordinary evaluation retain the
+                # default fail-closed boundary.
+                if discard_schema_invalid_reads and signature_access_mode == "read":
+                    discarded_invalid_reads.append({"position": position, "event_sha256": row.get("event_sha256"),
+                                                    "schema_error": row.get("schema_error"),
+                                                    "response_success": bool(row.get("response_success"))})
+                    audit_only.append({"position": position, "event_sha256": row.get("event_sha256"),
+                                       "reason": "discarded_schema_invalid_read"})
+                    continue
                 rejected.append({"position":position,"reason":"schema_mismatch"});continue
             reclassified = dict(row)
             reclassified.update({"schema_accepted": True, "schema_error": None, "unknown_fields": [],
@@ -384,6 +398,8 @@ def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha25
     audit={"version":VERSION,"registry_sha256":registry_sha256,"total_rows":len(records),"eligible_rows":len(eligible),
            "audit_only_rows":len(audit_only),"callable_error_rows":len(callable_errors),"rejected_rows":len(rejected),
            "legacy_runtime_context_reclassified_rows":len(legacy_reclassified), "legacy_runtime_context_reclassified":legacy_reclassified,
+           "discarded_schema_invalid_read_rows": len(discarded_invalid_reads),
+           "discarded_schema_invalid_reads": discarded_invalid_reads,
            "eligible_sha256":digest(eligible),"audit_only_sha256":digest(audit_only),"callable_errors_sha256":digest(callable_errors),"records_sha256":digest(records)}
     return eligible,audit
 

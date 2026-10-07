@@ -117,7 +117,12 @@ def _configure(run: pathlib.Path) -> None:
     V627_BANK_ROOT = bank; base.COPRO = bank; v622.V622_BANK_ROOT = bank; base.identities = v622._bank_identities
     base.derive_task_query = seed_query.derive_task_query; base.validate_task_query = seed_query.validate_task_query
     base.retrieval_record = _retrieval_record; base.reproduce_retrieval = _reproduce_seed
-    base.semantic_task_batch_update = semantic_spine_task_batch_update
+    # Isolated seed acquisition may retain malformed native read attempts as
+    # audit-only rows.  They never enter the semantic graph; invalid writes
+    # and every ordinary runner remain fail-closed.
+    def seed_update(**kwargs: Any):
+        return semantic_spine_task_batch_update(**kwargs, discard_schema_invalid_reads=True)
+    base.semantic_task_batch_update = seed_update
 
 
 def allocate(run: pathlib.Path, inventory_path: pathlib.Path, evaluation_allocation: pathlib.Path, bank_root: pathlib.Path) -> None:

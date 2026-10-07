@@ -17,6 +17,7 @@ from copromem.benchmarks.appworld.execution_evidence import (
     journal_records,
     learning_events,
     normalize_evidence_path,
+    partition_v6_graph_evidence,
     prepare_evidence_journal,
 )
 
@@ -174,6 +175,35 @@ def test_read_pagination_is_transport_context_but_write_and_unknown_fields_fail_
     assert {item["name"] for item in read_row["operation_signature"]["declared_parameters"]} == {"item_id"}
     assert write_row["schema_error"] == "unknown_undeclared_field"
     assert unknown_row["schema_error"] == "unknown_undeclared_field"
+
+
+def test_isolated_acquisition_can_audit_only_an_invalid_read_but_never_a_write(tmp_path):
+    """Malformed reads cannot become graph evidence; writes remain fatal."""
+    registry = _registry()
+    for row in registry["operations"]:
+        row["access_mode"] = "read" if row["operation"] == "apis.demo.loop" else "write"
+    registry.pop("registry_sha256")
+    registry["registry_sha256"] = digest(registry)
+    journal = ExecutionEvidenceJournal(tmp_path / "invalid-read.jsonl", require_e_backed=False)
+    requester = _Requester()
+    recorder = DispatcherEvidenceRecorder(registry, journal, "invalid-read", registry["registry_sha256"])
+    recorder.install(requester)
+    requester._request("demo", "loop", item_id="private", undeclared="x")
+    recorder.flush()
+    records = _records(journal.path)
+    with pytest.raises(ValueError, match="schema_mismatch"):
+        partition_v6_graph_evidence(records, registry["registry_sha256"])
+    eligible, audit = partition_v6_graph_evidence(
+        records, registry["registry_sha256"], discard_schema_invalid_reads=True)
+    assert eligible == []
+    assert audit["discarded_schema_invalid_read_rows"] == 1
+    assert audit["discarded_schema_invalid_reads"][0]["response_success"] is True
+    # The exact same unknown field on a write must still abort before graph construction.
+    write = dict(records[0])
+    write["operation_signature"] = {**write["operation_signature"], "access_mode": "write"}
+    write["event_sha256"] = digest({key: value for key, value in write.items() if key != "event_sha256"})
+    with pytest.raises(ValueError, match="schema_mismatch"):
+        partition_v6_graph_evidence([write], registry["registry_sha256"], discard_schema_invalid_reads=True)
 
 def test_explicit_path_boundary_converts_windows_path_and_preflights_parent(tmp_path, monkeypatch):
     expected = (Path("/mnt/e/Project/AAMAS/evidence/events.jsonl") if os.name == "posix"
