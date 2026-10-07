@@ -39,7 +39,8 @@ PROTOCOL = "v6_2_7_seed_acquisition_002"
 RUN_NAME = PROTOCOL
 ARMS = ["copromem_v6_2_7_dynamic"]
 PUBLIC_APPS = ("amazon", "file_system", "gmail", "phone", "simple_note", "spotify", "splitwise", "todoist", "venmo")
-SEED_APP_COUNT = 4
+MAX_SEED_APP_COUNT = 4
+MIN_SEED_APP_COUNT = 1
 SEED_TASKS_PER_APP = 1
 CALL_LIMITS = {"executor": 480, "reme_lifecycle": 0, "reme_embedding": 0,
                "copromem_decomposition": 0}
@@ -113,12 +114,14 @@ def _configure(run: pathlib.Path) -> None:
         raise RuntimeError("frozen v6.2.7 seed acquisition allocation is absent")
     audit = json.loads(audit_path.read_text(encoding="utf-8"))
     selected = audit.get("selected_task_ids")
-    expected_seed_tasks = SEED_APP_COUNT * SEED_TASKS_PER_APP
+    selected_apps = audit.get("selected_apps")
+    selected_app_count = len(selected_apps) if isinstance(selected_apps, list) else 0
+    expected_seed_tasks = selected_app_count * SEED_TASKS_PER_APP
     if (audit.get("version") != "v6.2.7-seed-acquisition-allocation-v1" or not isinstance(selected, list)
+            or not (MIN_SEED_APP_COUNT <= selected_app_count <= MAX_SEED_APP_COUNT)
             or len(selected) != expected_seed_tasks or len(set(selected)) != expected_seed_tasks or audit.get("split") != "train"):
         raise RuntimeError("v6.2.7 seed allocation is invalid")
-    selected_apps = audit.get("selected_apps")
-    if (not isinstance(selected_apps, list) or len(selected_apps) != SEED_APP_COUNT
+    if (not isinstance(selected_apps, list)
             or selected_apps != sorted(set(selected_apps))
             or any(app not in PUBLIC_APPS for app in selected_apps)):
         raise RuntimeError("v6.2.7 seed app diversity allocation is invalid")
@@ -168,9 +171,9 @@ def allocate(run: pathlib.Path, inventory_path: pathlib.Path, evaluation_allocat
         if viable:
             _family,tasks=viable[0]
             available.append((app, tasks[:SEED_TASKS_PER_APP]))
-    if len(available) < SEED_APP_COUNT:
-        raise RuntimeError("fewer than four fresh single-app acquisition candidates remain")
-    chosen = available[:SEED_APP_COUNT]
+    if len(available) < MIN_SEED_APP_COUNT:
+        raise RuntimeError("no fresh single-app acquisition candidate remains")
+    chosen = available[:MAX_SEED_APP_COUNT]
     for _app, tasks in chosen:
         selected.extend(tasks)
     state=json.loads((bank_root/"fixed-bank.json").read_text(encoding="utf-8"))
