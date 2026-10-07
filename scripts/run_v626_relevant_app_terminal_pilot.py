@@ -46,6 +46,7 @@ from copromem.integrations.reme.transport import PROVIDER as CHAT_PROVIDER
 from copromem.integrations.reme.transport import verify_locked_chat_route_available
 from scripts import run_v61_exploratory_evaluation as base
 from scripts import run_v622_semantic_spine_engineering as v622
+from scripts.v626_copromem_only_runtime import install as install_copromem_only_runtime
 
 
 PROTOCOL = "v6_2_6_relevant_app_terminal_guidance_check_001"
@@ -350,6 +351,7 @@ def configure(run: Path) -> None:
     base.CONSTRUCTION = REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_1_exploratory_diagnostic_construction_003"
     base.PROTOCOL = PROTOCOL
     base.ARMS = list(ARMS)
+    install_copromem_only_runtime(base, base.ARMS)
     base.FROZEN_TASK_IDS = list(audit["selected_task_ids"])
     base.EVALUATION_SPLIT = str(audit["split"])
     base.EVALUATION_SEEDS = (TRIAL_SEED,)
