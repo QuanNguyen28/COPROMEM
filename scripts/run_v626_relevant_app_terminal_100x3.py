@@ -359,7 +359,7 @@ def configure(run: Path) -> None:
     def reproduce_with_intents(state: Mapping[str, Any], task_query: Mapping[str, Any],
                                callable_registry: Mapping[str, Any], provenance: Mapping[str, Any]) -> str:
         receipt = None
-        if provenance.get("retrieval_mode") != "isolated_safe_terminal_slice_candidate_validation":
+        if provenance.get("retrieval_mode") not in {"isolated_safe_terminal_slice_candidate_validation", "isolated_relevant_app_terminal_slice_candidate_validation"}:
             receipt_path = run / "external-admission-receipt.json"
             if not receipt_path.is_file():
                 raise ValueError("admitted v6.2.6 restart lacks its frozen receipt")
