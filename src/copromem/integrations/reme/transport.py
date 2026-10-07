@@ -44,6 +44,34 @@ TOKENIZER_NAME = "o200k_base"
 # These values are deliberately higher than the earlier draft-manifest tariff.
 INPUT_PRICE = 0.30 / 1_000_000
 OUTPUT_PRICE = 1.20 / 1_000_000
+# A 429 is an explicit admission rejection before a completion exists.  It is
+# therefore safe to wait and resend the *same reserved logical request*; all
+# other transport failures retain conservative unknown-outcome accounting.
+# Values are environment-overridable only for isolated tests.  Production uses
+# the frozen defaults and never falls back to another model/provider.
+HTTP_429_MAX_RETRIES = int(os.environ.get("OFFICIAL_PILOT_HTTP_429_MAX_RETRIES", "6"))
+HTTP_429_INITIAL_BACKOFF_SECONDS = float(os.environ.get("OFFICIAL_PILOT_HTTP_429_INITIAL_BACKOFF_SECONDS", "5"))
+HTTP_429_MAX_BACKOFF_SECONDS = float(os.environ.get("OFFICIAL_PILOT_HTTP_429_MAX_BACKOFF_SECONDS", "60"))
+
+
+def _rate_limit_backoff_seconds(headers: Any, attempt: int) -> float:
+    """Return a bounded, deterministic retry delay without persisting headers.
+
+    OpenRouter commonly supplies numeric ``Retry-After``.  Date-form headers
+    are deliberately ignored: local-clock parsing would make a frozen run
+    non-reproducible.  The fallback is bounded exponential backoff.
+    """
+    retry_after = None
+    try:
+        raw = headers.get("retry-after") if headers is not None else None
+        if raw is not None:
+            candidate = float(str(raw).strip())
+            if candidate >= 0:
+                retry_after = candidate
+    except (TypeError, ValueError):
+        retry_after = None
+    fallback = HTTP_429_INITIAL_BACKOFF_SECONDS * (2 ** attempt)
+    return min(HTTP_429_MAX_BACKOFF_SECONDS, retry_after if retry_after is not None else fallback)
 
 
 class DispatchFailure(BaseException):
@@ -398,22 +426,39 @@ class LockedChatCompletions:
             request = urllib.request.Request(URL, data=json.dumps(body).encode(), method="POST",
                 headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json",
                          "X-OpenRouter-Metadata": "enabled"})
-            with urllib.request.urlopen(request, timeout=90) as response:
-                raw_response = response.read()
-                response_status = int(getattr(response, "status", 0) or 0)
-                response_content_type = str(response.headers.get("content-type") or "").split(";", 1)[0].lower()
-                response_request_id = str(response.headers.get("x-request-id") or
-                                          response.headers.get("x-openrouter-request-id") or "")[:128] or None
+            for retry_attempt in range(HTTP_429_MAX_RETRIES + 1):
                 try:
-                    data = json.loads(raw_response.decode("utf-8"))
-                except (UnicodeDecodeError, json.JSONDecodeError):
-                    self._progress({"event": "call_response_invalid", "id": call_id, "role": self.role,
-                                    "http_status": response_status,
-                                    "content_type": response_content_type or None,
-                                    "request_id": response_request_id,
-                                    "response_length": len(raw_response),
-                                    "response_sha256": hashlib.sha256(raw_response).hexdigest()})
-                    raise DispatchFailure("OpenRouter returned a non-JSON response") from None
+                    with urllib.request.urlopen(request, timeout=90) as response:
+                        raw_response = response.read()
+                        response_status = int(getattr(response, "status", 0) or 0)
+                        response_content_type = str(response.headers.get("content-type") or "").split(";", 1)[0].lower()
+                        response_request_id = str(response.headers.get("x-request-id") or
+                                                  response.headers.get("x-openrouter-request-id") or "")[:128] or None
+                        try:
+                            data = json.loads(raw_response.decode("utf-8"))
+                        except (UnicodeDecodeError, json.JSONDecodeError):
+                            self._progress({"event": "call_response_invalid", "id": call_id, "role": self.role,
+                                            "http_status": response_status,
+                                            "content_type": response_content_type or None,
+                                            "request_id": response_request_id,
+                                            "response_length": len(raw_response),
+                                            "response_sha256": hashlib.sha256(raw_response).hexdigest()})
+                            raise DispatchFailure("OpenRouter returned a non-JSON response") from None
+                except urllib.error.HTTPError as exc:
+                    if int(exc.code) != 429 or retry_attempt >= HTTP_429_MAX_RETRIES:
+                        raise
+                    delay = _rate_limit_backoff_seconds(exc.headers, retry_attempt)
+                    # No body is read or persisted here.  The provider has
+                    # explicitly rejected the request before generation; the
+                    # existing reservation remains the sole ledger entry for
+                    # this logical call.
+                    self._progress({"event": "call_rate_limited_retry", "id": call_id,
+                                    "role": self.role, "http_status": 429,
+                                    "retry_attempt": retry_attempt + 1,
+                                    "retry_delay_seconds": delay})
+                    time.sleep(delay)
+                    continue
+                break
         except urllib.error.HTTPError as exc:
             # HTTP errors still mean that the request crossed the provider
             # boundary, so its billable outcome is unknown.  Preserve the
