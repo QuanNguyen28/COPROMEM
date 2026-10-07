@@ -26,6 +26,7 @@ os.environ.setdefault("COPROMEM_EVALUATION_RUNNER", str(pathlib.Path(__file__).r
 from copromem.experiments.reme_copromem.runner import write_json
 from copromem.experiments.reme_copromem.contrastive_v6_runner import semantic_spine_task_batch_update
 from copromem.experiments.reme_copromem.runtime_identity_v3 import IDENTITY_VERSION as RUNTIME_IDENTITY_V3, build_evaluation_identity_v3
+from copromem.experiments.reme_copromem import task_conditioned_retrieval_v622 as seed_query
 from copromem.experiments.reme_copromem.task_conditioned_retrieval_v627 import (
     POLICY_VERSION, derive_task_query, frozen_policy, reproduce_retrieval, retrieve,
     validate_task_query,
@@ -67,7 +68,7 @@ def _bank_identities() -> tuple[dict[str, Any], dict[str, Any]]:
         raise RuntimeError("v6.2.7 admitted bank artifacts are absent")
     gate = json.loads(gate_path.read_text(encoding="utf-8"))
     bank = json.loads(bank_path.read_text(encoding="utf-8"))
-    if (gate.get("version") != "copromem-v6.2.7-bank-admission-v1" or gate.get("passed") is not True
+    if (gate.get("version") != "copromem-v6.2.2-bank-admission-v1" or gate.get("passed") is not True
             or gate.get("provider_calls") != 0 or gate.get("state_sha256") != base.digest(bank)):
         raise RuntimeError("v6.2.7 bank admission identity is invalid")
     return report, gate
@@ -76,18 +77,26 @@ def _bank_identities() -> tuple[dict[str, Any], dict[str, Any]]:
 def _retrieval_record(*, state: Mapping[str, Any], query_operations: list[str], registry_sha256: str,
                       task_query: Mapping[str, Any] | None = None,
                       callable_registry: Mapping[str, Any] | None = None) -> tuple[str, dict[str, Any]]:
-    """Adapter preserving the maintained runner call boundary exactly."""
+    """No-guidance acquisition boundary; learned evidence never feeds itself."""
     if callable_registry is None or task_query is None:
-        raise ValueError("v6.2.7 retrieval requires frozen registry and public query provenance")
+        raise ValueError("seed acquisition requires frozen query provenance")
     if registry_sha256 != callable_registry.get("registry_sha256"):
-        raise ValueError("v6.2.7 runner registry identity mismatch")
+        raise ValueError("seed acquisition registry differs")
     if list(query_operations) != list(task_query.get("canonical_query_operations", ())):
-        raise ValueError("v6.2.7 query operation boundary mismatch")
-    guidance, provenance = retrieve(state, task_query, callable_registry)
-    if guidance != reproduce_retrieval(state, task_query, callable_registry, provenance):
-        raise ValueError("v6.2.7 retrieval cannot reproduce offline")
-    return guidance, provenance
+        raise ValueError("seed acquisition query boundary differs")
+    provenance={"policy_version":"copromem-v6.2.7-seed-no-guidance-v1",
+                "pre_state_semantic_sha256":base.digest(state),"task_query":dict(task_query),
+                "task_query_sha256":task_query["query_sha256"],"registry_sha256":registry_sha256,
+                "selection_decision":"acquisition_no_self_guidance","selected_schema_id":None,
+                "selected_schema_ids":[],"guidance":"","guidance_sha256":base.digest(""),"guidance_nonempty":False}
+    provenance["retrieval_sha256"]=base.digest(provenance)
+    return "",provenance
 
+
+def _reproduce_seed(state: Mapping[str, Any], task_query: Mapping[str, Any], callable_registry: Mapping[str, Any], provenance: Mapping[str, Any]) -> str:
+    guidance, expected=_retrieval_record(state=state,query_operations=list(task_query["canonical_query_operations"]),registry_sha256=str(callable_registry["registry_sha256"]),task_query=task_query,callable_registry=callable_registry)
+    if dict(provenance)!=expected: raise ValueError("seed acquisition provenance does not reproduce")
+    return guidance
 
 def _configure(run: pathlib.Path) -> None:
     audit_path = run / ALLOCATION_NAME
@@ -106,8 +115,8 @@ def _configure(run: pathlib.Path) -> None:
     base.PREEXISTING_RUN_FILES = {ALLOCATION_NAME}
     bank = _external(str(audit["seed_bank"]["path"])); global V627_BANK_ROOT
     V627_BANK_ROOT = bank; base.COPRO = bank; v622.V622_BANK_ROOT = bank; base.identities = v622._bank_identities
-    base.derive_task_query = derive_task_query; base.validate_task_query = validate_task_query
-    base.retrieval_record = _retrieval_record; base.reproduce_retrieval = reproduce_retrieval
+    base.derive_task_query = seed_query.derive_task_query; base.validate_task_query = seed_query.validate_task_query
+    base.retrieval_record = _retrieval_record; base.reproduce_retrieval = _reproduce_seed
     base.semantic_task_batch_update = semantic_spine_task_batch_update
 
 
