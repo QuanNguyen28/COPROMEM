@@ -191,8 +191,16 @@ def prepare(run: Path) -> None:
     template["evaluation"].update({"task_ids": list(src["remaining"]), "task_count": len(src["remaining"]), "expected_trajectories": len(src["remaining"]) * 3, "recovery_imported_trajectories": len(src["prefix"]), "composite_expected_scored_trajectories": custody["composite_expected_scored_trajectories"]})
     template["banks"]["copromem_sha256"] = custody["restored_dynamic_state_sha256"]
     template["budget"].update({"historical_settled_exposure": float(Decimal(src["history"]))}); runtime, inputs = build_evaluation_identity_v3(root=overlay.ROOT, manifest=template)
-    write_json(run / "runtime-identity.json", runtime); write_json(run / "runtime-identity.binding.json", {"runtime_identity_sha256": runtime["runtime_identity_sha256"], "runtime_identity_record_sha256": sha(run / "runtime-identity.json")})
+    write_json(run / "runtime-identity.json", runtime)
     template["runtime_identity_inputs"] = inputs; template["runtime_identity_sha256"] = runtime["runtime_identity_sha256"]; template["runtime_identity_file_sha256"] = sha(run / "runtime-identity.json"); write_json(run / "template.json", template)
+    # This sidecar is a production dispatch prerequisite.  Write it after the
+    # final template materialization and prove its two identity domains are
+    # exact before freeze can proceed.
+    binding = run / "runtime-identity.binding.json"
+    expected_binding = {"runtime_identity_sha256": runtime["runtime_identity_sha256"], "runtime_identity_record_sha256": sha(run / "runtime-identity.json")}
+    write_json(binding, expected_binding)
+    if load(binding) != expected_binding:
+        raise RecoveryImportError("runtime identity binding was not persisted")
 
 
 def verify(run: Path) -> dict[str, Any]:
