@@ -1,4 +1,6 @@
 import json
+import io
+import urllib.error
 
 import pytest
 
@@ -153,3 +155,63 @@ def test_public_route_preflight_rejects_unhealthy_or_malformed_status(monkeypatc
                         lambda *_args, **_kwargs: _Response(payload))
     with pytest.raises(transport.DispatchFailure):
         transport.verify_locked_chat_route_available()
+
+
+def test_explicit_429_retries_same_reserved_logical_call(monkeypatch, tmp_path):
+    """429 is retried in-place; it must not create a second ledger reserve."""
+    error = urllib.error.HTTPError(
+        "https://openrouter.ai/api/v1/chat/completions", 429, "Too Many Requests",
+        {"retry-after": "0", "content-type": "application/json"}, io.BytesIO(b"never persist me"))
+    responses = [error, _Response(_payload())]
+    sleeps = []
+
+    def urlopen(*_args, **_kwargs):
+        item = responses.pop(0)
+        if isinstance(item, BaseException):
+            raise item
+        return item
+
+    monkeypatch.setattr(transport, "count_chat_tokens", lambda *_: 10)
+    monkeypatch.setattr(transport, "HTTP_429_MAX_RETRIES", 1)
+    monkeypatch.setattr(transport, "HTTP_429_INITIAL_BACKOFF_SECONDS", 0.0)
+    monkeypatch.setattr(transport, "HTTP_429_MAX_BACKOFF_SECONDS", 0.0)
+    monkeypatch.setattr(transport.time, "sleep", sleeps.append)
+    monkeypatch.setattr(transport.urllib.request, "urlopen", urlopen)
+    client, _ = _client(tmp_path)
+
+    result = client.create(model=transport.MODEL, messages=[{"role": "user", "content": "x"}])
+
+    assert result.model == transport.MODEL
+    assert sleeps == [0.0]
+    ledger = [json.loads(line) for line in (tmp_path / "ledger.jsonl").read_text().splitlines()]
+    assert [row["event"] for row in ledger] == ["reserve", "settle"]
+    progress_text = (tmp_path / "progress.jsonl").read_text()
+    progress = [json.loads(line) for line in progress_text.splitlines()]
+    assert progress[0] == {"event": "call_rate_limited_retry", "id": progress[0]["id"],
+                           "role": "executor:test", "http_status": 429,
+                           "retry_attempt": 1, "retry_delay_seconds": 0.0}
+    assert progress[-1]["event"] == "call_settled"
+    assert "never persist me" not in progress_text
+
+
+def test_exhausted_429_retries_preserve_conservative_terminal_accounting(monkeypatch, tmp_path):
+    def urlopen(*_args, **_kwargs):
+        raise urllib.error.HTTPError("https://openrouter.ai/api/v1/chat/completions", 429,
+                                     "Too Many Requests", {}, io.BytesIO(b"private provider body"))
+
+    monkeypatch.setattr(transport, "count_chat_tokens", lambda *_: 10)
+    monkeypatch.setattr(transport, "HTTP_429_MAX_RETRIES", 1)
+    monkeypatch.setattr(transport, "HTTP_429_INITIAL_BACKOFF_SECONDS", 0.0)
+    monkeypatch.setattr(transport, "HTTP_429_MAX_BACKOFF_SECONDS", 0.0)
+    monkeypatch.setattr(transport.time, "sleep", lambda _delay: None)
+    monkeypatch.setattr(transport.urllib.request, "urlopen", urlopen)
+    client, _ = _client(tmp_path)
+
+    with pytest.raises(transport.DispatchFailure, match="locked OpenRouter request failed"):
+        client.create(model=transport.MODEL, messages=[{"role": "user", "content": "x"}])
+
+    ledger = [json.loads(line) for line in (tmp_path / "ledger.jsonl").read_text().splitlines()]
+    assert [row["event"] for row in ledger] == ["reserve", "settle"]
+    progress_text = (tmp_path / "progress.jsonl").read_text()
+    assert [json.loads(line)["event"] for line in progress_text.splitlines()] == ["call_rate_limited_retry", "call_failed"]
+    assert "private provider body" not in progress_text
