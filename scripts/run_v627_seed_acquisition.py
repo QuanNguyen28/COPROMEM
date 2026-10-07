@@ -34,11 +34,11 @@ from scripts import run_v61_exploratory_evaluation as base
 from scripts import run_v622_semantic_spine_engineering as v622
 
 
-PROTOCOL = "v6_2_2_semantic_spine_engineering_001"
-RUN_NAME = "v6_2_2_semantic_spine_engineering_001"
-ARMS = ["no_memory", "official_upstream_reme_fixed", "official_upstream_reme_dynamic",
-        "copromem_v6_2_2_fixed", "copromem_v6_2_2_dynamic"]
-CALL_LIMITS = {"executor": 480, "reme_lifecycle": 0, "reme_embedding": 0, "copromem_decomposition": 0}
+PROTOCOL = "v6_2_7_seed_acquisition_002"
+RUN_NAME = PROTOCOL
+ARMS = ["copromem_v6_2_7_dynamic"]
+CALL_LIMITS = {"executor": 480, "reme_lifecycle": 0, "reme_embedding": 0,
+               "copromem_decomposition": 0}
 HARD_CAP_USD = 35
 ALLOCATION_NAME = "allocation-audit-v627-seed-acquisition.json"
 V627_BANK_ROOT: pathlib.Path | None = None
@@ -115,6 +115,11 @@ def allocate(run: pathlib.Path, inventory_path: pathlib.Path, evaluation_allocat
     if run.exists() and any(run.iterdir()): raise RuntimeError("allocation target must be empty")
     inventory=json.loads(inventory_path.read_text(encoding="utf-8")); evaluation=json.loads(evaluation_allocation.read_text(encoding="utf-8"))
     excluded=set(evaluation.get("selected_task_ids", ()))
+    consumed_root = REVIEW / "artifacts/research/official_reme_copromem_pilot"
+    for prior in consumed_root.glob("v6_2_7_seed_acquisition_*"):
+        for artifact in prior.glob("artifacts/*/*/trial-*.json"):
+            try: excluded.add(str(json.loads(artifact.read_text(encoding="utf-8")).get("task_id") or ""))
+            except (OSError, json.JSONDecodeError): pass
     rows=[row for row in inventory.get("unseen_train_tasks", []) if isinstance(row,dict) and str(row.get("task_id")) not in excluded]
     groups=defaultdict(list)
     for row in rows:
@@ -144,6 +149,7 @@ def prepare(run: pathlib.Path) -> None:
     template_path = run / "template.json"
     template = json.loads(template_path.read_text(encoding="utf-8"))
     allocation_bytes = (run / ALLOCATION_NAME).read_bytes()
+    count = len(template["evaluation"]["task_ids"])
     template["method"] = {
         "copromem": POLICY_VERSION,
         "retrieval": "task-supported semantic-spine projection; ambiguous schemas abstain",
@@ -152,7 +158,7 @@ def prepare(run: pathlib.Path) -> None:
     template["method_policy"] = frozen_policy()
     template["evaluation"].update({
         "allocation_audit_sha256": hashlib.sha256(allocation_bytes).hexdigest(),
-        "expected_trajectories": 30,
+        "expected_trajectories": count * len(base.EVALUATION_SEEDS) * len(ARMS),
         "compatible_task_count": 2,
         "negative_control_count": 1,
     })
