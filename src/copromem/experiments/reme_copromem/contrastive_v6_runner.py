@@ -93,19 +93,30 @@ def semantic_spine_state_compatibility(state: Mapping[str, Any]) -> str | None:
     schemas = state.get("contrastive_v6_schemas")
     if not isinstance(schemas, Mapping) or not schemas:
         return None
-    if all(
-        isinstance(schema, Mapping)
-        and schema.get("policy_version") == SEMANTIC_SPINE_POLICY_VERSION
-        and schema.get("schema_contract_version") == SEMANTIC_SPINE_SCHEMA_CONTRACT_VERSION
-        and isinstance(schema.get("occurrences"), list)
-        and bool(schema["occurrences"])
-        and isinstance(schema.get("terminal_occurrence_ids"), list)
-        and bool(schema["terminal_occurrence_ids"])
-        for schema in schemas.values()
-    ):
-        return "v622_semantic_spine_content"
-    return None
+    def spine(schema: Any) -> bool:
+        return (isinstance(schema, Mapping)
+                and schema.get("policy_version") == SEMANTIC_SPINE_POLICY_VERSION
+                and schema.get("schema_contract_version") == SEMANTIC_SPINE_SCHEMA_CONTRACT_VERSION
+                and isinstance(schema.get("occurrences"), list)
+                and bool(schema["occurrences"])
+                and isinstance(schema.get("terminal_occurrence_ids"), list)
+                and bool(schema["terminal_occurrence_ids"]))
 
+    def legacy_semantic(schema: Any) -> bool:
+        return (isinstance(schema, Mapping)
+                and schema.get("policy_version") == SEMANTIC_POLICY_VERSION
+                and isinstance(schema.get("semantic_projection_hashes"), list)
+                and isinstance(schema.get("semantic_provenance_hashes"), list))
+
+    values = list(schemas.values())
+    if all(spine(schema) for schema in values):
+        return "v622_semantic_spine_content"
+    # The v6.1 schemas are immutable prefix history.  Only a bank that also
+    # contains at least one attested v6.2.2 schema may continue through the
+    # v6.2.2 lifecycle; raw and v6.1-only banks remain rejected.
+    if any(spine(schema) for schema in values) and all(spine(schema) or legacy_semantic(schema) for schema in values):
+        return "v622_spine_with_legacy_v61_prefix"
+    return None
 def plan_task_batch_from_artifacts(*, artifacts: list[Mapping[str, Any]], registry: Mapping[str, Any], pre_state: Mapping[str, Any], evidence_paths: list[str | Path]) -> tuple[dict[str, Any], dict[str, Any]]:
     """Build the pure v6 plan from durable, scored public evidence only."""
     if len(artifacts) != len(evidence_paths) or any("after_score" not in item for item in artifacts):

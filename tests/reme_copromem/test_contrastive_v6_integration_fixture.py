@@ -220,3 +220,19 @@ def test_v622_semantic_spine_lifecycle_accepts_only_attested_v622_bank_content()
 
     admitted["contrastive_v6_schemas"]["schema_fixture"]["schema_contract_version"] = "raw-v6"
     assert semantic_spine_state_compatibility(admitted) is None
+
+
+def test_v622_semantic_spine_accepts_only_a_content_proven_mixed_legacy_prefix():
+    mixed = fresh_state()
+    mixed["contrastive_v6_schemas"] = {
+        "legacy": {"policy_version": SEMANTIC_POLICY_VERSION,
+                   "semantic_projection_hashes": ["projection"],
+                   "semantic_provenance_hashes": ["provenance"]},
+        "spine": {"policy_version": SEMANTIC_SPINE_POLICY_VERSION,
+                  "schema_contract_version": SEMANTIC_SPINE_SCHEMA_CONTRACT_VERSION,
+                  "occurrences": [{"occurrence_id": "apis.demo.write#1"}],
+                  "terminal_occurrence_ids": ["apis.demo.write#1"]},
+    }
+    assert semantic_spine_state_compatibility(mixed) == "v622_spine_with_legacy_v61_prefix"
+    mixed["contrastive_v6_schemas"]["legacy"]["semantic_provenance_hashes"] = "not-a-list"
+    assert semantic_spine_state_compatibility(mixed) is None
