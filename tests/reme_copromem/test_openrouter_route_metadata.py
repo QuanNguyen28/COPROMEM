@@ -1,5 +1,8 @@
 import json
 import http.client
+import hashlib
+import io
+import urllib.error
 
 import pytest
 
@@ -148,6 +151,35 @@ def test_incomplete_read_settles_unknown_transport_outcome_conservatively(monkey
     progress = json.loads((tmp_path / "progress.jsonl").read_text().splitlines()[-1])
     assert progress["event"] == "call_failed"
     assert progress["charge_status"] == "unknown_conservative_bound"
+
+
+def test_http_error_records_only_sanitized_transport_metadata(monkeypatch, tmp_path):
+    error_body = b'{"error":"provider response must never be written to progress"}'
+    headers = {"content-type": "application/json; charset=utf-8", "x-request-id": "safe-request-id"}
+    error = urllib.error.HTTPError("https://openrouter.ai/api/v1/chat/completions", 503,
+                                   "Service Unavailable", headers, io.BytesIO(error_body))
+    monkeypatch.setattr(transport, "count_chat_tokens", lambda *_: 10)
+    monkeypatch.setattr(transport.urllib.request, "urlopen",
+                        lambda *_args, **_kwargs: (_ for _ in ()).throw(error))
+    client, _ = _client(tmp_path)
+
+    with pytest.raises(transport.DispatchFailure, match="locked OpenRouter request failed"):
+        client.create(model=transport.MODEL, messages=[{"role": "user", "content": "x"}])
+
+    ledger = [json.loads(line) for line in (tmp_path / "ledger.jsonl").read_text().splitlines()]
+    assert [row["event"] for row in ledger] == ["reserve", "settle"]
+    assert ledger[-1]["outcome"] == "transport_outcome_unknown_conservative_bound"
+    assert ledger[-1]["usd"] == ledger[0]["usd"]
+    progress_text = (tmp_path / "progress.jsonl").read_text()
+    progress = json.loads(progress_text)
+    assert progress["event"] == "call_failed"
+    assert progress["error_type"] == "HTTPError"
+    assert progress["http_status"] == 503
+    assert progress["content_type"] == "application/json"
+    assert progress["request_id"] == "safe-request-id"
+    assert progress["response_bytes_read"] == len(error_body)
+    assert progress["response_sha256"] == hashlib.sha256(error_body).hexdigest()
+    assert error_body.decode() not in progress_text
 
 
 def test_public_route_preflight_accepts_only_healthy_exact_provider(monkeypatch):

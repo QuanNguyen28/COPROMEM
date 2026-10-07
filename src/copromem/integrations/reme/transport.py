@@ -414,6 +414,33 @@ class LockedChatCompletions:
                                     "response_length": len(raw_response),
                                     "response_sha256": hashlib.sha256(raw_response).hexdigest()})
                     raise DispatchFailure("OpenRouter returned a non-JSON response") from None
+        except urllib.error.HTTPError as exc:
+            # HTTP errors still mean that the request crossed the provider
+            # boundary, so its billable outcome is unknown.  Preserve the
+            # conservative accounting rule while recording only enough
+            # transport metadata to diagnose a route outage.  In particular,
+            # never persist an error body: it can contain provider data or
+            # echoed prompt fragments.
+            self.ledger.settle(call_id, bound, {"role": self.role, "model": MODEL,
+                                                "provider": PROVIDER,
+                                                "outcome": "transport_outcome_unknown_conservative_bound",
+                                                "charge_status": "unknown_conservative_bound"})
+            headers = exc.headers or {}
+            try:
+                error_bytes = exc.read(65_536)
+            except Exception:
+                error_bytes = b""
+            content_type = str(headers.get("content-type") or "").split(";", 1)[0].lower() or None
+            request_id = str(headers.get("x-request-id") or
+                             headers.get("x-openrouter-request-id") or "")[:128] or None
+            self._progress({"event": "call_failed", "id": call_id, "role": self.role,
+                            "error_type": type(exc).__name__, "http_status": int(exc.code),
+                            "content_type": content_type, "request_id": request_id,
+                            "response_bytes_read": len(error_bytes),
+                            "response_sha256": hashlib.sha256(error_bytes).hexdigest(),
+                            "charge_status": "unknown_conservative_bound",
+                            "conservative_bound_usd": bound})
+            raise DispatchFailure("locked OpenRouter request failed") from None
         except Exception as exc:
             # A read failure after the request crossed the transport boundary
             # has an unknown provider outcome.  Conservatively settle the
