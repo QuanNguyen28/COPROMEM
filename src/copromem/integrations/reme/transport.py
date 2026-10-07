@@ -415,8 +415,22 @@ class LockedChatCompletions:
                                     "response_sha256": hashlib.sha256(raw_response).hexdigest()})
                     raise DispatchFailure("OpenRouter returned a non-JSON response") from None
         except Exception as exc:
+            # A read failure after the request crossed the transport boundary
+            # has an unknown provider outcome.  Conservatively settle the
+            # reservation at its registered maximum instead of silently
+            # leaving an unresolved ledger entry that makes restart unsafe.
+            # This is deliberately labelled as an exposure bound, never as a
+            # reported provider usage amount.
+            self.ledger.settle(call_id, bound, {"role": self.role, "model": MODEL,
+                                                "provider": PROVIDER,
+                                                "outcome": "transport_outcome_unknown_conservative_bound",
+                                                "charge_status": "unknown_conservative_bound"})
+            if isinstance(exc, DispatchFailure):
+                raise
             self._progress({"event": "call_failed", "id": call_id, "role": self.role,
-                            "error_type": type(exc).__name__})
+                            "error_type": type(exc).__name__,
+                            "charge_status": "unknown_conservative_bound",
+                            "conservative_bound_usd": bound})
             raise DispatchFailure("locked OpenRouter request failed") from None
         choice = (data.get("choices") or [{}])[0]
         message = choice.get("message") or {}
