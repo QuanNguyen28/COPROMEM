@@ -132,7 +132,7 @@ def _configure(run: pathlib.Path) -> None:
     base.COPRO_DYNAMIC_ARM = ARMS[0]; base.TASK_MAJOR_ARM_FIRST = True
     base.PREEXISTING_RUN_FILES = {ALLOCATION_NAME}
     bank = _external(str(audit["seed_bank"]["path"])); global V627_BANK_ROOT
-    V627_BANK_ROOT = bank; base.COPRO = bank; v622.V622_BANK_ROOT = bank; base.identities = v622._bank_identities
+    V627_BANK_ROOT = bank; base.COPRO = bank; base.identities = _bank_identities
     base.derive_task_query = seed_query.derive_task_query; base.validate_task_query = seed_query.validate_task_query
     base.retrieval_record = _retrieval_record; base.reproduce_retrieval = _reproduce_seed
     # Isolated seed acquisition may retain malformed native read attempts as
