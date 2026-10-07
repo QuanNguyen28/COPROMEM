@@ -154,6 +154,27 @@ def test_global_frozen_runtime_context_is_not_an_undeclared_public_argument(tmp_
     assert "access_token" not in [item["name"] for item in row["operation_signature"]["declared_parameters"]]
 
 
+def test_read_pagination_is_transport_context_but_write_and_unknown_fields_fail_closed(tmp_path):
+    registry = _registry()
+    for row in registry["operations"]:
+        row["access_mode"] = "read" if row["operation"] == "apis.demo.loop" else "write"
+    registry.pop("registry_sha256")
+    registry["registry_sha256"] = digest(registry)
+    journal = ExecutionEvidenceJournal(tmp_path / "pagination.jsonl", require_e_backed=False)
+    requester = _Requester()
+    recorder = DispatcherEvidenceRecorder(registry, journal, "pagination", registry["registry_sha256"])
+    recorder.install(requester)
+    requester._request("demo", "loop", item_id="private", page_index=0, page_limit=20)
+    requester._request("demo", "direct", item_id="private", page_index=0, page_limit=20)
+    requester._request("demo", "loop", item_id="private", undeclared="x")
+    recorder.flush()
+    read_row, write_row, unknown_row = _records(journal.path)
+    assert read_row["schema_accepted"]
+    assert read_row["operation_signature"]["runtime_context_present"] == ["page_index", "page_limit"]
+    assert {item["name"] for item in read_row["operation_signature"]["declared_parameters"]} == {"item_id"}
+    assert write_row["schema_error"] == "unknown_undeclared_field"
+    assert unknown_row["schema_error"] == "unknown_undeclared_field"
+
 def test_explicit_path_boundary_converts_windows_path_and_preflights_parent(tmp_path, monkeypatch):
     expected = (Path("/mnt/e/Project/AAMAS/evidence/events.jsonl") if os.name == "posix"
                 else Path(r"E:\Project\AAMAS\evidence\events.jsonl").resolve())

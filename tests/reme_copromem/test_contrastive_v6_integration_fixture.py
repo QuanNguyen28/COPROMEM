@@ -161,6 +161,24 @@ def test_partition_reclassifies_only_frozen_global_runtime_context_legacy_rows()
         partition_v6_graph_evidence([legacy], registry["registry_sha256"], runtime_context_fields=frozenset({"access_token"}))
 
 
+def test_partition_reclassifies_only_read_pagination_transport_rows():
+    registry = fixture_registry()
+    legacy = {"version": VERSION, "parent_program_id": "legacy-pagination", "monotonic_index": 0,
+              "callable_registry_sha256": registry["registry_sha256"], "schema_accepted": False,
+              "schema_error": "unknown_undeclared_field", "unknown_fields": ["page_index", "page_limit"],
+              "missing_required": [], "response_success": True,
+              "operation_signature": {"operation": "apis.demo.inspect", "access_mode": "read"}}
+    legacy["event_sha256"] = digest(legacy)
+    original = copy.deepcopy(legacy)
+    rows, audit = partition_v6_graph_evidence([legacy], registry["registry_sha256"])
+    assert legacy == original
+    assert rows[0]["schema_accepted"] and audit["legacy_runtime_context_reclassified_rows"] == 1
+    assert rows[0]["legacy_runtime_context_reclassification"]["fields"] == ["page_index", "page_limit"]
+    legacy["operation_signature"] = {"operation": "apis.demo.inspect", "access_mode": "write"}
+    legacy["event_sha256"] = digest({key: value for key, value in legacy.items() if key != "event_sha256"})
+    with pytest.raises(ValueError, match="telemetry integrity rejection"):
+        partition_v6_graph_evidence([legacy], registry["registry_sha256"])
+
 def test_semantic_lifecycle_accepts_only_the_content_proven_legacy_v61_container():
     raw = fresh_state()
     assert semantic_state_compatibility(raw) is None

@@ -1,4 +1,4 @@
-"""Value-redacted evidence for *executed* public AppWorld API dispatches.
+﻿"""Value-redacted evidence for *executed* public AppWorld API dispatches.
 
 This module intentionally instruments AppWorld's shared ``Requester._request``
 boundary.  It never parses submitted Python to infer calls: loops, branches,
@@ -17,6 +17,11 @@ from typing import Any, Callable, Mapping
 
 VERSION = "public-execution-evidence-v1"
 
+# AppWorld''s native read dispatcher accepts these pagination controls on list
+# endpoints even where its frozen callable schema omitted them. They are
+# transport metadata, never learned procedure arguments. Writes deliberately
+# do not receive this compatibility allowance.
+_READ_TRANSPORT_CONTEXT_FIELDS = frozenset({"page_index", "page_limit"})
 
 class JournalPathError(RuntimeError):
     """Sanitized, deterministic error for the external durability boundary."""
@@ -119,6 +124,8 @@ def _operation_record(registry: Mapping[str, Any], app_name: str, api_name: str,
     names = set(values)
     known = set(parameters)
     context = set(meta.get("context_parameters", ())) | set(runtime_context_fields(registry))
+    if meta.get("access_mode") == "read":
+        context |= _READ_TRANSPORT_CONTEXT_FIELDS
     unknown = sorted(names - known - context)
     required = set(meta.get("required_parameters", ()))
     missing = sorted(required - names)
@@ -352,8 +359,13 @@ def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha25
             # fail-closed and the source journal is never modified.
             unknown = {str(value) for value in row.get("unknown_fields", ())}
             missing = {str(value) for value in row.get("missing_required", ())}
+            # Old journals predate the read-transport classification above.
+            # Reclassify only exact pagination fields on a recorded public read
+            # operation; any write or any other undeclared field still fails.
+            signature_access_mode = signature.get("access_mode")
+            pagination_only = (unknown <= _READ_TRANSPORT_CONTEXT_FIELDS and signature_access_mode == "read")
             legacy_context_only = (row.get("schema_error") == "unknown_undeclared_field" and bool(unknown)
-                                   and unknown <= set(runtime_context_fields) and not missing)
+                                   and (unknown <= set(runtime_context_fields) or pagination_only) and not missing)
             if not legacy_context_only:
                 rejected.append({"position":position,"reason":"schema_mismatch"});continue
             reclassified = dict(row)
@@ -410,3 +422,4 @@ def learning_events(records: list[Mapping[str, Any]], registry_sha256: str) -> t
              "invalid": invalid, "valid": bool(records) and not invalid,
              "records_sha256": digest(list(records)), "events_sha256": digest(events)}
     return events, audit
+
