@@ -1,7 +1,7 @@
-# ALFWorld pilot table
+# ALFWorld pilot and final results
 
-All rows use the same OpenRouter action model. Results and code in this
-directory are external to the CoProMem repository.
+All rows use the same OpenRouter action model. Raw episodes and detailed logs
+are stored under the ignored `benchmarks/results/` directory.
 
 | Run | Steps | Arm | Tasks | Success | Rate | Avg steps | Retrieval hits | Action-model cost |
 |---|---:|---|---:|---:|---:|---:|---:|---:|
@@ -19,3 +19,17 @@ memories for both tasks. It attempted trajectory summarization after each
 episode, but the legacy failure extractor returned no parseable memory, so no
 experience was available for the second task. The service-side model usage is
 not included in the action-model cost column.
+
+## Final sorted tasks 1–100
+
+Each arm completed all 100 tasks with a 60-step per-task cap. Average steps
+are computed with episode lengths capped at 60. Cost uses the specified rates
+of $0.0152 per 1M input tokens and $1.28 per 1M output tokens; auxiliary
+memory-service calls are included only when their token usage was recorded.
+
+| Arm | Completed | Successes | Success rate | Average steps | Estimated cost (USD) |
+|---|---:|---:|---:|---:|---:|
+| No memory | 100/100 | 82 | 82.0% | 23.12 | $1.2700 |
+| CoProMem | 100/100 | 91 | 91.0% | 20.91 | $1.1722 |
+| ReMe | 100/100 | 82 | 82.0% | 25.09 | $1.3334 |
+| ReasoningBank | 100/100 | 85 | 85.0% | 19.06 | $0.9056 |
