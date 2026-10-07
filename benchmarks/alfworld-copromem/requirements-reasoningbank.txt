@@ -1,0 +1,3 @@
+# Lightweight dependency needed by the pinned upstream OpenRouter client.
+# NumPy and python-dotenv are already part of the ALFWorld runner environment.
+openai>=2.26.0,<3
