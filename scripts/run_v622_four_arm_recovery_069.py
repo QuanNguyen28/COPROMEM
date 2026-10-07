@@ -231,7 +231,7 @@ def run(run: Path) -> None:
     if lock.exists(): raise RuntimeError("duplicate runner")
     write_json(lock, {"pid": os.getpid()}); ledger = AppendOnlyLedger(run / "ledger.jsonl", base.HARD_CAP_USD, manifest["budget"]["call_limits"])
     if not base._has_ledger_reservation(run / "ledger.jsonl", "historical-e068-carry"):
-        ledger.reserve("historical-e068-carry", base.HISTORICAL_EXPOSURE, {"role": "historical_carry_forward_e068"}); ledger.settle("historical-e068-carry", base.HISTORICAL_EXPOSURE, {"role": "historical_carry_forward_e068"})
+        ledger.reserve("historical-construction-carry", base.HISTORICAL_EXPOSURE, {"role": "historical_carry_forward", "source": "E068"}); ledger.settle("historical-construction-carry", base.HISTORICAL_EXPOSURE, {"role": "historical_carry_forward", "source": "E068"})
     base._runtime_checkpoint(run, manifest, "startup"); api_key = base.key(); base.st(run, "running", manifest_sha256=base.file_sha(run / "manifest.json")); registry = _load(base.REG); context = base.EXTRA_RUNTIME_FACTORY(run, manifest, ledger, api_key, registry)
     try:
         source_records = _source()[1]
@@ -282,3 +282,4 @@ def main() -> None:
     else: run(run_path)
 
 if __name__ == "__main__": main()
+
