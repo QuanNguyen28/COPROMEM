@@ -1,8 +1,12 @@
-﻿"""Build a frozen v6.2.7 multi-schema admission bundle without provider calls."""
+"""Build a frozen v6.2.7 multi-schema admission bundle without provider calls."""
 from __future__ import annotations
 import argparse, json
 from pathlib import Path
+import sys
 from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(ROOT), str(ROOT / "src")]
 from copromem.experiments.reme_copromem import task_conditioned_retrieval_v627 as retrieval
 from copromem.experiments.reme_copromem.schema_multi_admission import bundle, schema_identity, verify
 
@@ -45,3 +49,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
