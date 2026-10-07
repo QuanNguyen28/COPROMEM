@@ -227,9 +227,13 @@ def _guidance(candidate: Mapping[str, Any]) -> str:
 
 
 def retrieve(state: Mapping[str, Any], task_query: Mapping[str, Any],
-             callable_registry: Mapping[str, Any], admission: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
+             callable_registry: Mapping[str, Any], admission: Mapping[str, Any], *,
+             admission_bank_sha256: str | None = None) -> tuple[str, dict[str, Any]]:
     bank = base.digest(state)
-    verify_admission(admission, bank_sha256=bank)
+    # Admission attests an immutable learned schema in its source bank. Dynamic
+    # task updates legitimately change the enclosing bank state; they must not
+    # erase that attestation when the admitted schema bytes remain present.
+    verify_admission(admission, bank_sha256=admission_bank_sha256 or bank)
     if admission.get("retrieval_policy_sha256") != frozen_policy()["policy_sha256"]:
         raise ValueError("v6.2.5 admission receipt was validated under a different retrieval policy")
     if task_query.get("callable_registry_sha256") != callable_registry.get("registry_sha256"):
@@ -327,7 +331,8 @@ def frozen_policy() -> dict[str, Any]:
 def reproduce_retrieval(state: Mapping[str, Any], task_query: Mapping[str, Any],
                         callable_registry: Mapping[str, Any],
                         provenance: Mapping[str, Any],
-                        admission: Mapping[str, Any] | None = None) -> str:
+                        admission: Mapping[str, Any] | None = None, *,
+                        admission_bank_sha256: str | None = None) -> str:
     if base.digest(state) != provenance.get("pre_state_semantic_sha256"):
         raise ValueError("v6.2.5 retrieval pre-state mismatch")
     if dict(task_query) != provenance.get("task_query"):
@@ -343,7 +348,7 @@ def reproduce_retrieval(state: Mapping[str, Any], task_query: Mapping[str, Any],
     elif mode == "admitted_safe_terminal_slice":
         if admission is None:
             raise ValueError("admitted v6.2.5 retrieval lacks admission receipt")
-        guidance, expected = retrieve(state, task_query, callable_registry, admission)
+        guidance, expected = retrieve(state, task_query, callable_registry, admission, admission_bank_sha256=admission_bank_sha256)
     else:
         raise ValueError("unknown v6.2.5 retrieval provenance mode")
     if dict(provenance) != expected:

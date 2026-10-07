@@ -138,3 +138,16 @@ def test_persisted_provenance_reproduces_and_tampering_fails_closed():
 
 
 
+
+
+def test_admitted_schema_survives_dynamic_enclosing_bank_update():
+    value = state(("one", schema("one", terminal="apis.venmo.create_transaction")))
+    signed = admission(value, ["one"])
+    changed = state(("one", schema("one", terminal="apis.venmo.create_transaction")), ("later", schema("later", terminal="apis.venmo.create_transaction")))
+    q = v.derive_task_query("Send money on Venmo to a user.", "appworld", meta(), registry())
+    guidance, provenance = v.retrieve(changed, q, registry(), signed, admission_bank_sha256=signed["bank_sha256"])
+    assert "apis.venmo.create_transaction" in guidance
+    assert provenance["pre_state_semantic_sha256"] != signed["bank_sha256"]
+    assert v.reproduce_retrieval(changed, q, registry(), provenance, signed, admission_bank_sha256=signed["bank_sha256"]) == guidance
+
+

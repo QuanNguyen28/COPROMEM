@@ -275,8 +275,9 @@ def _retrieval_record(*, state: Mapping[str, Any], query_operations: list[str], 
     if not receipt_path.is_file():
         raise RuntimeError("v6.2.5 external admission receipt is absent")
     admission = json.loads(receipt_path.read_text(encoding="utf-8"))
-    verify_admission(admission, bank_sha256=_sha(dict(state)))
-    guidance, provenance = retrieve(state, task_query, callable_registry, admission)
+    admission_bank_sha256 = str(admission.get("bank_sha256") or "")
+    verify_admission(admission, bank_sha256=admission_bank_sha256)
+    guidance, provenance = retrieve(state, task_query, callable_registry, admission, admission_bank_sha256=admission_bank_sha256)
     # An admitted schema must never be forced into an unrelated task.  Empty
     # retrieval is the fail-closed result for nonmatching task queries; the
     # frozen coverage-positive task is separately asserted at preflight and
@@ -362,7 +363,7 @@ def configure(run: Path) -> None:
                 raise ValueError("admitted v6.2.5 restart lacks its frozen receipt")
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
         from copromem.experiments.reme_copromem.task_conditioned_retrieval_v625 import reproduce_retrieval
-        return reproduce_retrieval(state, task_query, callable_registry, provenance, receipt)
+        return reproduce_retrieval(state, task_query, callable_registry, provenance, receipt, admission_bank_sha256=(str(receipt.get("bank_sha256")) if receipt else None))
     base.reproduce_retrieval = reproduce_with_intents
     # Three trials per task retain v6.2.2's native Dynamic update threshold.
     # This is the regular durable checkpoint path, never the one-trial no-op
