@@ -38,6 +38,8 @@ from scripts import run_v622_semantic_spine_engineering as v622
 PROTOCOL = "v6_2_7_seed_acquisition_002"
 RUN_NAME = PROTOCOL
 ARMS = ["copromem_v6_2_7_dynamic"]
+SEED_APPS = ("phone", "spotify", "simple_note", "venmo")
+SEED_TASKS_PER_APP = 1
 CALL_LIMITS = {"executor": 480, "reme_lifecycle": 0, "reme_embedding": 0,
                "copromem_decomposition": 0}
 HARD_CAP_USD = 35
@@ -104,8 +106,9 @@ def _configure(run: pathlib.Path) -> None:
         raise RuntimeError("frozen v6.2.7 seed acquisition allocation is absent")
     audit = json.loads(audit_path.read_text(encoding="utf-8"))
     selected = audit.get("selected_task_ids")
+    expected_seed_tasks = len(SEED_APPS) * SEED_TASKS_PER_APP
     if (audit.get("version") != "v6.2.7-seed-acquisition-allocation-v1" or not isinstance(selected, list)
-            or len(selected) != 8 or len(set(selected)) != 8 or audit.get("split") != "train"):
+            or len(selected) != expected_seed_tasks or len(set(selected)) != expected_seed_tasks or audit.get("split") != "train"):
         raise RuntimeError("v6.2.7 seed allocation is invalid")
     base.PROTOCOL = PROTOCOL; base.SOURCE = REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_shared_acquisition_001"; base.CONSTRUCTION = REVIEW / "artifacts/research/official_reme_copromem_pilot/v6_1_exploratory_diagnostic_construction_003"; base.ARMS = list(ARMS); base.FROZEN_TASK_IDS = list(selected)
     base.EVALUATION_SPLIT = "train"; base.EVALUATION_SEEDS = (11001, 11002)
@@ -141,12 +144,16 @@ def allocate(run: pathlib.Path, inventory_path: pathlib.Path, evaluation_allocat
         apps=[app for app in ("phone","spotify","simple_note","venmo") if app.replace("_", " ") in text or app in text]
         if len(apps)==1: groups[apps[0]].append((family,task))
     selected=[]
-    for app in ("phone","spotify","simple_note","venmo"):
+    for app in SEED_APPS:
         families=defaultdict(list)
         for family,task in groups[app]: families[family].append(task)
-        viable=sorted((family,sorted(tasks)) for family,tasks in families.items() if len(tasks)>=2)
-        if not viable: raise RuntimeError(f"no fresh two-sibling acquisition family for {app}")
-        family,tasks=viable[0]; selected.extend(tasks[:2])
+        # Dynamic learning receives two independent seeds for every selected
+        # task, so it does not need two task IDs from one family.  Requiring
+        # sibling IDs needlessly exhausts a public train inventory after a
+        # prior no-replay acquisition attempt.
+        viable=sorted((family,sorted(tasks)) for family,tasks in families.items() if tasks)
+        if not viable: raise RuntimeError(f"no fresh acquisition task for {app}")
+        _family,tasks=viable[0]; selected.extend(tasks[:SEED_TASKS_PER_APP])
     state=json.loads((bank_root/"fixed-bank.json").read_text(encoding="utf-8"))
     gate=json.loads((bank_root/"semantic-admission-gate.json").read_text(encoding="utf-8"))
     value={"version":"v6.2.7-seed-acquisition-allocation-v1","split":"train","selected_task_ids":selected,
