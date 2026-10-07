@@ -71,9 +71,15 @@ def _bank_identities() -> tuple[dict[str, Any], dict[str, Any]]:
         raise RuntimeError("v6.2.7 admitted bank artifacts are absent")
     gate = json.loads(gate_path.read_text(encoding="utf-8"))
     bank = json.loads(bank_path.read_text(encoding="utf-8"))
-    if (gate.get("version") != "copromem-v6.2.2-bank-admission-v1" or gate.get("passed") is not True
+    allowed_gates = {"copromem-v6.2.2-bank-admission-v1", "copromem-v6.2.7-seed-bank-promotion-v1"}
+    if (gate.get("version") not in allowed_gates or gate.get("passed") is not True
             or gate.get("provider_calls") != 0 or gate.get("state_sha256") != base.digest(bank)):
         raise RuntimeError("v6.2.7 bank admission identity is invalid")
+    if gate.get("version") == "copromem-v6.2.7-seed-bank-promotion-v1":
+        report_path = V627_BANK_ROOT / "recovery-report.json"
+        if (not report_path.is_file() or gate.get("recovery_report_sha256") != base.file_sha(report_path)
+                or not isinstance(gate.get("source_manifest_sha256"), str)):
+            raise RuntimeError("v6.2.7 promoted bank custody is invalid")
     return report, gate
 
 
