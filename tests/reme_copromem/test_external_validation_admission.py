@@ -29,3 +29,11 @@ def test_policy_bound_admission_requires_the_exact_retrieval_provenance(tmp_path
  with pytest.raises(ValueError,match='policy binding'):
   admit(bank_sha256='b',schema_ids=['x'],validation_task_id='held',artifact_path=a,journal_path=j,
         expected_registry_sha256='r',retrieval_provenance_path=retrieval,retrieval_policy_sha256=policy)
+
+
+def test_policy_bound_admission_accepts_the_durable_retrieval_sidecar(tmp_path):
+ a,j=write(tmp_path); retrieval=tmp_path/'retrieval.json'; policy='c'*64
+ retrieval.write_text(json.dumps({'provenance':{'policy_sha256':policy,'guidance_nonempty':True}}))
+ value=admit(bank_sha256='b',schema_ids=['x'],validation_task_id='held',artifact_path=a,journal_path=j,
+             expected_registry_sha256='r',retrieval_provenance_path=retrieval,retrieval_policy_sha256=policy)
+ assert value['retrieval_policy_sha256']==policy

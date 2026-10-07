@@ -27,7 +27,8 @@ def admit(*,bank_sha256:str,schema_ids:Sequence[str],validation_task_id:str,arti
   raise ValueError('external validation retrieval policy binding is incomplete')
  if retrieval_provenance_path is not None:
   if not retrieval_provenance_path.is_file():raise ValueError('external validation retrieval provenance is missing')
-  provenance=json.loads(retrieval_provenance_path.read_text())
+  loaded=json.loads(retrieval_provenance_path.read_text())
+  provenance=loaded.get('provenance',loaded) if isinstance(loaded, Mapping) else {}
   if provenance.get('policy_sha256')!=retrieval_policy_sha256 or provenance.get('guidance_nonempty') is not True:
    raise ValueError('external validation retrieval policy binding is invalid')
  scorer=scorer_evidence_sha256(artifact)
