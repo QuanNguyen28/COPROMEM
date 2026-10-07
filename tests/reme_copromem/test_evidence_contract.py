@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import pathlib
 
@@ -199,3 +200,56 @@ def test_zero_action_required_bindings_fail_closed(tmp_path, mutation):
         (tmp_path / "progress.jsonl").write_text(json.dumps(progress) + "\n", encoding="utf-8")
     with pytest.raises(EvidenceContractError):
         validate(row, run_root=tmp_path, expected_registry_sha256=REGISTRY)
+
+class _WorkerPipe:
+    def __init__(self, *, reply: str = "") -> None:
+        self.reply = reply
+        self.writes: list[str] = []
+
+    def write(self, value: str) -> int:
+        self.writes.append(value)
+        return len(value)
+
+    def flush(self) -> None:
+        return None
+
+    def readline(self) -> str:
+        return self.reply
+
+
+class _WorkerProcess:
+    def __init__(self, *, reply: str = "", stderr: str = "") -> None:
+        self.stdin = _WorkerPipe()
+        self.stdout = _WorkerPipe(reply=reply)
+        self.stderr = io.StringIO(stderr)
+        self.returncode = None
+        self.wait_calls = 0
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        self.wait_calls += 1
+        self.returncode = 1
+        return self.returncode
+
+    def terminate(self):
+        self.returncode = -15
+
+
+def test_worker_rejection_is_not_overwritten_by_context_cleanup():
+    proxy = AppWorldProxy.__new__(AppWorldProxy)
+    proxy._proc = _WorkerProcess(reply=json.dumps({"ok": False, "error_type": "ValueError", "error": "duplicate execution evidence event"}) + "\n")
+    proxy._finished = False
+    with pytest.raises(RuntimeError, match="rejected action: ValueError: duplicate execution evidence event"):
+        with proxy:
+            proxy._send({"op": "action"})
+    assert proxy._proc.stdin.writes == [json.dumps({"op": "action"}) + "\n"]
+    assert proxy._proc.wait_calls == 1
+
+
+def test_worker_eof_has_bounded_diagnostic():
+    proxy = AppWorldProxy.__new__(AppWorldProxy)
+    proxy._proc = _WorkerProcess(stderr="native trace only")
+    with pytest.raises(RuntimeError, match="ended without a response during finish; exit_code=None"):
+        proxy._send({"op": "finish"})

@@ -38,7 +38,7 @@ class AppWorldProxy:
     execution_evidence: dict[str, Any] | None = None
     def __init__(self, task_id: str, experiment_name: str, **_: Any) -> None:
         self._proc = subprocess.Popen([NATIVE_PYTHON, str(WORKER)], stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE, text=True, cwd=NATIVE_ROOT,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=NATIVE_ROOT,
             env={**__import__("os").environ, "APPWORLD_ALLOWED_TASKS": self.allowed_tasks})
         self.task_id = task_id
         start_request: dict[str, Any] = {"op": "start", "task_id": task_id, "experiment_name": experiment_name}
@@ -63,25 +63,56 @@ class AppWorldProxy:
         # infer it from journal ordering.
         self._score_phase = "pre_trajectory"
 
+    def _worker_exit_diagnostic(self, operation: str) -> str:
+        """Return bounded transport evidence after an unexpected worker exit."""
+        code = self._proc.poll()
+        stderr = ""
+        if self._proc.stderr is not None:
+            try:
+                stderr = self._proc.stderr.read(512)
+            except OSError:
+                stderr = ""
+        safe = " ".join(stderr.split())[:256]
+        suffix = f" stderr={safe!r}" if safe else ""
+        return f"native AppWorld worker ended without a response during {operation}; exit_code={code!r}{suffix}"
+
     def _send(self, value: dict[str, Any]) -> dict[str, Any]:
         assert self._proc.stdin and self._proc.stdout
-        import json
-        self._proc.stdin.write(json.dumps(value) + "\n"); self._proc.stdin.flush()
-        response = json.loads(self._proc.stdout.readline())
+        operation = str(value.get("op") or "unknown")
+        try:
+            self._proc.stdin.write(json.dumps(value) + "\n")
+            self._proc.stdin.flush()
+        except (BrokenPipeError, OSError) as exc:
+            raise RuntimeError(self._worker_exit_diagnostic(operation)) from exc
+        raw = self._proc.stdout.readline()
+        if not raw:
+            raise RuntimeError(self._worker_exit_diagnostic(operation))
+        try:
+            response = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"native AppWorld worker emitted invalid JSON during {operation}") from exc
         if not response.get("ok"):
-            # The worker already emits only a bounded, sanitized diagnostic.
-            # Preserve it so a pre-dispatch telemetry failure is repairable.
+            # The worker emits a bounded diagnostic.  Preserve it, and crucially
+            # do not let __exit__ obscure this primary failure with a second
+            # finish request after the worker intentionally terminates.
             kind = str(response.get("error_type") or "WorkerError")[:128]
             detail = str(response.get("error") or "no diagnostic")[:256]
-            raise RuntimeError(f"native AppWorld worker rejected request: {kind}: {detail}")
+            raise RuntimeError(f"native AppWorld worker rejected {operation}: {kind}: {detail}")
         return response
 
     def __enter__(self) -> "AppWorldProxy": return self
-    def __exit__(self, *_: Any) -> None:
-        if not self._finished and self._proc.poll() is None:
+    def __exit__(self, exc_type: Any, *_: Any) -> None:
+        # A failed action causes the worker to emit one structured error and
+        # terminate. Preserve that error; a cleanup finish request is unsafe
+        # and previously hid the actual conflict as a JSONDecodeError.
+        if exc_type is None and not self._finished and self._proc.poll() is None:
             self._send({"op": "finish"}); self._finished = True
-        if self._proc.poll() is None: self._proc.wait(timeout=20)
-
+        if self._proc.poll() is None:
+            try:
+                self._proc.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                self._proc.terminate()
+                self._proc.wait(timeout=20)
     def execute(self, code: str) -> str:
         # Durably journal the submitted native action before asking the worker
         # to apply it.  The journal deliberately stores only a digest of the
