@@ -63,10 +63,22 @@ def _role_owner(role: str, *, allow_copromem_decomposition: bool,
                  "reme_lifecycle:reme-dynamic": "official_upstream_reme_dynamic"}
     embedding = {"reme_embedding:reme-fixed": "official_upstream_reme_fixed",
                  "reme_embedding:reme-dynamic": "official_upstream_reme_dynamic"}
+    # In a CoProMem-only recovery, the admitted retrieval implementation can
+    # use a ReMe service as its embedding backend.  Its transport role names
+    # the backend, while its cost belongs to the sole registered CoProMem arm.
+    # This fallback is deliberately unavailable for mixed or ambiguous arm
+    # schedules, where it would hide a protocol-attribution error.
+    copromem_arms = sorted(arm for arm in registered_arms if arm.startswith("copromem_"))
+    def backend_owner(owner: str, kind: str) -> tuple[str, str]:
+        if owner in registered_arms:
+            return owner, kind
+        if len(copromem_arms) == 1:
+            return copromem_arms[0], kind
+        raise LedgerReconciliationError("ReMe backend call has no unambiguous registered owner")
     if role in lifecycle:
-        return lifecycle[role], "lifecycle"
+        return backend_owner(lifecycle[role], "lifecycle")
     if role in embedding:
-        return embedding[role], "embedding"
+        return backend_owner(embedding[role], "embedding")
     # Legacy engineering artifacts used ``reasoningbank_dynamic`` as an
     # internal compatibility ID.  New controlled pilots use the method name
     # ``reasoningbank`` because this frozen-bank comparison does not perform
@@ -275,7 +287,10 @@ def build_live_summary(*, ledger_path: pathlib.Path, artifact_root: pathlib.Path
             "EmbeddingCost": _number(by_kind["embedding"]), "TotalCost": _number(sum(by_kind.values(), Decimal(0)))}
         if len(items) > len(task_list) * len(seed_list):
             raise LedgerReconciliationError("an arm exceeds its frozen trajectory count")
-    per_arm = sum((Decimal(str(value["TotalCost"])) for value in summary["arms"].values()), Decimal(0))
+    # Reconcile from the exact Decimal ledger values, never from the
+    # presentation floats stored in the summary.
+    per_arm = sum((call.settled_usd or Decimal(0) for call in ledger.calls
+                   if call.kind != "historical" and call.arm in registered), Decimal(0))
     if per_arm != ledger.settled_evaluation_cost:
         raise LedgerReconciliationError("per-arm settled costs do not reconcile with the ledger")
     summary.update({"settled_evaluation_cost": _number(ledger.settled_evaluation_cost),

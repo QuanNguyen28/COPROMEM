@@ -187,3 +187,22 @@ def test_final_60_of_60_invariant(tmp_path):
     summary = build_live_summary(ledger_path=ledger, artifact_root=tmp_path / "artifacts", expected_tasks=TASKS,
         expected_seeds=SEEDS, historical_expected_usd=HISTORICAL, state="completed", final=True)
     assert summary["completed"] == 60 and all(row["Completed"] == 12 for row in summary["arms"].values())
+
+def test_copromem_only_summary_attributes_reme_backend_embedding_to_the_sole_copromem_arm(tmp_path):
+    ledger = _ledger(tmp_path / "ledger.jsonl")
+    arm = "copromem_v6_2_5_dynamic"
+    _reserve_settle(ledger, "executor", f"executor:{arm}:task-0:trial=1:seed=11001", .1)
+    _reserve_settle(ledger, "backend", "reme_embedding:reme-fixed", .02)
+    _artifact(tmp_path, arm=arm)
+    summary = build_live_summary(ledger_path=ledger, artifact_root=tmp_path / "artifacts",
+        expected_tasks=TASKS, expected_seeds=SEEDS, historical_expected_usd=HISTORICAL,
+        registered_arms={arm}, state="running")
+    assert summary["arms"][arm]["EmbeddingCalls"] == 1
+    assert summary["arms"][arm]["TotalCost"] == pytest.approx(.12)
+    assert summary["settled_evaluation_cost"] == pytest.approx(.12)
+
+def test_reme_backend_without_a_standard_or_sole_copromem_owner_fails_closed(tmp_path):
+    ledger = _ledger(tmp_path / "ledger.jsonl")
+    _reserve_settle(ledger, "backend", "reme_embedding:reme-fixed", .02)
+    with pytest.raises(LedgerReconciliationError, match="unambiguous registered owner"):
+        reconcile_ledger(ledger, historical_expected_usd=HISTORICAL, registered_arms={"no_memory"})
