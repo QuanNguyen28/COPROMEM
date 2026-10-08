@@ -22,13 +22,13 @@ def _graph():
     return Graph("r",tuple(nodes),tuple(),digest(body))
 
 
-def test_registry_roles_and_projection_exclude_scaffolding_and_collapse_repeated_reads():
+def test_registry_roles_and_projection_exclude_scaffolding_and_preserve_repeated_reads():
     registry=_registry(); graph,audit=project_graph(_graph(),registry)
     assert classify_operation(registry["operations"][0]) == "infrastructure_discovery"
     assert classify_operation(registry["operations"][1]) == "supervisor_control"
     assert classify_operation(registry["operations"][2]) == "authentication_runtime_context"
-    assert [node["operation"] for node in graph.nodes] == ["apis.demo.read","apis.demo.write"]
-    assert graph.nodes[0]["multiplicity"] == 2
+    assert [node["operation"] for node in graph.nodes] == ["apis.demo.read","apis.demo.read","apis.demo.write"]
+    assert [node["multiplicity"] for node in graph.nodes] == [1,1,1]
     assert {row["role"] for row in audit["excluded_nodes"]} == {"infrastructure_discovery","supervisor_control","authentication_runtime_context"}
 
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 from typing import Any, Mapping
 ROOT=Path(__file__).resolve().parents[1]; sys.path[:0]=[str(ROOT),str(ROOT/'src')]
-from copromem.experiments.reme_copromem.contrastive_v6_runner import semantic_spine_task_batch_update
+from copromem.experiments.reme_copromem.v627_semantic_update import semantic_spine_task_batch_update_v627 as semantic_spine_task_batch_update
 from copromem.experiments.reme_copromem.public_operation_intent_registry import build as build_intents, verify as verify_intents
 from copromem.experiments.reme_copromem.runner import write_json
 from copromem.experiments.reme_copromem.runtime_identity_v3 import IDENTITY_VERSION as RUNTIME_IDENTITY_V3, build_evaluation_identity_v3
