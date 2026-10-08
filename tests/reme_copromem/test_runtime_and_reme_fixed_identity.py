@@ -52,6 +52,13 @@ def test_local_runtime_config_is_a_path_locator_not_a_semantic_identity(tmp_path
         _local_runtime_config(tmp_path)
 
 
+def test_local_runtime_config_accepts_powershell_utf8_bom(tmp_path):
+    payload = {"version": "copromem-runtime-local-v1", "reme_source": str(tmp_path)}
+    (tmp_path / ".copromem-runtime.json").write_bytes(
+        b"\xef\xbb\xbf" + json.dumps(payload).encode("utf-8"))
+    assert _local_runtime_config(tmp_path) == {"reme_source": str(tmp_path)}
+
+
 def test_windows_style_absolute_runtime_locators_are_resolved_without_becoming_identity(tmp_path, monkeypatch):
     values = {"COPROMEM_REME_SOURCE": r"E:\runtime\reme", "COPROMEM_REME_PYTHON": r"E:\runtime\reme\python.exe",
               "COPROMEM_APPWORLD_ROOT": r"E:\runtime\appworld", "COPROMEM_APPWORLD_PYTHON": r"E:\runtime\appworld\python.exe"}

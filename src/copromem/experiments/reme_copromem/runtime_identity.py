@@ -81,7 +81,10 @@ def _local_runtime_config(root: Path) -> dict[str, str]:
     if not path.is_file():
         return {}
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        # PowerShell 5 writes a UTF-8 BOM for its ``utf8`` encoding.  This is
+        # a local locator file, so accepting that transport marker preserves
+        # the exact JSON value without changing any semantic runtime identity.
+        value = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
         raise RuntimeIdentityError("local runtime configuration is unreadable") from exc
     if not isinstance(value, dict) or value.get("version") != LOCAL_CONFIG_VERSION:
