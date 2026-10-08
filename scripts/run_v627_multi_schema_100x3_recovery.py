@@ -10,6 +10,7 @@ from copromem.experiments.reme_copromem.v627_semantic_update import semantic_spi
 from copromem.experiments.reme_copromem.public_operation_intent_registry import build as build_intents, verify as verify_intents
 from copromem.experiments.reme_copromem.runner import write_json
 from copromem.experiments.reme_copromem.runtime_identity_v3 import IDENTITY_VERSION as RUNTIME_IDENTITY_V3, build_evaluation_identity_v3
+from copromem.experiments.reme_copromem.copromem_dynamic_checkpoint import CoProMemDynamicCheckpointManager
 from copromem.experiments.reme_copromem.schema_multi_admission import verify as verify_bundle
 from copromem.experiments.reme_copromem.task_conditioned_retrieval_v627 import POLICY_VERSION, derive_task_query, frozen_policy, reproduce_retrieval, retrieve, validate_task_query
 from copromem.integrations.reme.transport import PROVIDER as CHAT_PROVIDER, verify_locked_chat_route_available
@@ -67,7 +68,78 @@ def retrieval_record(*,state:Mapping[str,Any],query_operations:list[str],registr
  bundle=read(Path(getattr(retrieval_record,'bundle_path','')));return retrieve(state,task_query,callable_registry,bundle)
 SOURCE: Path|None=None
 CUSTODY='recovery-custody.json'; RECOVERY_BANK='recovery-bank'
+
+def stalled_continuation_state(run: Path) -> dict[str, Any]:
+ """Admit one interrupted v6.2.7 successor prefix without replaying calls.
+
+ The source can only be a previously prepared no-replay continuation.  Its
+ native checkpoint chain validates the first completed task prefix; the one
+ fully-scored, uncommitted task is reconstructed offline with the versioned
+ projection before the new successor starts at the next task.
+ """
+ custody=read(run/CUSTODY); manifest=read(run/'manifest.json')
+ if custody.get('version')!=PROTOCOL or manifest.get('recovery',{}).get('imported_trajectory_count')!=120:
+  raise RuntimeError('stalled continuation identity differs')
+ tasks=list(manifest.get('evaluation',{}).get('task_ids',()))
+ if len(tasks)!=60 or len(set(tasks))!=60 or list(custody.get('remaining',()))!=tasks:
+  raise RuntimeError('stalled continuation schedule differs')
+ rows=[json.loads(line) for line in (run/'ledger.jsonl').read_text(encoding='utf-8').splitlines() if line]
+ reserved={str(row.get('id')) for row in rows if row.get('event')=='reserve'}; settled={str(row.get('id')) for row in rows if row.get('event')=='settle'}
+ if not reserved or reserved!=settled:
+  raise RuntimeError('stalled continuation ledger unresolved')
+ progress=[json.loads(line) for line in (run/'progress.jsonl').read_text(encoding='utf-8').splitlines() if line]
+ scored=[row for row in progress if row.get('event')=='trajectory_scored']
+ if len(scored)!=135 or len({str(row.get('trajectory_id')) for row in scored})!=135:
+  raise RuntimeError('stalled continuation scored prefix differs')
+ completed_tasks=tasks[:45]
+ refs=list(custody.get('artifacts',()))
+ if len(refs)!=120 or len({str(row.get('trajectory_id')) for row in refs})!=120:
+  raise RuntimeError('stalled continuation imported custody differs')
+ for task in completed_tasks:
+  for trial,seed in enumerate(TRIAL_SEEDS,1):
+   path=run/'artifacts'/task/ARM/f'trial-{trial}.json'
+   artifact=read(path)
+   if artifact.get('trajectory_id') != f'evaluation:{ARM}:{task}:trial={trial}:seed={seed}':
+    raise RuntimeError('stalled continuation artifact identity differs')
+   evidence=Path(str(artifact.get('execution_evidence_path') or ''))
+   if not evidence.is_file(): raise RuntimeError('stalled continuation evidence absent')
+   refs.append({'trajectory_id':artifact['trajectory_id'],'artifact':str(path.resolve()),'artifact_sha256':fsha(path),
+                'journal':str(evidence.resolve()),'journal_sha256':fsha(evidence),'task_id':task,'trial_id':trial,'seed':seed})
+ initial=read(run/'copromem-dynamic-checkpoints'/'initial.json')
+ manager=CoProMemDynamicCheckpointManager(
+  root=run/'copromem-dynamic-checkpoints', manifest_sha256=str(initial['manifest_sha256']),
+  source_identity_sha256=str(initial['source_identity_sha256']), registry_sha256=str(initial['registry_sha256']),
+  ordered_tasks=initial['ordered_tasks'], fixed_initial_state=initial['fixed_initial_state'],
+  dynamic_initial_state=initial['dynamic_initial_state'])
+ prefix=manager.reconcile(ledger_reconciled=True, fixed_current_state=initial['fixed_initial_state'])
+ stalled=tasks[44]
+ if prefix.get('completed_task_count')!=44 or prefix.get('next_task_id')!=stalled or prefix.get('next_transition')!='batch_ready':
+  raise RuntimeError('stalled continuation checkpoint prefix differs')
+ task_dir=run/'copromem-dynamic-checkpoints'/'tasks'/f'0045-{stalled}'
+ if not (task_dir/'03-trajectories_complete.json').is_file() or (task_dir/'04-batch_ready.json').exists() or (task_dir/'post-state.json').exists():
+  raise RuntimeError('stalled continuation boundary differs')
+ artifacts=[read(run/'artifacts'/stalled/ARM/f'trial-{trial}.json') for trial in (1,2,3)]
+ post, marker, audit=semantic_spine_task_batch_update(
+  artifacts=artifacts, registry=read(base.REG), pre_state=prefix['dynamic_state'],
+  evidence_paths=[artifact['execution_evidence_path'] for artifact in artifacts], run_root=run,
+  discard_schema_invalid_reads=True)
+ if marker.get('state')!='rejected' or post!=prefix['dynamic_state'] or audit.get('post_state_sha256')!=sha(post):
+  raise RuntimeError('stalled continuation offline boundary reconstruction differs')
+ dense=audit['semantic_graph_audits'][2]['projection']
+ if len(dense['retained_domain_nodes'])!=1034 or len(dense['retained_domain_dataflow_edges'])!=503744:
+  raise RuntimeError('stalled continuation dense projection differs')
+ if len(refs)!=255 or len({str(row.get('trajectory_id')) for row in refs})!=255:
+  raise RuntimeError('stalled continuation custody artifact prefix differs')
+ historical=float(custody.get('historical_settled_exposure_usd',0.0))+sum(float(row.get('usd',0.0)) for row in rows if row.get('event')=='settle')
+ return {'source_manifest_sha256':fsha(run/'manifest.json'),'source_ledger_sha256':fsha(run/'ledger.jsonl'),
+         'source_ledger_rows':len(rows),'historical_settled_exposure_usd':historical,'artifacts':refs,
+         'completed_checkpoint_count':45,'failed_task':stalled,'reconstructed_marker_sha256':sha(marker),
+         'reconstructed_audit_sha256':sha(audit),'restored_state':post,'restored_state_sha256':sha(post),
+         'remaining':tasks[45:],'source_stalled_run':str(run.resolve()),'source_checkpoint_prefix_sha256':fsha(task_dir/'03-trajectories_complete.json'),
+         'source_recovery_custody_sha256':fsha(run/CUSTODY),'dense_projection_node_count':1034,'dense_projection_edge_count':503744}
+
 def source_state(source:Path, continuation:Path|None=None)->dict[str,Any]:
+ if continuation is None and (source/CUSTODY).is_file(): return stalled_continuation_state(source)
  m=read(source/'manifest.json'); tasks=list(m.get('evaluation',{}).get('task_ids',()))
  if len(tasks)!=100 or list(m.get('evaluation',{}).get('seeds',()))!=list(TRIAL_SEEDS): raise RuntimeError('source schedule differs')
  ledger=source/'ledger.jsonl'; rows=[json.loads(x) for x in ledger.read_text(encoding='utf-8').splitlines() if x]
