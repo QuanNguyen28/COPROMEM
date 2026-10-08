@@ -337,14 +337,15 @@ def journal_records(path: str | Path, *, require_e_backed: bool = True) -> list[
 
 def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha256: str, *,
                                 runtime_context_fields: frozenset[str] = frozenset(),
-                                discard_schema_invalid_reads: bool = False) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+                                discard_schema_invalid_reads: bool = False,
+                                discard_schema_invalid_unsuccessful_calls: bool = False) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Separate callable evidence from immutable telemetry without renumbering.
 
     Lifecycle-independent audit rows carry no callable signature and are kept in
     the audit partition. Malformed or contradictory callable rows are rejected
     fail-closed rather than silently filtered.
     """
-    eligible: list[dict[str, Any]]=[]; audit_only=[]; callable_errors=[]; rejected=[]; legacy_reclassified=[]; discarded_invalid_reads=[]
+    eligible: list[dict[str, Any]]=[]; audit_only=[]; callable_errors=[]; rejected=[]; legacy_reclassified=[]; discarded_invalid_reads=[]; discarded_invalid_unsuccessful_calls=[]
     for position,row in enumerate(records):
         signature=row.get("operation_signature")
         if not isinstance(signature, Mapping):
@@ -368,6 +369,17 @@ def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha25
             legacy_context_only = (row.get("schema_error") == "unknown_undeclared_field" and bool(unknown)
                                    and (unknown <= set(runtime_context_fields) or pagination_only) and not missing)
             if not legacy_context_only:
+                # A schema-invalid call that the native AppWorld worker itself
+                # rejected has no response-attested callable evidence. A
+                # separately versioned recovery may retain it as immutable
+                # audit-only telemetry; successful invalid writes remain a
+                # hard integrity rejection.
+                if discard_schema_invalid_unsuccessful_calls and not row.get("response_success"):
+                    discarded_invalid_unsuccessful_calls.append({"position": position, "event_sha256": row.get("event_sha256"),
+                                                                 "schema_error": row.get("schema_error"), "access_mode": signature_access_mode})
+                    audit_only.append({"position": position, "event_sha256": row.get("event_sha256"),
+                                       "reason": "discarded_schema_invalid_unsuccessful_call"})
+                    continue
                 # A native agent can make an unsuccessful or server-ignored
                 # read call using a field outside the frozen callable schema.
                 # It is never evidence: preserve a hash-bound audit entry and
@@ -400,6 +412,8 @@ def partition_v6_graph_evidence(records: list[Mapping[str, Any]], registry_sha25
            "legacy_runtime_context_reclassified_rows":len(legacy_reclassified), "legacy_runtime_context_reclassified":legacy_reclassified,
            "discarded_schema_invalid_read_rows": len(discarded_invalid_reads),
            "discarded_schema_invalid_reads": discarded_invalid_reads,
+           "discarded_schema_invalid_unsuccessful_call_rows": len(discarded_invalid_unsuccessful_calls),
+           "discarded_schema_invalid_unsuccessful_calls": discarded_invalid_unsuccessful_calls,
            "eligible_sha256":digest(eligible),"audit_only_sha256":digest(audit_only),"callable_errors_sha256":digest(callable_errors),"records_sha256":digest(records)}
     return eligible,audit
 

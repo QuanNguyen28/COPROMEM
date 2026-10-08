@@ -205,6 +205,30 @@ def test_isolated_acquisition_can_audit_only_an_invalid_read_but_never_a_write(t
     with pytest.raises(ValueError, match="schema_mismatch"):
         partition_v6_graph_evidence([write], registry["registry_sha256"], discard_schema_invalid_reads=True)
 
+def test_recovery_can_audit_only_unsuccessful_invalid_write_but_not_successful_write(tmp_path):
+    """A rejected native call has no callable evidence; a successful one remains fatal."""
+    registry = _registry()
+    for row in registry["operations"]:
+        row["access_mode"] = "write"
+    registry.pop("registry_sha256")
+    registry["registry_sha256"] = digest(registry)
+    journal = ExecutionEvidenceJournal(tmp_path / "invalid-write.jsonl", require_e_backed=False)
+    requester = _Requester()
+    recorder = DispatcherEvidenceRecorder(registry, journal, "invalid-write", registry["registry_sha256"])
+    recorder.install(requester)
+    requester._request("demo", "loop", item_id="private", undeclared="x")
+    recorder.flush()
+    row = _records(journal.path)[0]
+    assert row["schema_accepted"] is False
+    failed = {**row, "response_success": False, "response_error_class": "http_422"}
+    failed["event_sha256"] = digest({key: value for key, value in failed.items() if key != "event_sha256"})
+    eligible, audit = partition_v6_graph_evidence(
+        [failed], registry["registry_sha256"], discard_schema_invalid_unsuccessful_calls=True)
+    assert eligible == []
+    assert audit["discarded_schema_invalid_unsuccessful_call_rows"] == 1
+    with pytest.raises(ValueError, match="schema_mismatch"):
+        partition_v6_graph_evidence([row], registry["registry_sha256"], discard_schema_invalid_unsuccessful_calls=True)
+
 def test_explicit_path_boundary_converts_windows_path_and_preflights_parent(tmp_path, monkeypatch):
     expected = (Path("/mnt/e/Project/AAMAS/evidence/events.jsonl") if os.name == "posix"
                 else Path(r"E:\Project\AAMAS\evidence\events.jsonl").resolve())

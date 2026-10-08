@@ -190,7 +190,8 @@ def semantic_task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: 
 def semantic_spine_task_batch_update(*, artifacts: list[Mapping[str, Any]], registry: Mapping[str, Any],
                                      pre_state: Mapping[str, Any], evidence_paths: list[str | Path],
                                      run_root: Path,
-                                     discard_schema_invalid_reads: bool = False) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+                                     discard_schema_invalid_reads: bool = False,
+                                     discard_schema_invalid_unsuccessful_calls: bool = False) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """v6.2.2 update whose commit is gated by occurrence-level semantics."""
     if len(artifacts) != len(evidence_paths) or len(artifacts) < 2:
         raise ValueError("complete same-task semantic-spine batch required")
@@ -206,7 +207,8 @@ def semantic_spine_task_batch_update(*, artifacts: list[Mapping[str, Any]], regi
         partition, ingestion = partition_v6_graph_evidence(
             journal_records(evidence_path), str(registry["registry_sha256"]),
             runtime_context_fields=runtime_context_fields(registry),
-            discard_schema_invalid_reads=discard_schema_invalid_reads)
+            discard_schema_invalid_reads=discard_schema_invalid_reads,
+            discard_schema_invalid_unsuccessful_calls=discard_schema_invalid_unsuccessful_calls)
         graph, projection = build_semantic_graph(partition, registry)
         semantic_graphs.append((graph, float(artifact["after_score"]) == 1.0))
         audits.append({"artifact_trajectory_id": artifact.get("trajectory_id"),
